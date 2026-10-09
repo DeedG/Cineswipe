@@ -48,13 +48,15 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -f keystore/cineswipe.jks ]; then exit 0; fi
+          if [ -f keystore/cineswipe.jks ]; then echo "SIGNED=true" >> "$GITHUB_ENV"; exit 0; fi
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::warning::Pas de clé de signature dans les secrets : APK non signé avec la clé du projet."
+            echo "::warning::Pas de clé de signature dans les secrets (KEYSTORE_BASE64…) : tests et compilation seulement, aucune version publiée."
             exit 0
           fi
+          echo "SIGNED=true" >> "$GITHUB_ENV"
           mkdir -p keystore
-          echo "$KEYSTORE_BASE64" | base64 -d > keystore/cineswipe.jks
+          # Tolère un collage depuis certutil (Windows) : lignes d'en-tête et retours chariot retirés.
+          printf '%s' "$KEYSTORE_BASE64" | grep -v -- '-----' | tr -d '\r\n ' | base64 -d > keystore/cineswipe.jks
           printf 'storePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore/keystore.properties
 
       - name: Tests unitaires et APK signé
@@ -104,11 +106,11 @@ jobs:
           fi
 
       - name: Nommer l'APK
-        if: success()
+        if: success() && env.SIGNED == 'true'
         run: cp app/build/outputs/apk/release/app-release.apk "CineSwipe-0.1.${{ env.VERSION_CODE }}.apk"
 
       - name: Publier la version
-        if: success()
+        if: success() && env.SIGNED == 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}

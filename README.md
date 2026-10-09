@@ -232,8 +232,13 @@ app/src/main/java/io/github/deedg/cineswipe/
 
 - `./gradlew testDebugUnitTest` : tests unitaires et parcours des écrans avec **Robolectric**,
   contre de faux serveurs (TMDB, Plex, Jellyfin, Seerr, Radarr).
-- `./gradlew assembleRelease` : APK signé.
-- Chaque push sur `main` lance les tests et publie l'APK dans les releases (GitHub Actions).
+- `./gradlew assembleRelease` : APK (non signé sans clé ; signe-le avec ta propre clé, ou utilise
+  `assembleDebug` pour un APK installable directement).
+- Chaque version de ce dépôt est compilée, testée et publiée dans les releases par GitHub Actions,
+  signée avec la clé du projet (gardée dans les secrets du dépôt) : les mises à jour s'installent
+  par-dessus sans perdre les données. Sur un fork sans ces secrets, la CI teste et compile
+  seulement. Une version que tu compiles toi-même porte une autre signature : désinstalle
+  (après un export de sauvegarde) avant de passer de l'une à l'autre.
 - Workflows manuels : **Captures** (le tour de la démo photographié sur 5 tailles d'écran, dont
   les pliants) et **Classpath** (bibliothèques de compilation, pour vérifier les types hors de
   Gradle).
