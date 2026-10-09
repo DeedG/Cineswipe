@@ -1,0 +1,104 @@
+name: Classpath
+
+# Outil de développement, lancé à la main.
+# - publier : met les bibliothèques de compilation de l'appli et des tests (android.jar compris)
+#   dans une pré-version temporaire « outil-classpath », pour vérifier la compilation Kotlin hors
+#   de Gradle, là où les dépôts Maven ne sont pas accessibles ;
+# - nettoyer : supprime cette pré-version une fois l'archive récupérée (ainsi que les anciennes
+#   pré-versions « classpath-N » des premières versions de l'outil).
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: publier ou nettoyer
+        required: true
+        default: publier
+        type: choice
+        options:
+          - publier
+          - nettoyer
+
+permissions:
+  contents: write
+
+env:
+  TAG: outil-classpath
+
+jobs:
+  publier:
+    if: inputs.action == 'publier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+          cache: gradle
+
+      - name: Compilation avec relevé des bibliothèques
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew --no-daemon --no-configuration-cache --stacktrace -I .github/scripts/export-classpath.gradle :app:compileDebugUnitTestKotlin 2>&1 | tee build.log
+
+      - name: Erreurs en annotations
+        if: failure()
+        run: python3 .github/scripts/report_errors.py build.log
+
+      - name: Archive des bibliothèques
+        run: |
+          set -e
+          out="$RUNNER_TEMP/classpath"
+          mkdir -p "$out/main" "$out/test"
+          copy_list() {
+            index=0
+            while IFS= read -r entry; do
+              [ -z "$entry" ] && continue
+              index=$((index + 1))
+              parent=$(basename "$(dirname "$entry")")
+              target="$2/$(printf '%04d' $index)-${parent}-$(basename "$entry")"
+              if [ -d "$entry" ]; then
+                (cd "$entry" && zip -qr "$target.jar" .) || true
+              else
+                cp "$entry" "$target"
+              fi
+            done < "$1"
+          }
+          copy_list build/classpath/compileDebugKotlin.txt "$out/main"
+          copy_list build/classpath/compileDebugUnitTestKotlin.txt "$out/test"
+          cp "$ANDROID_HOME/platforms/android-36/android.jar" "$out/android.jar"
+          (cd "$out" && zip -qr "$GITHUB_WORKSPACE/classpath.zip" .)
+          echo "::notice title=Classpath::$(ls "$out/main" | wc -l) jars (appli), $(ls "$out/test" | wc -l) jars (tests)"
+
+      - name: Publier en pré-version temporaire
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$TAG" classpath.zip --prerelease --latest=false \
+            --title "Outil de compilation (temporaire)" \
+            --notes "Bibliothèques de compilation du commit ${{ github.sha }}. Supprimée automatiquement après usage ; ce n'est pas une version de l'appli."
+
+  nettoyer:
+    if: inputs.action == 'nettoyer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Supprimer la pré-version temporaire (et les anciennes « classpath-N »)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "$TAG" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName \
+            --jq '.[].tagName | select(startswith("classpath-"))' |
+            while read -r old; do
+              gh release delete "$old" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true
+            done
+          # Tags « classpath-N » restés seuls après la suppression de leur pré-version.
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/classpath-" --jq '.[].ref' |
+            while read -r ref; do
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/$ref" || true
+            done

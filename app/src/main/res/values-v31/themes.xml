@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CineSwipe" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/cine_black</item>
+        <item name="android:colorAccent">@color/cine_red</item>
+        <item name="android:windowSplashScreenBackground">@color/cine_black</item>
+    </style>
+</resources>

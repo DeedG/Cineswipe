@@ -1,0 +1,289 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "0c6d0036e34c2fd31cbbe72e6d8b2e6e",
+    "entities": [
+      {
+        "tableName": "movie",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tmdbId` INTEGER NOT NULL, `title` TEXT NOT NULL, `originalTitle` TEXT, `year` INTEGER, `posterPath` TEXT, `backdropPath` TEXT, `overview` TEXT, `overviewLanguage` TEXT, `director` TEXT, `cast` TEXT NOT NULL, `trailerKey` TEXT, `genreIds` TEXT NOT NULL, `genres` TEXT NOT NULL, `tmdbRating` REAL, `voteCount` INTEGER, `runtimeMinutes` INTEGER, `fetchedAt` INTEGER, PRIMARY KEY(`tmdbId`))",
+        "fields": [
+          {
+            "fieldPath": "tmdbId",
+            "columnName": "tmdbId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalTitle",
+            "columnName": "originalTitle",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "year",
+            "columnName": "year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "posterPath",
+            "columnName": "posterPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "backdropPath",
+            "columnName": "backdropPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "overview",
+            "columnName": "overview",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "overviewLanguage",
+            "columnName": "overviewLanguage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "director",
+            "columnName": "director",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cast",
+            "columnName": "cast",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trailerKey",
+            "columnName": "trailerKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "genreIds",
+            "columnName": "genreIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "genres",
+            "columnName": "genres",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tmdbRating",
+            "columnName": "tmdbRating",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "voteCount",
+            "columnName": "voteCount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "runtimeMinutes",
+            "columnName": "runtimeMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetchedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tmdbId"
+          ]
+        }
+      },
+      {
+        "tableName": "user_movie",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tmdbId` INTEGER NOT NULL, `status` TEXT NOT NULL, `watchedAt` INTEGER, `watchedSource` TEXT, `rating` REAL NOT NULL, `duels` INTEGER NOT NULL, `availability` TEXT NOT NULL, `availabilityUpdatedAt` INTEGER, `shownCount` INTEGER NOT NULL, `lastShownAt` INTEGER, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`tmdbId`))",
+        "fields": [
+          {
+            "fieldPath": "tmdbId",
+            "columnName": "tmdbId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "watchedAt",
+            "columnName": "watchedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "watchedSource",
+            "columnName": "watchedSource",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "duels",
+            "columnName": "duels",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "availability",
+            "columnName": "availability",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "availabilityUpdatedAt",
+            "columnName": "availabilityUpdatedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "shownCount",
+            "columnName": "shownCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastShownAt",
+            "columnName": "lastShownAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tmdbId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_user_movie_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_user_movie_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_user_movie_availability",
+            "unique": false,
+            "columnNames": [
+              "availability"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_user_movie_availability` ON `${TABLE_NAME}` (`availability`)"
+          }
+        ]
+      },
+      {
+        "tableName": "duel",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `winnerId` INTEGER NOT NULL, `loserId` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `winnerRatingBefore` REAL NOT NULL, `loserRatingBefore` REAL NOT NULL, `winnerRatingAfter` REAL NOT NULL, `loserRatingAfter` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "winnerId",
+            "columnName": "winnerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loserId",
+            "columnName": "loserId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "winnerRatingBefore",
+            "columnName": "winnerRatingBefore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loserRatingBefore",
+            "columnName": "loserRatingBefore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "winnerRatingAfter",
+            "columnName": "winnerRatingAfter",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loserRatingAfter",
+            "columnName": "loserRatingAfter",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_duel_winnerId",
+            "unique": false,
+            "columnNames": [
+              "winnerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_duel_winnerId` ON `${TABLE_NAME}` (`winnerId`)"
+          },
+          {
+            "name": "index_duel_loserId",
+            "unique": false,
+            "columnNames": [
+              "loserId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_duel_loserId` ON `${TABLE_NAME}` (`loserId`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0c6d0036e34c2fd31cbbe72e6d8b2e6e')"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Le mode homelab (étape 3) parle à des services du réseau local ou du tailnet Tailscale,
+  souvent en http ou avec un certificat auto-signé. On autorise donc le http et les
+  autorités installées par l'utilisateur. L'interface signale les URL en http.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config
+        cleartextTrafficPermitted="true"
+        tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates
+                src="user"
+                tools:ignore="AcceptsUserCertificates" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

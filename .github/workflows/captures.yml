@@ -1,0 +1,75 @@
+name: Captures
+
+# Outil de développement, lancé à la main.
+# - publier : capture les écrans de la démo sur plusieurs tailles de téléphone (petit écran,
+#   Pixel, pliant ouvert, écran externe d'un pliant à clapet) et les met dans une pré-version
+#   temporaire « outil-captures », pour vérifier la mise en page sans les appareils ;
+# - nettoyer : supprime cette pré-version une fois l'archive récupérée.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: publier ou nettoyer
+        required: true
+        default: publier
+        type: choice
+        options:
+          - publier
+          - nettoyer
+
+permissions:
+  contents: write
+
+env:
+  TAG: outil-captures
+
+jobs:
+  publier:
+    if: inputs.action == 'publier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+          cache: gradle
+
+      - name: Captures des écrans
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest --tests '*ScreenCaptureTest' -Pcaptures=true 2>&1 | tee build.log
+
+      - name: Erreurs en annotations
+        if: failure()
+        run: python3 .github/scripts/report_errors.py build.log
+
+      - name: Résumé des tests
+        if: always()
+        run: python3 .github/scripts/test_summary.py
+
+      - name: Publier en pré-version temporaire
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -d app/build/captures ]; then echo "::error::Aucune capture"; exit 1; fi
+          (cd app/build/captures && zip -qr "$GITHUB_WORKSPACE/captures.zip" .)
+          echo "::notice title=Captures::$(find app/build/captures -name '*.png' | wc -l) images"
+          gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$TAG" captures.zip --prerelease --latest=false \
+            --title "Captures d'écran (temporaire)" \
+            --notes "Captures du commit ${{ github.sha }}. Supprimée après usage ; ce n'est pas une version de l'appli."
+
+  nettoyer:
+    if: inputs.action == 'nettoyer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Supprimer la pré-version temporaire
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "$TAG" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true

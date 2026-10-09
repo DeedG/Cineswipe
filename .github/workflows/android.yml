@@ -1,0 +1,120 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+          cache: gradle
+
+      # Dépôt privé : numéro du run. Dépôt public : numéro de la version publiée (version.properties).
+      - name: Version
+        run: |
+          if [ -f version.properties ]; then
+            code=$(sed -n 's/^versionCode=//p' version.properties)
+            echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
+            echo "RELEASE_TAG=v0.1.$code" >> "$GITHUB_ENV"
+          else
+            echo "VERSION_CODE=${{ github.run_number }}" >> "$GITHUB_ENV"
+            echo "RELEASE_TAG=build-${{ github.run_number }}" >> "$GITHUB_ENV"
+          fi
+
+      # Dépôt public : la clé de signature n'y est pas, elle vient des secrets du dépôt (même clé
+      # que les versions privées, pour que les mises à jour s'installent par-dessus).
+      - name: Clé de signature depuis les secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -f keystore/cineswipe.jks ]; then exit 0; fi
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Pas de clé de signature dans les secrets : APK non signé avec la clé du projet."
+            exit 0
+          fi
+          mkdir -p keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > keystore/cineswipe.jks
+          printf 'storePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore/keystore.properties
+
+      - name: Tests unitaires et APK signé
+        env:
+          CINESWIPE_VERSION_CODE: ${{ env.VERSION_CODE }}
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace :app:dependencies --configuration releaseRuntimeClasspath testDebugUnitTest assembleRelease 2>&1 | tee build.log
+
+      - name: Erreurs de compilation en annotations
+        if: failure()
+        run: python3 .github/scripts/report_errors.py build.log
+
+      - name: Versions des bibliothèques
+        if: always()
+        run: python3 .github/scripts/versions_summary.py build.log
+
+      - name: Résumé des tests
+        if: always()
+        run: python3 .github/scripts/test_summary.py
+
+      - name: Rapports de tests
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: app/build/reports/tests
+          if-no-files-found: ignore
+
+      - name: Schéma Room versionné
+        if: success()
+        run: |
+          if [ -n "$(git status --porcelain app/schemas)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/schemas
+            git commit -m "Mise à jour du schéma Room [skip ci]"
+            # La branche a pu avancer pendant la compilation : on se replace dessus avant d'envoyer.
+            for attempt in 1 2 3; do
+              if git pull --rebase --quiet origin "$GITHUB_REF_NAME" && git push; then
+                break
+              fi
+              if [ "$attempt" = 3 ]; then exit 1; fi
+              sleep 5
+            done
+          fi
+
+      - name: Nommer l'APK
+        if: success()
+        run: cp app/build/outputs/apk/release/app-release.apk "CineSwipe-0.1.${{ env.VERSION_CODE }}.apk"
+
+      - name: Publier la version
+        if: success()
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: CineSwipe 0.1.${{ env.VERSION_CODE }}
+          make_latest: true
+          files: CineSwipe-0.1.${{ env.VERSION_CODE }}.apk
+          body: |
+            Compilation automatique du commit ${{ github.sha }}.
+            Sur le téléphone : télécharger l'APK ci-dessous puis l'ouvrir pour l'installer.

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 et moins. Seuls les chemins inclus sont sauvegardés : la base et les réglages.
+  Les clés API chiffrées (datastore/secrets.preferences_pb) ne le sont jamais.
+-->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="file" path="datastore/settings.preferences_pb" />
+</full-backup-content>

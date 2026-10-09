@@ -1,0 +1,19 @@
+// Script d'initialisation Gradle : note les bibliothèques passées au compilateur Kotlin
+// (code de l'appli et tests), pour pouvoir vérifier la compilation hors de Gradle.
+allprojects {
+    tasks.configureEach { task ->
+        if (task.name == "compileDebugKotlin" || task.name == "compileDebugUnitTestKotlin") {
+            task.doFirst {
+                def dest = new File(rootProject.layout.buildDirectory.get().asFile, "classpath")
+                dest.mkdirs()
+                def files = new LinkedHashSet<File>()
+                if (task.hasProperty("libraries")) files.addAll(task.libraries.files)
+                def list = new File(dest, "${task.name}.txt")
+                list.text = files
+                    .findAll { it.exists() && (it.isDirectory() || it.name.endsWith(".jar")) }
+                    .collect { it.absolutePath }
+                    .join("\n") + "\n"
+            }
+        }
+    }
+}
