@@ -50,4 +50,11 @@ class HomelabUrlsTest {
         val headers = HomelabUrls.parseHeaders("CF-Access-Client-Id: abc\nligne sans séparateur\nX-Token:  xyz  \n: sans nom\nMauvais Nom: 1")
         assertEquals(mapOf("CF-Access-Client-Id" to "abc", "X-Token" to "xyz"), headers)
     }
+
+    @Test
+    fun jellyfinLinkAddsTheMissingScheme() {
+        assertEquals("http://100.64.1.2:8096/web/#/details?id=abc", JellyfinClient.webUrl("100.64.1.2:8096", "abc"))
+        assertEquals("https://films.example.org/jellyfin/web/#/details?id=abc", JellyfinClient.webUrl("https://films.example.org/jellyfin/", "abc"))
+        assertEquals(null, JellyfinClient.webUrl("pas une adresse", "abc"))
+    }
 }

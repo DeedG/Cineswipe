@@ -112,10 +112,11 @@ fun MovieDetailRoute(tmdbId: Long, onBack: () -> Unit, onLightning: (Long) -> Un
     val uriHandler = LocalUriHandler.current
     val missingFormat = stringResource(R.string.tonight_not_on_server)
     val demoWatch = stringResource(R.string.demo_watch)
+    val cantOpen = stringResource(R.string.watch_cant_open)
     LaunchedEffect(viewModel) {
         viewModel.links.collect { result ->
             when (result) {
-                is WatchLinkResult.Open -> openWatchLink(context, uriHandler, result.link) { toaster.show(demoWatch.format(it.service.displayName)) }
+                is WatchLinkResult.Open -> if (!openWatchLink(context, uriHandler, result.link) { toaster.show(demoWatch.format(it.service.displayName)) }) toaster.show(cantOpen.format(result.link.service.displayName))
                 is WatchLinkResult.Missing -> toaster.show(missingFormat.format(result.service.displayName))
             }
         }

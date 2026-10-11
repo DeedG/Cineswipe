@@ -150,9 +150,15 @@ class JellyfinClient(
 
     companion object {
         private const val PAGE_SIZE = 500
-        const val ANDROID_PACKAGE = "org.jellyfin.mobile"
-
-        /** Fiche d'un film dans l'interface web de Jellyfin (l'appli Android l'ouvre aussi). */
-        fun webUrl(serverUrl: String, itemId: String): String = serverUrl.trimEnd('/') + "/web/#/details?id=$itemId"
+        /**
+         * Fiche d'un film dans l'interface web de Jellyfin, à partir de l'adresse telle que saisie
+         * (« 100.64.0.1:8096 » devient « http://100.64.0.1:8096/web/#/details?id=… »). Null si
+         * l'adresse est invalide. L'appli Android officielle n'accepte aucun lien : la fiche s'ouvre
+         * dans le navigateur.
+         */
+        fun webUrl(serverUrl: String, itemId: String): String? {
+            val base = HomelabUrls.parse(serverUrl) ?: return null
+            return base.toString().trimEnd('/') + "/web/#/details?id=$itemId"
+        }
     }
 }

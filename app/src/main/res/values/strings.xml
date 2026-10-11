@@ -663,6 +663,7 @@
     <string name="tonight_empty_message">Ajoute des films à ta liste À voir depuis les recos (swipe à droite) : ils apparaîtront ici, triés selon tes goûts.</string>
     <string name="tonight_empty_message_server">Ni film à voir, ni film non vu sur ton serveur. Swipe à droite dans les recos pour remplir ta liste.</string>
     <string name="tonight_not_on_server">Film introuvable sur %1$s</string>
+    <string name="watch_cant_open">Impossible d’ouvrir le film dans %1$s : vérifie son adresse dans les réglages Homelab.</string>
     <string name="tonight_marked_watched">« %1$s » ajouté aux vus</string>
     <string name="discover_tonight_title">Ce soir</string>
     <string name="discover_tonight_message">Que regarder parmi tes films à voir et ceux de ton serveur</string>

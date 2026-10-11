@@ -71,7 +71,8 @@ class HomelabFlowTest {
                 ServiceConfig(
                     service = HomelabService.JELLYFIN,
                     enabled = true,
-                    url = FakeHomelabServer.url("jellyfin"),
+                    // Saisie sans « http:// », comme le suggère l'écran de réglage.
+                    url = FakeHomelabServer.url("jellyfin").removePrefix("http://"),
                     apiKey = FakeHomelabServer.JELLYFIN_KEY,
                     userId = FakeHomelabServer.JELLYFIN_USER,
                     userName = "Alex",
@@ -151,8 +152,9 @@ class HomelabFlowTest {
         assertEquals(setOf(HomelabService.JELLYFIN), having.keys)
         assertEquals(setOf(FakeHomelabServer.AVAILABLE_ID), having[HomelabService.JELLYFIN])
         val link = checkNotNull(runBlocking { homelab.watchLink(HomelabService.JELLYFIN, FakeHomelabServer.AVAILABLE_ID) })
-        assertTrue(link.webUrl.endsWith("/web/#/details?id=jf-available"))
-        assertEquals("org.jellyfin.mobile", link.appPackage)
+        assertTrue(link.webUrl.startsWith("http://") && link.webUrl.endsWith("/web/#/details?id=jf-available"))
+        // L'appli Jellyfin n'accepte aucun lien : la fiche s'ouvre dans le navigateur.
+        assertNull(link.appPackage)
         assertNull(runBlocking { homelab.watchLink(HomelabService.PLEX, FakeHomelabServer.AVAILABLE_ID) })
         assertNull(runBlocking { homelab.watchLink(HomelabService.JELLYFIN, 999L) })
 
@@ -170,6 +172,7 @@ class HomelabFlowTest {
             }
             assertEquals(Intent.ACTION_VIEW, opened!!.action)
             assertTrue(opened!!.dataString.orEmpty().endsWith("/web/#/details?id=jf-available"))
+            assertNull(opened!!.`package`)
         }
     }
 

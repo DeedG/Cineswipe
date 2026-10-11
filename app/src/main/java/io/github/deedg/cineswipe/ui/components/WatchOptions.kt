@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,12 +57,12 @@ val HomelabService.accent: Color
 
 /**
  * Ouvre un film sur son serveur : l'appli du serveur si elle est installée et sait ouvrir le
- * lien, sinon l'interface web dans le navigateur.
+ * lien, sinon l'interface web dans le navigateur. Faux si rien n'a pu l'ouvrir.
  */
-fun openWatchLink(context: Context, uriHandler: UriHandler, link: WatchLink, onDemo: (WatchLink) -> Unit = {}) {
+fun openWatchLink(context: Context, uriHandler: UriHandler, link: WatchLink, onDemo: (WatchLink) -> Unit = {}): Boolean {
     if (link.demo) {
         onDemo(link)
-        return
+        return true
     }
     val target = link.appUri ?: link.webUrl
     val opened = link.appPackage?.let { pkg ->
@@ -72,7 +73,10 @@ fun openWatchLink(context: Context, uriHandler: UriHandler, link: WatchLink, onD
             false
         }
     } ?: false
-    if (!opened) runCatching { uriHandler.openUri(link.webUrl) }
+    if (opened) return true
+    return runCatching { uriHandler.openUri(link.webUrl) }
+        .onFailure { Log.w("CineSwipe", "Lien ${link.service.displayName} impossible à ouvrir", it) }
+        .isSuccess
 }
 
 /** Un bouton « Plex », « Jellyfin »… par serveur qui a le film (aucun sans serveur média). */

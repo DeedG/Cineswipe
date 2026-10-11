@@ -231,12 +231,13 @@ fun TonightRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit) {
     val notOnServer = stringResource(R.string.tonight_not_on_server)
     val markedFormat = stringResource(R.string.tonight_marked_watched)
     val demoWatch = stringResource(R.string.demo_watch)
+    val cantOpen = stringResource(R.string.watch_cant_open)
     // Rechargé à chaque retour sur l'écran (un film a pu être vu depuis sa fiche).
     LaunchedEffect(viewModel) { viewModel.load() }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                is TonightEvent.Open -> openWatchLink(context, uriHandler, event.link) { toaster.show(demoWatch.format(it.service.displayName)) }
+                is TonightEvent.Open -> if (!openWatchLink(context, uriHandler, event.link) { toaster.show(demoWatch.format(it.service.displayName)) }) toaster.show(cantOpen.format(event.link.service.displayName))
                 is TonightEvent.NotOnServer -> toaster.show(notOnServer.format(event.service.displayName))
                 is TonightEvent.MarkedWatched -> toaster.show(markedFormat.format(event.title))
             }

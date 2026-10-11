@@ -377,8 +377,8 @@ class HomelabRepository(
             HomelabService.JELLYFIN -> WatchLink(
                 service = HomelabService.JELLYFIN,
                 appUri = null,
-                appPackage = JellyfinClient.ANDROID_PACKAGE,
-                webUrl = JellyfinClient.webUrl(config.url, itemId),
+                appPackage = null,
+                webUrl = JellyfinClient.webUrl(config.url, itemId) ?: return null,
             )
             else -> null
         }
