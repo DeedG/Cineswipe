@@ -1,0 +1,29 @@
+name: Démo des séries
+
+# Outil lancé à la main : complète le catalogue des séries de la démo avec TMDB (clé des secrets)
+# et l'enregistre dans le dépôt.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  completer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compléter le catalogue
+        env:
+          TMDB_BUILTIN_KEY: ${{ secrets.TMDB_BUILTIN_KEY }}
+        run: python3 .github/scripts/enrich_demo_series.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Enregistrer
+        run: |
+          if [ -n "$(git status --porcelain app/src/main/assets/demo)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/assets/demo/series.json
+            git commit -m "Démo : catalogue des séries complété avec TMDB"
+            git push
+          fi

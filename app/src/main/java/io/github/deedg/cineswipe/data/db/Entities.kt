@@ -40,6 +40,8 @@ data class TvSeason(
     val name: String? = null,
     val episodeCount: Int? = null,
     val year: Int? = null,
+    /** Affiche de la saison (Arène des saisons), sinon celle de la série. */
+    val poster: String? = null,
 )
 
 /** Première impression donnée en marquant un film vu (recensement) : point de départ de l'Arène. */
@@ -281,4 +283,34 @@ data class UserListItemEntity(
     val listId: Long,
     val tmdbId: Long,
     val addedAt: Long,
+)
+
+/**
+ * Une saison dans l'Arène des saisons (monde des séries) : un classement à part de celui des
+ * séries. [key] = identifiant TMDB de la série × 1000 + numéro de saison.
+ */
+@Entity(tableName = "season_rank", indices = [Index("tmdbId")])
+data class SeasonRankEntity(
+    @PrimaryKey val key: Long,
+    val tmdbId: Long,
+    val season: Int,
+    val rating: Double = Ranking.INITIAL_RATING,
+    val deviation: Double = Ranking.INITIAL_DEVIATION,
+    val confidence: Double = 0.0,
+    val duels: Int = 0,
+    val updatedAt: Long = 0,
+) {
+    companion object {
+        fun key(tmdbId: Long, season: Int): Long = tmdbId * 1000 + season
+    }
+}
+
+/** Journal des duels de l'Arène des saisons. */
+@Entity(tableName = "season_duel")
+data class SeasonDuelEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val winnerKey: Long,
+    val loserKey: Long,
+    @ColumnInfo(defaultValue = "0") val draw: Boolean = false,
+    val createdAt: Long,
 )

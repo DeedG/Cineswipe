@@ -59,7 +59,7 @@ import org.robolectric.annotation.Config
 
 /** Mode séries : un monde à part (base, TMDB en séries, couleur), et le suivi saison par saison. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class SeriesWorldTest {
 
     @get:Rule
@@ -282,6 +282,29 @@ class SeriesWorldTest {
             FakeTmdbServer.airedSeasons.clear()
             series.settings.setNewSeasonNotifications(true)
         }
+    }
+
+    @Test
+    fun seasonsFightInTheirOwnArena() = runBlocking(Dispatchers.IO) {
+        val series = app.seriesWorld()
+        // Les Gardiens finie (3 saisons), Série Reco Un en cours en saison 2 (saison 1 vue).
+        series.tmdb.ensureDetails(FakeTmdbServer.GUARDIANS.id)
+        series.tmdb.ensureDetails(3001)
+        series.library.setProgress(FakeTmdbServer.GUARDIANS.id, SeriesProgress.FINISHED, null)
+        series.library.setProgress(3001, SeriesProgress.IN_PROGRESS, 2)
+        val arena = series.seasonArena
+        val items = arena.items()
+        assertEquals(setOf(1004001L, 1004002L, 1004003L, 3001001L), items.map { it.key }.toSet())
+        val match = checkNotNull(arena.pickMatch())
+        val duel = arena.vote(match.a.key, match.b.key)
+        val after = arena.items().associateBy { it.key }
+        assertTrue(after.getValue(match.a.key).rating > after.getValue(match.b.key).rating)
+        assertEquals(1, after.getValue(match.a.key).duels)
+        // Annulé : tout revient au départ.
+        arena.undo(duel)
+        assertEquals(0, arena.items().first { it.key == match.a.key }.duels)
+        // Le classement des séries n'a pas bougé.
+        assertEquals(0, series.database.userMovieDao().get(FakeTmdbServer.GUARDIANS.id)?.duels)
     }
 
     @Test

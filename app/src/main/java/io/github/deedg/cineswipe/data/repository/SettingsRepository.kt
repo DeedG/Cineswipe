@@ -92,7 +92,7 @@ class SettingsRepository(
         return plain
     }
 
-    val language: Flow<String> = settings.data.map { prefs -> prefs[LANGUAGE] ?: DEFAULT_LANGUAGE }
+    val language: Flow<String> = settings.data.map { prefs -> prefs[LANGUAGE] ?: systemLanguage() }
 
     /**
      * Réglages du homelab tels qu'enregistrés (communs aux deux mondes), pour les écrans de réglage.
@@ -348,6 +348,9 @@ class SettingsRepository(
     companion object {
         const val DEFAULT_LANGUAGE = "fr-FR"
         val SUPPORTED_LANGUAGES = listOf("fr-FR", "en-US")
+
+        /** Langue TMDB tant que l'utilisateur n'en a pas choisi : celle du téléphone (anglais ou français). */
+        fun systemLanguage(): String = if (java.util.Locale.getDefault().language == "en") "en-US" else DEFAULT_LANGUAGE
         private val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
         private val LANGUAGE = stringPreferencesKey("tmdb_language")
         private val REQUEST_TARGET = stringPreferencesKey("homelab_request_target")

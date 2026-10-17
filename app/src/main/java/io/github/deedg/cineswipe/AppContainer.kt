@@ -40,6 +40,7 @@ import io.github.deedg.cineswipe.data.repository.ListsRepository
 import io.github.deedg.cineswipe.data.repository.PeopleRepository
 import io.github.deedg.cineswipe.data.repository.RecoRepository
 import io.github.deedg.cineswipe.data.repository.RetroRepository
+import io.github.deedg.cineswipe.data.repository.SeasonArenaRepository
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.StatsRepository
 import io.github.deedg.cineswipe.data.repository.TasteShareRepository
@@ -206,6 +207,9 @@ class AppContainer(
 
     /** Mises à jour publiées sur GitHub. */
     val updates: UpdateRepository by lazy { UpdateRepository(settings, BuildConfig.VERSION_CODE, config.updateUrl) }
+
+    /** Arène des saisons (monde des séries). */
+    val seasonArena: SeasonArenaRepository by lazy { SeasonArenaRepository(database) }
 
     /** Comparer ses goûts entre amis (QR code). */
     val tasteShare: TasteShareRepository by lazy { TasteShareRepository(database, tmdb, kind.isSeries) }

@@ -47,7 +47,7 @@ import org.robolectric.annotation.Config
 
 /** « Ce soir », partage vers CineSwipe et sauvegarde automatique. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class TonightShareBackupTest {
 
     @get:Rule

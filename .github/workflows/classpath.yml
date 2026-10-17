@@ -27,7 +27,7 @@ env:
 jobs:
   publier:
     if: inputs.action == 'publier'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -84,7 +84,7 @@ jobs:
 
   nettoyer:
     if: inputs.action == 'nettoyer'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Supprimer la pré-version temporaire (et les anciennes « classpath-N »)

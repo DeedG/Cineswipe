@@ -39,7 +39,7 @@ import java.io.File
  * l'Arène, le résumé se copie et l'export JSON part dans le partage Android.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = SmokeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = SmokeApp::class)
 class DiagnosticsFlowTest {
 
     @get:Rule

@@ -82,6 +82,7 @@ import kotlin.math.roundToInt
 
 /** Repères pour les tests d'interface. */
 object ArenaTestTags {
+    const val SEASONS = "arena_seasons"
     const val FIGHTER_A = "arena-fighter-a"
     const val FIGHTER_B = "arena-fighter-b"
     const val DRAW = "arena-draw"
@@ -90,7 +91,7 @@ object ArenaTestTags {
 }
 
 @Composable
-fun ArenaRoute(onOpenCensus: () -> Unit) {
+fun ArenaRoute(onOpenCensus: () -> Unit, onOpenSeasons: (() -> Unit)? = null) {
     val viewModel = cineViewModel { ArenaViewModel(it.arena, it.library) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
@@ -139,6 +140,7 @@ fun ArenaRoute(onOpenCensus: () -> Unit) {
         onInfo = viewModel::showInfo,
         onEloInfo = { showEloInfo = true },
         onOpenCensus = onOpenCensus,
+        onOpenSeasons = onOpenSeasons,
         focusBanner = focusBanner,
         onStopFocus = viewModel::stopFocus,
     )
@@ -159,6 +161,7 @@ fun ArenaScreen(
     onInfo: (Long) -> Unit,
     onEloInfo: () -> Unit,
     onOpenCensus: () -> Unit,
+    onOpenSeasons: (() -> Unit)? = null,
     focusBanner: FocusBanner? = null,
     onStopFocus: () -> Unit = {},
 ) {
@@ -197,6 +200,7 @@ fun ArenaScreen(
                     onUndo = onUndo,
                     onSkip = onSkip,
                     onEloInfo = onEloInfo,
+                    onOpenSeasons = onOpenSeasons,
                 )
                 if (focusBanner != null) FocusBannerRow(focusBanner, onStop = onStopFocus)
                 Box(
@@ -304,6 +308,7 @@ private fun ArenaHeader(
     onUndo: () -> Unit,
     onSkip: () -> Unit,
     onEloInfo: () -> Unit,
+    onOpenSeasons: (() -> Unit)? = null,
 ) {
     Box(
         Modifier
@@ -352,6 +357,14 @@ private fun ArenaHeader(
             modifier = Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (onOpenSeasons != null) {
+                GlassIconButton(
+                    icon = CineIcons.Layers,
+                    contentDescription = stringResource(R.string.seasons_open),
+                    onClick = onOpenSeasons,
+                    modifier = Modifier.testTag(ArenaTestTags.SEASONS),
+                )
+            }
             GlassIconButton(icon = CineIcons.Skip, contentDescription = stringResource(R.string.arena_skip), onClick = onSkip)
             GlassIconButton(icon = CineIcons.Info, contentDescription = stringResource(R.string.arena_elo_info), onClick = onEloInfo)
         }

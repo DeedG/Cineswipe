@@ -82,28 +82,28 @@ class ScreenCaptureTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = "fr-w360dp-h640dp-xhdpi")
     fun smallPhone() = tour("1-petit-telephone-360x640")
 
     @Test
-    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    @Config(qualifiers = "fr-w412dp-h915dp-xxhdpi")
     fun pixel() = tour("2-pixel-412x915")
 
     @Test
-    @Config(qualifiers = "w791dp-h820dp-xhdpi")
+    @Config(qualifiers = "fr-w791dp-h820dp-xhdpi")
     fun foldOpen() = tour("3-pliant-ouvert-791x820")
 
     @Test
-    @Config(qualifiers = "w841dp-h701dp-land-xhdpi")
+    @Config(qualifiers = "fr-w841dp-h701dp-land-xhdpi")
     fun foldOpenLandscape() = tour("4-pliant-ouvert-paysage-841x701")
 
     @Test
-    @Config(qualifiers = "w360dp-h380dp-xhdpi")
+    @Config(qualifiers = "fr-w360dp-h380dp-xhdpi")
     fun flipCoverScreen() = tour("5-ecran-externe-clapet-360x380")
 
     /** Le monde des séries (pastille, violet, fiche en cours), sur un Pixel. */
     @Test
-    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    @Config(qualifiers = "fr-w412dp-h915dp-xxhdpi")
     fun seriesPixel() = seriesTour("6-series-pixel-412x915")
 
     private fun seriesTour(size: String) {

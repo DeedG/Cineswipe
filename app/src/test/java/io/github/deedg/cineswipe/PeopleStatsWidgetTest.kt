@@ -40,7 +40,7 @@ import org.robolectric.annotation.Config
 
 /** Fiches réalisateur et acteur, stats de goûts, données et liens des widgets. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class PeopleStatsWidgetTest {
 
     @get:Rule

@@ -89,6 +89,7 @@ import io.github.deedg.cineswipe.ui.recos.LightningRoute
 import io.github.deedg.cineswipe.ui.recos.RecosRoute
 import io.github.deedg.cineswipe.ui.retro.RetroRoute
 import io.github.deedg.cineswipe.ui.search.SearchRoute
+import io.github.deedg.cineswipe.ui.seasons.SeasonArenaRoute
 import io.github.deedg.cineswipe.ui.settings.DiagnosticsRoute
 import io.github.deedg.cineswipe.ui.settings.SettingsRoute
 import io.github.deedg.cineswipe.ui.settings.TmdbKeyRoute
@@ -405,7 +406,14 @@ private fun MainContent(
                                     )
                                 }
                                 entry<Route.Arena> {
-                                    ArenaRoute(onOpenCensus = openCensus)
+                                    ArenaRoute(
+                                        onOpenCensus = openCensus,
+                                        // Séries : l'Arène des saisons, à côté.
+                                        onOpenSeasons = if (container.kind.isSeries) ({ navigator.open(Route.SeasonArena) }) else null,
+                                    )
+                                }
+                                entry<Route.SeasonArena> {
+                                    SeasonArenaRoute(onBack = { navigator.back() })
                                 }
                                 entry<Route.Search> {
                                     SearchRoute(onOpenMovie = openMovie, onOpenSettings = openKeyGuide, onLightning = openLightning)

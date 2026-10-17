@@ -681,6 +681,18 @@
     <string name="update_banner_title">CineSwipe %1$s est disponible</string>
     <string name="update_banner_body">Touche pour télécharger la mise à jour.</string>
     <string name="update_dismiss">Plus tard</string>
+    <string name="seasons_open">Arène des saisons</string>
+    <string name="seasons_title">Arène des saisons</string>
+    <string name="seasons_intro">%1$d saisons vues, classées à part de tes séries. Touche ta préférée. Fiabilité : %2$d %%.</string>
+    <string name="seasons_badge">Saison %1$d</string>
+    <plurals name="seasons_episodes">
+        <item quantity="one">%d épisode</item>
+        <item quantity="many">%d épisodes</item>
+        <item quantity="other">%d épisodes</item>
+    </plurals>
+    <string name="seasons_ranking">Classement des saisons</string>
+    <string name="seasons_empty_title">Pas encore assez de saisons</string>
+    <string name="seasons_empty_message">Les saisons vues viennent de l’avancement de tes séries : toutes celles d’une série finie, celles d’avant la saison en cours. Marque quelques séries finies ou en cours (avec la saison) pour les faire s’affronter.</string>
     <string name="friends_open">Comparer avec un ami</string>
     <string name="friends_title">Entre amis</string>
     <string name="friends_intro">Chacun montre son QR code, l’autre le scanne : vos goûts sont comparés sur le téléphone, rien ne passe par Internet.</string>

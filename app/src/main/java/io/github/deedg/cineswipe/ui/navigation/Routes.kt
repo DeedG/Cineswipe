@@ -49,6 +49,9 @@ sealed interface Route : NavKey {
     /** Une liste perso et ses films. */
     @Serializable data class UserList(val id: Long) : Route
 
+    /** Arène des saisons (mode séries). */
+    @Serializable data object SeasonArena : Route
+
     /** Comparer ses goûts avec un ami (QR code) ; [code] : code reçu par un partage. */
     @Serializable data class Friends(val code: String? = null) : Route
 
@@ -86,7 +89,7 @@ val StartRoute: Route = Route.Recos
 val Route.tab: Tab
     get() = when (this) {
         Route.Recos, is Route.Lightning, Route.Tonight -> Tab.RECOS
-        Route.Arena -> Tab.ARENA
+        Route.Arena, Route.SeasonArena -> Tab.ARENA
         Route.Search, is Route.Shared -> Tab.SEARCH
         Route.Discover, Route.Census -> Tab.DISCOVER
         Route.Profile, is Route.Library, Route.DuelHistory, Route.Settings, Route.Homelab, is Route.HomelabServiceSettings,

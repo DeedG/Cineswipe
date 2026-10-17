@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 
 /** Listes perso : créées depuis la fiche d'un film, retrouvées dans le profil, modifiées. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class ListsFlowTest {
 
     @get:Rule

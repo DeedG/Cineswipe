@@ -42,7 +42,7 @@ import org.robolectric.annotation.Config
  * TMDB), IMDb fusionné avec une bibliothèque existante, et restauration d'une sauvegarde CineSwipe.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class ImportFlowTest {
 
     @get:Rule

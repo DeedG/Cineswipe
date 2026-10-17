@@ -28,6 +28,8 @@ import io.github.deedg.cineswipe.data.model.MediaKind
 @Database(
     entities = [
         MovieEntity::class,
+        SeasonRankEntity::class,
+        SeasonDuelEntity::class,
         UserMovieEntity::class,
         DuelEntity::class,
         OutboxEntity::class,
@@ -38,7 +40,7 @@ import io.github.deedg.cineswipe.data.model.MediaKind
         UserListEntity::class,
         UserListItemEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -48,6 +50,7 @@ import io.github.deedg.cineswipe.data.model.MediaKind
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
+        AutoMigration(from = 8, to = 9),
     ],
 )
 @TypeConverters(Converters::class)
@@ -63,6 +66,7 @@ abstract class CineSwipeDatabase : RoomDatabase() {
     abstract fun diagnosticsDao(): DiagnosticsDao
     abstract fun importDao(): ImportDao
     abstract fun listDao(): ListDao
+    abstract fun seasonArenaDao(): SeasonArenaDao
 
     /**
      * Passage au classement recalculé : la note de chaque film avant son premier duel du journal

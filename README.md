@@ -158,6 +158,8 @@ l'appli dans le monde des séries, en violet. Rien n'est partagé avec les films
   (au hasard, à la télé), décrochée. Au swipe, au recensement ou sur la fiche.
 - **Nouvelles saisons** : une notification quand une série vue a une nouvelle saison (sortie,
   ou annoncée dans le mois), avec « Remettre en cours » et « Demander la saison ».
+- **Arène des saisons** : les saisons que tu as vues s'affrontent entre elles et ont leur propre
+  classement, à part des séries (bouton en haut de l'Arène, en mode séries).
 - **Demandes saison par saison** à Seerr ou Sonarr : toute la série, ou quelques saisons.
 - **Plex et Jellyfin** savent où tu en es : une série commencée sur ton serveur passe « en cours »
   sur la bonne saison, une série terminée passe « finie ».
@@ -213,6 +215,7 @@ Tu peux mettre **ta propre clé TMDB** (Réglages › Clé API TMDB) : elle remp
 ## Téléphones compatibles
 
 - Tout téléphone Android 8.0+, en portrait. Icône à thème sur Android 13+.
+- En français, ou en anglais si le téléphone est en anglais.
 - **Pliants** : écran externe et écran intérieur. Sur un grand écran (pliant ouvert, tablette,
   multi-fenêtre), l'appli garde sa mise en page de téléphone, centrée.
 

@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 
 /** Rétro de l'année : ouverte depuis le profil, avec sa carte à partager et le top. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class RetroFlowTest {
 
     @get:Rule

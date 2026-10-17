@@ -1,5 +1,8 @@
 package io.github.deedg.cineswipe
 
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -17,6 +20,7 @@ import io.github.deedg.cineswipe.testing.TestCineSwipeApp
 import io.github.deedg.cineswipe.ui.friends.FriendsTestTags
 import io.github.deedg.cineswipe.ui.profile.ProfileTestTags
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -26,10 +30,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 
 /** Entre amis : mon QR code, puis la comparaison avec le code d'un ami (collé). */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class FriendsFlowTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -73,6 +79,15 @@ class FriendsFlowTest {
             compose.waitForTag(ProfileTestTags.FRIENDS)
             compose.onNodeWithTag(ProfileTestTags.FRIENDS).performScrollTo().performClick()
             compose.waitForTag(FriendsTestTags.QR)
+            // Le prénom tapé est enregistré (une fois la saisie finie).
+            compose.waitUntil(TIMEOUT_MS) { compose.onAllNodes(hasTestTag(FriendsTestTags.NAME) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag(FriendsTestTags.NAME).performTextInput("Alex")
+            compose.onNodeWithTag(FriendsTestTags.NAME).assertTextContains("Alex")
+            // L'enregistrement attend la fin de la saisie (400 ms) : l'horloge de Robolectric avance à la main.
+            compose.waitUntil(TIMEOUT_MS) {
+                ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
+                runBlocking { app.container.settings.tasteName.first() } == "Alex"
+            }
 
             compose.onNodeWithTag(FriendsTestTags.TAB_SCAN).performClick()
             compose.waitForTag(FriendsTestTags.PASTE)

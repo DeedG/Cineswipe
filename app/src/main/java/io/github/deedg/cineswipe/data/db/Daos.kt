@@ -1281,3 +1281,31 @@ abstract class ListDao {
         return lists.size
     }
 }
+
+/** Arène des saisons : leurs notes et leur journal de duels. */
+@Dao
+abstract class SeasonArenaDao {
+    @Query("SELECT * FROM season_rank")
+    abstract suspend fun ranks(): List<SeasonRankEntity>
+
+    @Query("SELECT * FROM season_rank")
+    abstract fun observeRanks(): Flow<List<SeasonRankEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertRanks(ranks: List<SeasonRankEntity>)
+
+    @Query("UPDATE season_rank SET rating = :rating, deviation = :deviation, confidence = :confidence, duels = :duels, updatedAt = :now WHERE `key` = :key")
+    abstract suspend fun updateRank(key: Long, rating: Double, deviation: Double, confidence: Double, duels: Int, now: Long)
+
+    @Query("SELECT * FROM season_duel ORDER BY id")
+    abstract suspend fun duels(): List<SeasonDuelEntity>
+
+    @Insert
+    abstract suspend fun insertDuel(duel: SeasonDuelEntity): Long
+
+    @Query("DELETE FROM season_duel WHERE id = :id")
+    abstract suspend fun deleteDuel(id: Long)
+
+    @Query("SELECT COUNT(*) FROM season_duel")
+    abstract fun observeDuelCount(): Flow<Int>
+}

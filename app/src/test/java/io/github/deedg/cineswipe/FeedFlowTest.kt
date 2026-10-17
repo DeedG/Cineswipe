@@ -40,7 +40,7 @@ import org.robolectric.annotation.Config
  * pourquoi elles proposent un film et qu'elles apprennent des actions.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class FeedFlowTest {
 
     @get:Rule

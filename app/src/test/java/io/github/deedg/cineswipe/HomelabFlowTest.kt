@@ -56,7 +56,7 @@ import java.time.Instant
  * des disponibilités, demande depuis une carte puis annulation, et écrans de réglages.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class HomelabFlowTest {
 
     @get:Rule

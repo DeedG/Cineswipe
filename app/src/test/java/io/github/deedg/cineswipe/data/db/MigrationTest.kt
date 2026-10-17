@@ -274,6 +274,24 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun version8BecomesVersion9WithTheSeasonArena() = runBlocking {
+        createVersion(8) { db -> userMovie(db, 1396, 1600.0, 4) }
+
+        val database = Room.databaseBuilder(context, CineSwipeDatabase::class.java, NAME)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            // Le classement des séries est intact ; l'Arène des saisons part de zéro.
+            assertEquals(1600.0, database.userMovieDao().get(1396)!!.rating, 0.0)
+            assertTrue(database.seasonArenaDao().ranks().isEmpty())
+            database.seasonArenaDao().insertRanks(listOf(SeasonRankEntity(SeasonRankEntity.key(1396, 4), 1396, 4)))
+            assertEquals(1396004L, database.seasonArenaDao().ranks().single().key)
+        } finally {
+            database.close()
+        }
+    }
+
     private fun userMovie(db: SQLiteDatabase, id: Long, rating: Double, duels: Int) {
         db.execSQL(
             "INSERT INTO user_movie (tmdbId, status, rating, duels, availability, shownCount, updatedAt) VALUES (?, 'WATCHED', ?, ?, 'NONE', 0, 0)",

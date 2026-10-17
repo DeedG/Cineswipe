@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TV mode: variants of the texts that talk about movies. A "name_series" string replaces
+  "name" in the TV world (SeriesResources); the other texts stay the same.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources">
+    <!-- Arena -->
+    <string name="arena_not_enough_title_series">Not enough shows to fight</string>
+    <string name="arena_not_enough_message_series">You need at least two shows you’ve seen. The catch-up finds them in a few taps.</string>
+    <string name="elo_info_body_series">Every duel counts. After each vote, CineSwipe recomputes your whole ranking from all your duels (Bradley-Terry model, a cousin of chess Elo): the order of matches no longer matters, and a win against a highly ranked show weighs more.</string>
+    <string name="elo_info_matches_series">Matches are chosen to learn as fast as possible: a new show faces well-placed shows of similar level, like a binary search.</string>
+    <string name="elo_info_buttons_series">“Tie” if you can’t pick between the two shows, “Skip” if you don’t remember one of them.</string>
+    <string name="elo_info_provisional_series">Faded stars are provisional: the show hasn’t fought enough yet (three or four duels are usually enough).</string>
+    <string name="elo_info_reliability_series" formatted="false">Reliability: the average probability that your shows’ stars are right to within half a star. It goes up with every duel; around 90 %, your ranking is solid.</string>
+    <string name="duels_unknown_film_series">Unknown show</string>
+
+    <!-- Picks, cards and gestures -->
+    <string name="feed_loading_more_series">Looking at new shows…</string>
+    <string name="toast_dismissed_series">You won’t be offered this show again</string>
+    <string name="toast_already_watched_series">You’ve already seen this show</string>
+    <string name="card_lightning_series">Picks based on this show</string>
+    <string name="recos_loading_series">Finding shows for you…</string>
+    <string name="recos_empty_message_series">Every show found is already seen, dismissed or shown recently. Rank more shows in the Arena, or come back later.</string>
+    <string name="reason_director_series">A show by %1$s</string>
+    <string name="lightning_loading_series">Finding similar shows…</string>
+    <string name="lightning_empty_message_series">TMDB has no other show to suggest from this one.</string>
+    <string name="badge_watched_series">Seen</string>
+    <string name="badge_requested_series">Requested</string>
+    <string name="directed_by_series">Created by %1$s</string>
+    <string name="swipe_watched_series">Seen</string>
+    <string name="swipe_already_watched_series">Already seen</string>
+    <string name="toast_marked_watched_series">Marked as seen</string>
+    <string name="toast_unwatched_series">Removed from seen</string>
+
+    <!-- Search, discover -->
+    <string name="search_hint_series">Show, actor, creator…</string>
+    <string name="search_intro_series">Look up any show on TMDB, then swipe: left if you’ve seen it, right for your watchlist. Type a name to find an actor’s or creator’s shows.</string>
+    <string name="search_empty_message_series">No show matches “%1$s”.</string>
+    <string name="discover_loading_series">Finding shows…</string>
+    <string name="discover_empty_title_series">No show found</string>
+    <string name="discover_empty_message_series">No unseen show matches these filters.</string>
+    <string name="discover_census_message_series">Find every show you’ve seen, in a few taps.</string>
+    <string name="discover_tonight_message_series">What to watch from your shows to watch</string>
+    <string name="discover_length_series">Episode length</string>
+    <string name="tonight_length_short_series">≤ 30 min</string>
+    <string name="tonight_length_medium_series">≤ 50 min</string>
+    <string name="discover_length_long_series">Over 50 min</string>
+
+    <!-- Library, profile -->
+    <string name="library_empty_message_series">Find the shows you’ve seen with the catch-up: they land here, ready to fight in the Arena.</string>
+    <string name="library_no_result_series">No show matches.</string>
+    <string name="library_filter_watched_series">Seen</string>
+    <string name="library_section_unranked_series">Unranked</string>
+    <string name="profile_stat_watched_series">Shows seen</string>
+    <string name="profile_hall_of_fame_empty_series">Fight in the Arena to rank your shows!</string>
+    <plurals name="library_count_series">
+        <item quantity="one">%1$d show</item>
+        <item quantity="other">%1$d shows</item>
+    </plurals>
+
+    <!-- Details -->
+    <string name="detail_undismissed_series">This show may be suggested to you again</string>
+    <string name="detail_lightning_series">Picks based on this show</string>
+    <string name="detail_unwatch_title_series">Remove this show from seen?</string>
+    <string name="detail_not_found_series">Show not found.</string>
+    <string name="detail_mark_watched_series">Mark as seen</string>
+    <string name="detail_unmark_watched_series">Remove from seen</string>
+    <string name="detail_marked_watched_series">Marked as seen</string>
+    <string name="detail_unmarked_watched_series">Removed from seen</string>
+
+    <!-- Catch-up -->
+    <string name="census_cta_series">Find the shows I’ve seen</string>
+    <string name="census_refresh_series">Look for more shows</string>
+    <string name="census_empty_message_series">Change the filter, or come back later: the catalog grows with the shows you’ve seen.</string>
+    <string name="census_filter_french_series">French shows</string>
+    <string name="census_help_grid_series">Tap the posters of shows you’ve seen. 1st tap: finished. 2nd: in progress. 3rd: random episodes (watched here and there, on TV for example). 4th: dropped. 5th: cleared.</string>
+    <string name="census_help_menu_series">Long press: pick the progress directly, watchlist, not for me, or the show’s details.</string>
+    <string name="census_help_next_series">“Next”: shows without an answer become “not seen”. They leave the catch-up, and it never counts against them in the picks.</string>
+    <string name="census_help_order_series">Shows you’re most likely to have seen come first, and the order learns from your answers.</string>
+    <string name="census_help_impression_series">Progress is saved right away, no need to open the details. The current season is optional: you can set it later on the details page, or leave it at “I don’t remember”.</string>
+    <string name="census_help_cards_series">In cards, like the picks: swipe left if you’ve seen it, right to add it to your watchlist, up if you haven’t seen it.</string>
+    <string name="census_progress_of_series">%1$s / %2$s reviewed · %3$s seen</string>
+    <string name="census_progress_series">%1$s reviewed · %2$s seen</string>
+    <string name="census_cell_tap_series">Finished, in progress, random episodes, dropped</string>
+    <string name="census_choice_none_series">Not seen</string>
+    <string name="census_choice_seen_series">Seen</string>
+    <plurals name="census_page_done_series">
+        <item quantity="one">%1$d show reviewed · seen: %2$d</item>
+        <item quantity="other">%1$d shows reviewed · seen: %2$d</item>
+    </plurals>
+
+    <!-- Settings: data -->
+    <string name="settings_data_body_series">For a fresh start: restart just the TV ranking, or erase everything and rebuild your seen shows with the picks.</string>
+    <string name="settings_data_ranking_message_series">Your seen shows stay, but their duels and Elo are erased: the TV Arena starts from scratch.</string>
+    <string name="settings_data_everything_message_series">Seen shows, watchlist, dismissed shows and the TV ranking are erased. Your movies, TMDB key and settings stay.</string>
+
+    <!-- Homelab -->
+    <string name="homelab_media_body_series">Shows started or finished (progress is picked up automatically) and available shows, from Jellyfin, Plex or both.</string>
+    <string name="homelab_requests_body_series">Right swipe on a card = request the show, from Seerr or Sonarr (all seasons).</string>
+    <string name="homelab_intro_series">Connect CineSwipe to your server: shows watched on Jellyfin or Plex land in your library with the season you’re at, and a right swipe requests the show from Seerr or Sonarr. Each service has its own address, port included.</string>
+    <string name="settings_homelab_body_series">Jellyfin, Plex, Seerr and Sonarr: shows seen and where you’re at, available shows and requests straight from the cards.</string>
+    <string name="homelab_notify_title_series">After a show watched on the server</string>
+    <string name="homelab_notify_body_series">A notification offers to place the show in your ranking (3 duels in the Arena) when you start or finish it. The sync runs every 6 h.</string>
+    <string name="homelab_sync_watched_series">Seen on your servers: %1$d (%2$d new)</string>
+
+    <!-- Tonight -->
+    <string name="tonight_none_with_filters_series">No show with these filters.</string>
+    <string name="tonight_empty_message_series">Add shows to your watchlist from the picks (swipe right), or mark one as “in progress” on its details page: they’ll show up here, sorted by your tastes.</string>
+    <string name="tonight_seen_series">Already seen</string>
+    <string name="tonight_marked_watched_series">“%1$s” added to seen</string>
+
+    <!-- People -->
+    <string name="person_needs_key_series">Add your TMDB key to see their shows.</string>
+    <string name="person_failed_series">Couldn’t load their shows. Check your connection.</string>
+    <string name="person_seen_series">You’ve seen %1$d of their %2$d shows</string>
+    <string name="person_no_films_series">No shows.</string>
+
+    <!-- Stats -->
+    <string name="stats_empty_title_series">Not enough shows yet</string>
+    <string name="stats_empty_message_series">Mark at least %1$d shows as seen and play a few duels to see your tastes.</string>
+    <string name="stats_tile_watched_series">shows seen</string>
+    <string name="stats_tile_directors_series">different creators</string>
+    <string name="stats_directors_series">Creators</string>
+    <string name="stats_headline_decade_series">Your decade: the %1$s (%2$d shows seen)</string>
+    <string name="stats_headline_director_series">Your most-watched creator: %1$s (%2$d shows)</string>
+    <string name="stats_genres_hint_series">Average stars of your seen shows, by genre.</string>
+    <string name="stats_people_hint_series">Those you’ve seen at least 2 or 3 shows by, best ranked first. Tap a name to see their shows.</string>
+    <string name="stats_decades_hint_series">Shows seen by decade (first aired); in bright color, your favorite.</string>
+    <string name="stats_themes_hint_series">TMDB keywords of the shows you rank highest.</string>
+    <string name="stats_footer_series">Stars come from your Arena ranking (rank among your seen shows); they get sharper with every duel.</string>
+    <string name="stats_intro_series">What your Arena ranking says about you. The averages are cautious: a genre or creator seen only a few times stays close to your average.</string>
+    <plurals name="stats_films_series">
+        <item quantity="one">%d show</item>
+        <item quantity="other">%d shows</item>
+    </plurals>
+    <plurals name="stats_films_seen_series">
+        <item quantity="one">%d show seen</item>
+        <item quantity="other">%d shows seen</item>
+    </plurals>
+
+    <!-- Lists -->
+    <string name="lists_name_hint_series">E.g.: Shows to binge</string>
+    <string name="lists_delete_confirm_series">Delete “%1$s”? The shows stay in your library.</string>
+    <string name="lists_shelf_empty_series">Sort your shows into your own lists (“To binge”, “To show someone”…), from a show’s details.</string>
+    <string name="lists_empty_series">Empty list. Add shows from their details, with “Add to a list”.</string>
+    <plurals name="lists_count_series">
+        <item quantity="one">%d show</item>
+        <item quantity="other">%d shows</item>
+    </plurals>
+
+    <!-- Year in review -->
+    <string name="retro_card_title_series">My year in TV</string>
+    <string name="retro_films_label_series">shows</string>
+    <string name="retro_film_label_series">show</string>
+    <string name="retro_months_series">Shows per month</string>
+    <string name="retro_first_series">First show of the year</string>
+    <string name="retro_empty_series">No show seen in %1$d yet. Shows you mark as seen during the year will show up here.</string>
+    <string name="retro_no_data_series">Nothing to review yet: mark shows as seen, your review builds up over the year.</string>
+    <plurals name="retro_backfill_series">
+        <item quantity="one">+ %d show found this year (catch-up, import): not counted here, since there’s no watch date.</item>
+        <item quantity="other">+ %d shows found this year (catch-up, imports): not counted here, since there’s no watch date.</item>
+    </plurals>
+    <plurals name="retro_director_films_series">
+        <item quantity="one">%1$s · %2$d show</item>
+        <item quantity="other">%1$s · %2$d shows</item>
+    </plurals>
+    <plurals name="retro_month_films_series">
+        <item quantity="one">%1$s · %2$d show</item>
+        <item quantity="other">%1$s · %2$d shows</item>
+    </plurals>
+
+    <!-- TV mode welcome (first arrival) and TV demo -->
+    <string name="welcome_tagline_series">TV mode: the shows you’ve seen, where you’re at, picks that feel like you and a ranking built from duels. A world of its own, your movies don’t change a thing.</string>
+    <string name="welcome_recos_body_series">Swipe left if you’ve seen the show, right to keep it for later (or request it from Seerr or Sonarr, the whole show or a few seasons).</string>
+    <string name="welcome_arena_body_series">Two shows, you pick your favorite: your TV ranking computes itself, apart from your movies.</string>
+    <string name="welcome_census_body_series">Find the shows you’ve seen in a few taps, and say where you’re at: finished, in progress, random episodes or dropped.</string>
+    <string name="welcome_demo_note_series">A step-by-step tour, in a demo with the 100 most-watched shows and a fake profile that has already seen about twenty. Nothing is saved, and you’ll find it again in the settings.</string>
+    <string name="settings_demo_body_series">You’re exploring TV mode with the 100 most-watched shows and a fake profile. Nothing is saved: when you leave, your real data is back.</string>
+    <string name="tuto_intro_title_series">Welcome to the TV demo</string>
+    <string name="tuto_intro_body_series">In two minutes, we’ll tour TV mode with a fake profile that has already seen about twenty shows (some finished, others in progress or dropped) and a fake Seerr. Try anything you like: nothing is saved.</string>
+    <string name="tuto_reco_body_series">One card = one show chosen for you. The purple line under the poster says why: a show you liked, a creator, a great classic… The number of seasons and the episode length are under the title.</string>
+    <string name="tuto_watched_body_series">The show joins your seen shows (its details page then lets you say where you’re at: finished, in progress with the season, random episodes or dropped). Drag the card to the left.</string>
+    <string name="tuto_watchlist_body_series">It joins your watchlist. With Seerr or Sonarr, you then choose to request the whole show or only a few seasons, or just keep it on your watchlist.</string>
+    <string name="tuto_skip_body_series">The show goes by without changing anything. It may come back later, if your tastes change.</string>
+    <string name="tuto_actions_body_series">“Not for me” dismisses the show for good, “Trailer” opens the trailer on YouTube, and ⚡ chains picks from this show. Tap the poster to open the details: seasons, progress, current season.</string>
+    <string name="tuto_arena_body_series">Two shows you’ve seen face off. Tap the one you prefer.</string>
+    <string name="tuto_census_open_body_series">The catch-up scrolls through the shows you’re most likely to have seen. Open it.</string>
+    <string name="tuto_census_tap_body_series">One tap: finished. Two: in progress. Three: random episodes (watched here and there, on TV). Four: dropped. A long press also offers “watchlist” or the show’s details.</string>
+    <string name="tuto_census_next_body_series">“Next” saves the page. Shows without an answer become “not seen”, with no effect on your picks. Those put on your watchlist offer their request, season by season.</string>
+    <string name="tuto_census_mode_body_series">This button switches to cards, with the same gestures as the picks. The filters at the top target a period or French shows.</string>
+    <string name="tuto_search_body_series">Type a title: results come as cards, with the same gestures as the picks. Type a name: actors and creators show up, with all their shows. In the demo, it covers the sandbox’s 100 shows.</string>
+    <string name="tuto_profile_body_series">Your counters open your TV library (“In progress” filter, and swipe from one details page to the next) or the duel history. Further down: your tastes in numbers, your year in review, your own lists and your Hall of Fame.</string>
+    <string name="tuto_settings_body_series">The Movies | TV switch, your TMDB key (the same for both), your homelab (Plex, Jellyfin to know where you’re at; Seerr or Sonarr for requests) and the backup of your data.</string>
+    <string name="tuto_end_body_series">Keep exploring the demo freely, or leave it to get back to your shows. “Tour”, in the banner, restarts the tour. Outside the demo, the Movies | TV switch at the top of the screens takes you back to movies.</string>
+
+    <!-- Texts that talked about movies (found in the TV demo) -->
+    <string name="tuto_watched_title_series">Seen it? Swipe left</string>
+    <string name="tuto_census_open_title_series">Find the shows you’ve seen</string>
+    <string name="tuto_census_tap_title_series">Tap the ones you’ve seen</string>
+    <plurals name="census_next_unseen_series">
+        <item quantity="one">Next · %d not seen</item>
+        <item quantity="other">Next · %d not seen</item>
+    </plurals>
+    <plurals name="lists_seen_series">
+        <item quantity="one">%d seen</item>
+        <item quantity="other">%d seen</item>
+    </plurals>
+    <string name="discover_only_available_series">Only shows on my server</string>
+    <string name="discover_empty_available_series">No show on your server matches these filters.</string>
+    <string name="service_key_hint_plex_series">Plex Web: on a show, ⋯ → Get Info → View XML. The token is at the end of the address, after X-Plex-Token=</string>
+    <string name="service_jellyfin_user_series">User whose seen shows are read</string>
+    <string name="service_plex_sections_series">TV libraries</string>
+    <string name="service_plex_sections_hint_series">No selection = all TV libraries.</string>
+    <string name="service_clear_message_series">The address and the key are deleted from the phone. Your shows and ranking stay as they are.</string>
+    <string name="settings_data_export_body_series">All your shows, duels and answers in a JSON file: to back them up, or to have them analyzed.</string>
+    <string name="diagnostics_intro_series">Temporary tools to check the Arena, the picks and the TV catch-up. The JSON export contains all your shows, duels and answers.</string>
+    <string name="diagnostics_films_series">Ranked shows</string>
+    <string name="diagnostics_universe_series">Notable shows</string>
+    <string name="diagnostics_directors_series">Creators</string>
+    <string name="diagnostics_source_people_series">Creators, actors</string>
+    <string name="tonight_empty_message_server_series">No show on your watchlist, no unseen show on your server. Swipe right in the picks to fill your list.</string>
+    <string name="tonight_not_on_server_series">Show not found on %1$s</string>
+    <string name="watch_cant_open_series">Couldn’t open the show in %1$s: check its address in the Homelab settings.</string>
+    <string name="person_role_directed_series">Created</string>
+    <string name="person_role_directed_short_series">Creates</string>
+    <string name="person_known_directing_series">Creating</string>
+    <string name="stats_tile_hours_series">hours of TV, that’s %1$d days</string>
+    <string name="retro_hours_label_series">h of TV</string>
+    <string name="retro_best_month_series">Busiest TV month</string>
+    <string name="demo_watch_series">In the demo, the show would open here in %1$s.</string>
+
+    <!-- Weak picks: invite to the catch-up or duels -->
+    <plurals name="reco_nudge_census_body_series">
+        <item quantity="one">Only %d show seen: find the ones you’ve already seen in a few taps, and the picks will be much more accurate.</item>
+        <item quantity="other">Only %d shows seen: find the ones you’ve already seen in a few taps, and the picks will be much more accurate.</item>
+    </plurals>
+
+    <!-- Import in TV mode -->
+    <string name="settings_data_import_series">Import or restore shows</string>
+    <string name="settings_data_import_body_series">Your seen shows, their progress, your ratings and watchlist from a CineSwipe TV backup, Trakt, IMDb or a CSV file.</string>
+    <string name="import_intro_series">Bring over your seen shows, watchlist and ratings from a CineSwipe backup, Trakt or IMDb. A CineSwipe backup on an empty library is restored in full (progress, duels, ranking); the rest is merged without erasing anything. With Trakt, progress is picked up: finished, or in progress with the season.</string>
+    <string name="import_how_cineswipe_body_series">In TV mode: Settings › My data › Export my data (cineswipe-series-….json file). On a new phone, the backup is restored in full, duels and ranking included.</string>
+    <string name="import_failed_unreadable_series">These files weren’t recognized. Choose the export of one of the apps below (ZIP, CSV or JSON).</string>
+    <string name="import_failed_wrong_world_series">This is a movies backup: switch back to movie mode (the Movies | TV switch) to restore it.</string>
+    <string name="import_done_restored_series">Backup restored: %1$d shows seen, %2$d duels.</string>
+    <string name="import_count_watched_series">Shows seen</string>
+    <string name="import_merge_note_series">Your library isn’t empty: the backup will be merged (seen shows, progress and watchlist), without its duels.</string>
+    <string name="import_see_library_series">See my shows</string>
+    <string name="import_done_added_watched_series">Added to seen</string>
+    <plurals name="import_start_series">
+        <item quantity="one">Import %d show</item>
+        <item quantity="other">Import %d shows</item>
+    </plurals>
+    <string name="import_running_body_series">Looking up the shows on TMDB: %1$d of %2$d. You can leave this screen, the import keeps going.</string>
+
+    <!-- Tonight in TV mode -->
+    <string name="tonight_intro_series">Your shows in progress first, to pick up where you left off, then what you have at hand, from most to least likely to please you.</string>
+
+    <!-- Widgets in TV mode -->
+    <string name="widget_tonight_empty_series">Nothing at hand: add shows to your watchlist.</string>
+    <string name="widget_top_empty_series">Rank your shows in the Arena to see your top here.</string>
+    <string name="widget_stat_watched_series">shows seen</string>
+    <string name="widget_stat_hours_series">hours of TV</string>
+    <string name="widget_stat_director_series">favorite creator</string>
+    <string name="widget_config_source_series">Which shows</string>
+    <string name="widget_config_count_series">Number of shows</string>
+    <string name="widget_tonight_hint_series">The widget shows your shows in progress first, then the show most likely to please you; “Next” moves to the next one. It updates several times a day.</string>
+    <string name="import_how_trakt_body_series">On trakt.tv: Settings › Data › Export. Pick the ZIP archive (or the watched-shows, ratings-shows and watchlist files). Progress comes from the episodes watched.</string>
+    <string name="import_how_imdb_body_series">On imdb.com: “Your ratings” page (or your Watchlist) › ⋮ menu › Export. Rated series and mini-series become seen, those on the watchlist go to your watchlist.</string>
+    <string name="import_failed_empty_series">No shows in these files (in TV mode, only shows are read: import movies in movie mode).</string>
+
+    <!-- Between friends, in TV mode -->
+    <string name="friends_code_hint_series">Your code holds your favorite shows, your least liked, the most watched and your watchlist, with your stars. No account, no server.</string>
+    <string name="friends_error_world_series">This is a movies code: switch back to movie mode to compare.</string>
+    <string name="friends_score_unknown_series">Too few shows in common to compare you: rank a few more in the Arena.</string>
+    <string name="friends_common_series">%1$d shows seen by both of you</string>
+    <string name="friends_verdict_twins_series">TV twins</string>
+    <string name="friends_share_text_series">Compare your TV tastes with mine in CineSwipe: TV mode › Profile › Compare with a friend › Scan, then paste this code (or share it straight to CineSwipe).</string>
+</resources>

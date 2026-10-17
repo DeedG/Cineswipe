@@ -49,8 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -93,6 +93,8 @@ import io.github.deedg.cineswipe.ui.components.SectionCard
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -122,6 +124,8 @@ enum class FriendsError { INVALID, OTHER_WORLD }
 data class FriendsState(
     val tab: FriendsTab = FriendsTab.CODE,
     val name: String = "",
+    /** Le prénom enregistré est lu (le champ part de lui, une seule fois). */
+    val nameLoaded: Boolean = false,
     val code: String? = null,
     val comparing: Boolean = false,
     val result: FriendMatch? = null,
@@ -140,7 +144,7 @@ class FriendsViewModel(
     init {
         viewModelScope.launch {
             val name = settings.tasteName.first()
-            mutableState.update { it.copy(name = name) }
+            mutableState.update { it.copy(name = name, nameLoaded = true) }
             refreshCode(name)
         }
         // Code reçu par un partage (message, mail) : comparaison tout de suite.
@@ -149,11 +153,17 @@ class FriendsViewModel(
 
     fun setTab(tab: FriendsTab) = mutableState.update { it.copy(tab = tab, error = null) }
 
+    private var nameJob: Job? = null
+
+    /** Prénom tapé : enregistré, et le QR code refait une fois la saisie finie. */
     fun setName(name: String) {
-        mutableState.update { it.copy(name = name.take(24)) }
-        viewModelScope.launch {
-            settings.setTasteName(name)
-            refreshCode(name)
+        val trimmed = name.take(24)
+        mutableState.update { it.copy(name = trimmed) }
+        nameJob?.cancel()
+        nameJob = viewModelScope.launch {
+            delay(NAME_DEBOUNCE_MS)
+            settings.setTasteName(trimmed)
+            refreshCode(trimmed)
         }
     }
 
@@ -189,6 +199,10 @@ class FriendsViewModel(
     }
 
     fun closeResult() = mutableState.update { it.copy(result = null, error = null) }
+
+    private companion object {
+        const val NAME_DEBOUNCE_MS = 400L
+    }
 }
 
 /**
@@ -257,12 +271,16 @@ fun FriendsScreen(
 @Composable
 private fun MyCode(state: FriendsState, onName: (String) -> Unit) {
     val context = LocalContext.current
-    var name by rememberSaveable(state.name.isEmpty()) { mutableStateOf(state.name) }
+    // Le champ part du prénom enregistré (lu une fois), puis garde ce qui est tapé.
+    var typed by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.nameLoaded) { if (typed == null && state.nameLoaded) typed = state.name }
     OutlinedTextField(
-        value = name,
+        value = typed.orEmpty(),
+        enabled = typed != null,
         onValueChange = {
-            name = it.take(24)
-            onName(name)
+            val value = it.take(24)
+            typed = value
+            onName(value)
         },
         modifier = Modifier.fillMaxWidth().testTag(FriendsTestTags.NAME),
         singleLine = true,

@@ -22,7 +22,7 @@ object TmdbMapper {
     const val DETAILS_VERSION = 2
 
     /** Version des fiches de séries : 4 = durée d'un épisode (finals courts acceptés, 0.1.65). */
-    const val SERIES_DETAILS_VERSION = 4
+    const val SERIES_DETAILS_VERSION = 5
 
     /** Première version dont les fiches ont mots-clés et personnes (profil de goût). */
     const val TASTE_DETAILS_VERSION = 1
@@ -158,7 +158,7 @@ object TmdbMapper {
             .filter { it.number > 0 && (it.episodeCount ?: 0) > 0 }
             .distinctBy { it.number }
             .sortedBy { it.number }
-            .map { TvSeason(number = it.number, name = cleanText(it.name), episodeCount = it.episodeCount, year = year(it.airDate)) }
+            .map { TvSeason(number = it.number, name = cleanText(it.name), episodeCount = it.episodeCount, year = year(it.airDate), poster = imagePath(it.posterPath)) }
             .toList()
 
     /**

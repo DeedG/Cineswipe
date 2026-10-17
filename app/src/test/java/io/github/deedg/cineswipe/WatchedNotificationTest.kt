@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 
 /** Après un film vu sur Plex ou Jellyfin : une notification, qui ouvre l'Arène sur ce film. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class WatchedNotificationTest {
 
     @get:Rule

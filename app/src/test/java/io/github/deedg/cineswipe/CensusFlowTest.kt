@@ -35,7 +35,7 @@ import org.robolectric.annotation.Config
  * suite d'un film vu qui arrive par sa saga, puis le mode cartes.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = TestCineSwipeApp::class)
 class CensusFlowTest {
 
     @get:Rule

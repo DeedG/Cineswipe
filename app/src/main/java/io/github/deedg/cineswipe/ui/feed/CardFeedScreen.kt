@@ -200,7 +200,7 @@ fun CardFeedScreen(
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                GlassPillButton(text = stringResource(R.string.action_cancel), icon = CineIcons.Undo, onClick = onUndo)
+                GlassPillButton(text = stringResource(R.string.arena_undo), icon = CineIcons.Undo, onClick = onUndo)
             }
         }
         if (banner != null && (state.phase == FeedPhase.READY || state.phase == FeedPhase.EMPTY)) {

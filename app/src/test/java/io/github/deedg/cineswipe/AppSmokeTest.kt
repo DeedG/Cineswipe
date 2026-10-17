@@ -45,7 +45,7 @@ class SmokeApp : CineSwipeApp() {
  * aucun appel réseau ne part.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = SmokeApp::class)
+@Config(sdk = [30], qualifiers = "fr-w412dp-h915dp-xxhdpi", application = SmokeApp::class)
 class AppSmokeTest {
 
     @get:Rule
