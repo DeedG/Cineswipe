@@ -6,11 +6,12 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-private val CineColorScheme = darkColorScheme(
+private fun cineColorScheme() = darkColorScheme(
     primary = CineColors.Red,
     onPrimary = Color.White,
     primaryContainer = CineColors.RedDeep,
@@ -57,11 +58,13 @@ private val CineShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp),
 )
 
-/** Thème sombre unique, sans couleurs dynamiques : la DA rouge et noire prime. */
+/** Thème sombre unique, sans couleurs dynamiques : la DA noire, rouge pour les films et violette pour les séries, prime. */
 @Composable
 fun CineSwipeTheme(content: @Composable () -> Unit) {
+    val accent = CineAccent.current
+    val colorScheme = remember(accent) { cineColorScheme() }
     MaterialTheme(
-        colorScheme = CineColorScheme,
+        colorScheme = colorScheme,
         typography = CineTypography,
         shapes = CineShapes,
         content = content,

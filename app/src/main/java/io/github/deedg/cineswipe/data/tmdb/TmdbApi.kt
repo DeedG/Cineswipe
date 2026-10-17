@@ -134,6 +134,13 @@ interface TmdbApi {
         @Tag auth: TmdbAuth,
     ): TmdbWatchProvidersDto
 
+    /** Identifiants externes (IMDb, TVDB pour une série). */
+    @GET("movie/{id}/external_ids")
+    suspend fun externalIds(
+        @Path("id") id: Long,
+        @Tag auth: TmdbAuth,
+    ): TmdbExternalIdsDto
+
     /** Film d'après un identifiant externe (IMDb « tt… »). */
     @GET("find/{id}")
     suspend fun find(

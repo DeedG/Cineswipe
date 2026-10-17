@@ -30,6 +30,8 @@ android {
         applicationId = "io.github.deedg.cineswipe"
         minSdk = 26
         targetSdk = 36
+        // Clé TMDB intégrée (secret TMDB_BUILTIN_KEY de la CI) : sans elle, chacun met la sienne.
+        buildConfigField("String", "TMDB_BUILTIN_KEY", "\"${System.getenv("TMDB_BUILTIN_KEY").orEmpty().filter { it.isLetterOrDigit() }}\"")
         versionCode = ciVersionCode
         versionName = "0.1.$ciVersionCode"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -117,6 +119,10 @@ dependencies {
     implementation(libs.okhttp.client)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.glance.appwidget)
+    implementation(libs.zxing.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

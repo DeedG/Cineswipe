@@ -1,32 +1,38 @@
 # CineSwipe
 
-**Tes films vus, ton classement à toi, et quoi regarder ce soir. Avec ton homelab si tu en as un.**
+**Tes films et séries vus, ton classement à toi, et quoi regarder ce soir. Avec ton homelab si tu en as un.**
 
-CineSwipe est une appli Android pour retrouver tous les films que tu as vus, les classer en
-duels (« celui-ci ou celui-là ? ») jusqu'à obtenir un vrai classement personnel, et découvrir
-des films faits pour toi. Avec un homelab (Plex ou Jellyfin, Seerr ou Radarr), elle sait ce qui
-est déjà sur ton serveur, demande un film d'un simple swipe et repère les films que tu viens de
-regarder.
+CineSwipe est une appli Android pour retrouver tout ce que tu as vu, le classer en duels
+(« celui-ci ou celui-là ? ») jusqu'à obtenir un vrai classement personnel, et découvrir des films
+et des séries faits pour toi. Films et séries vivent dans deux mondes séparés, chacun avec ses
+recos, son Arène et sa bibliothèque ; pour les séries, tu sais toujours où tu en es.
 
 Tout reste sur le téléphone : pas de compte, pas de serveur CineSwipe, pas de publicité ni de
-statistiques d'usage. Une clé TMDB gratuite suffit.
+statistiques d'usage. Rien à configurer : installe, et c'est parti.
 
 <p align="center">
-  <img src="docs/captures/recos.png" width="19%" alt="Recos" />
-  <img src="docs/captures/arene.png" width="19%" alt="Arène" />
-  <img src="docs/captures/recensement.png" width="19%" alt="Recensement" />
-  <img src="docs/captures/retro.png" width="19%" alt="Rétro de l'année" />
-  <img src="docs/captures/fiche.png" width="19%" alt="Fiche d'un film" />
+  <a href="https://github.com/DeedG/Cineswipe/releases/latest"><b>⬇ Télécharger la dernière version (APK)</b></a>
+</p>
+
+<p align="center">
+  <img src="docs/captures/recos.png" width="16%" alt="Recos de films" />
+  <img src="docs/captures/recos-series.png" width="16%" alt="Recos de séries" />
+  <img src="docs/captures/arene.png" width="16%" alt="Arène" />
+  <img src="docs/captures/recensement.png" width="16%" alt="Recensement" />
+  <img src="docs/captures/profil-series.png" width="16%" alt="Profil, mode séries" />
+  <img src="docs/captures/retro.png" width="16%" alt="Rétro de l'année" />
 </p>
 
 ---
 
 ## Sommaire
 
+- [Installer](#installer)
 - [L'idée](#lidée)
 - [Fonctionnalités](#fonctionnalités)
+- [Mode séries](#mode-séries)
+- [Entre amis](#entre-amis)
 - [Avec un homelab](#avec-un-homelab)
-- [Installer](#installer)
 - [Premiers pas](#premiers-pas)
 - [Données et vie privée](#données-et-vie-privée)
 - [Téléphones compatibles](#téléphones-compatibles)
@@ -34,109 +40,135 @@ statistiques d'usage. Une clé TMDB gratuite suffit.
 - [Licence](#licence)
 - [Crédits](#crédits)
 
+## Installer
+
+CineSwipe se télécharge ici, sur GitHub (pas de Play Store) :
+
+1. Sur le téléphone, ouvre la [dernière version](https://github.com/DeedG/Cineswipe/releases/latest)
+   et télécharge le fichier `CineSwipe-x.y.z.apk`.
+2. Ouvre le fichier ; la première fois, Android demande d'autoriser l'installation depuis le
+   navigateur.
+3. C'est tout : la clé TMDB est intégrée, il n'y a rien à configurer.
+
+**Mises à jour** : CineSwipe regarde chaque jour s'il y a une nouvelle version et te le dit (bandeau
+sur le profil, Réglages › Mises à jour). Elle s'installe par-dessus, sans perdre tes données (même
+signature). [Obtainium](https://github.com/ImranR98/Obtainium) peut aussi suivre ce dépôt.
+
+Le fichier `.aab` publié à côté de l'APK ne sert qu'aux stores ; sur un téléphone, prends l'APK.
+
+Android 8.0 ou plus récent.
+
 ## L'idée
 
-1. **Retrouver ses films vus** en quelques minutes : le recensement fait défiler les films que
-   tu as le plus de chances d'avoir vus, 9 affiches par page, un toucher par film.
-2. **Les classer en duels** dans l'Arène : deux films, tu touches celui que tu préfères. Le
-   classement se recalcule à chaque duel et donne des étoiles à chaque film, de ½ à 5.
+1. **Retrouver ce qu'on a vu** en quelques minutes : le recensement fait défiler les films (ou
+   les séries) que tu as le plus de chances d'avoir vus, 9 affiches par page, un toucher par titre.
+2. **Les classer en duels** dans l'Arène : deux titres, tu touches celui que tu préfères. Le
+   classement se recalcule à chaque duel et donne des étoiles à chacun, de ½ à 5.
 3. **Découvrir** : les recos apprennent de ton classement et de tes swipes ; « Ce soir »
-   propose quoi regarder parmi ta liste et ce qui est sur ton serveur.
+   propose quoi regarder parmi ta liste, ce qui est sur ton serveur et tes séries en cours.
+
+Tant que l'appli te connaît peu (peu de titres vus, peu de duels), les recos te le disent et te
+proposent de recenser ou de jouer quelques duels — une fois, sans insister.
 
 ## Fonctionnalités
 
 ### Recos
 
-- Une carte plein écran par film : affiche, raison de la proposition (« Parce que tu as aimé
-  Drive », « Un film de Denis Villeneuve », « Pépite méconnue »…), réalisateur, note TMDB,
-  acteurs, synopsis, bande-annonce, genres.
+- Une carte plein écran par titre : affiche, raison de la proposition (« Parce que tu as aimé
+  Drive », « Un film de Denis Villeneuve », « Pépite méconnue »…), réalisateur ou créateurs,
+  note TMDB, acteurs, synopsis, bande-annonce, genres.
 - **Swipe à gauche** : déjà vu. **Swipe à droite** : à voir (ou **demander** au serveur avec
-  Seerr/Radarr). **Vers le haut** : passer. **Pas pour moi** : écarter pour de bon.
+  Seerr, Radarr ou Sonarr). **Vers le haut** : passer. **Pas pour moi** : écarter pour de bon.
   **Annuler** reprend les trois dernières actions.
-- **⚡ Éclair** : une suite de recos à partir d'un film.
-- Le moteur combine le graphe des recommandations TMDB autour de tes films (aimés, détestés,
+- **⚡ Éclair** : une suite de recos à partir d'un titre.
+- Le moteur combine le graphe des recommandations TMDB autour de tes titres (aimés, détestés,
   à voir), ton profil de goût (genres, réalisateurs, acteurs, thèmes, décennies, langues) et la
-  qualité des films. Il varie ses sources (pour toi, grands classiques, pépites, tendances, tes
+  qualité des œuvres. Il varie ses sources (pour toi, grands classiques, pépites, tendances, tes
   réalisateurs et acteurs, tes thèmes) selon ce que tu gardes ou écartes.
-- Un film passé revient plus tard (30 jours, puis de plus en plus tard) : tes goûts évoluent.
 
 ### Arène
 
-- Duel entre deux films vus : touche ton préféré, ou **Égalité**. **Annuler** pendant 3,5 s,
-  **Passer**, fiche détaillée de chaque film.
+- Duel entre deux titres vus : touche ton préféré, ou **Égalité**. **Annuler**, **Passer**,
+  fiche détaillée de chacun.
 - Classement **Bradley-Terry** (la même échelle que l'Elo), recalculé sur tout l'historique à
   chaque duel : l'ordre des duels ne compte pas, une égalité vaut un demi-point.
-- Les duels proposés sont ceux qui apprennent le plus : des films de niveau proche, en
+- Les duels proposés sont ceux qui apprennent le plus : des titres de niveau proche, en
   priorité ceux dont la place est encore incertaine.
-- **Étoiles par rang** (top 5 % = 5★…) et **fiabilité** du classement affichée en direct :
-  vers 90 %, le classement est solide.
-- **Placement** : un film que tu viens de voir joue 3 duels de suite pour trouver sa place.
-- Historique de tous les duels, depuis le profil.
+- **Étoiles par rang** et **fiabilité** du classement affichée en direct : vers 90 %, le
+  classement est solide.
+- **Placement** : un titre que tu viens de voir joue 3 duels de suite pour trouver sa place.
 
 ### Recensement
 
-- Pour retrouver vite tous ses films déjà vus, sans fausser les recos.
-- **Grille de 9 affiches** : un toucher = vu, deux = adoré, trois = bof ; appui long = à voir,
-  pas pour moi, fiche. « Suivant » passe les autres en « pas vu ».
+- Pour retrouver vite tout ce que tu as déjà vu, sans fausser les recos.
+- **Grille de 9 affiches** : un toucher = vu, deux = adoré, trois = bof (pour les séries : finie,
+  en cours, par épisodes, décrochée) ; appui long = à voir, pas pour moi, fiche.
 - Ou **en cartes**, avec les mêmes gestes que les recos.
-- L'ordre apprend de tes réponses (probabilité d'avoir vu chaque film) ; un film vu amène sa
-  saga et ses films proches. Filtres : films français, depuis 2020, par décennie.
-- « Adoré » et « bof » donnent un point de départ à l'Arène.
+- L'ordre apprend de tes réponses ; un film vu amène sa saga et ses films proches.
 
-### Recherche et Découverte
+### Recherche, Découverte, Ce soir
 
-- **Recherche** de films en cartes swipables, et des **acteurs et réalisateurs** dès qu'on tape
-  un nom : leur filmographie s'ouvre d'un toucher.
-- **Découverte** : genre, période, note TMDB minimale, durée (moins d'1 h 40, de 2 h 10…),
-  « dispo sur mon serveur ».
-
-### Ce soir
-
-- Quoi regarder parmi ta liste À voir et les films de ton serveur, triés selon tes goûts, avec
-  un film mis en avant. Filtres de durée et d'origine.
-- Boutons **Plex** et **Jellyfin** pour lancer le film sur ton serveur ; sinon **où le
+- **Recherche** en cartes swipables, et des **acteurs, réalisateurs et créateurs** dès qu'on tape
+  un nom.
+- **Découverte** : genre, période, note minimale, durée (d'un film ou d'un épisode), « dispo sur
+  mon serveur ».
+- **Ce soir** : tes séries en cours d'abord (« À reprendre », saison suivante d'un toucher), puis ta
+  liste et ton serveur, triés selon tes goûts. Boutons **Plex** et **Jellyfin**, ou **où le
   regarder** (abonnement, location, achat dans ton pays).
 
 ### Fiches
 
-- Synopsis, durée, note TMDB, ton Elo et tes étoiles, bande-annonce, genres.
-- **Réalisateur souligné** et **photos des acteurs** cliquables : leur filmographie, avec ce que
-  tu as vu, tes étoiles et ce qui est sur ton serveur.
-- Marquer vu, à voir, pas pour moi, demander au serveur, regarder sur Plex/Jellyfin, ajouter à
-  une liste, ⚡ Éclair.
+- Synopsis, durée, note TMDB, ton Elo et tes étoiles, bande-annonce, genres ; pour une série :
+  saisons, durée d'un épisode, statut de diffusion, où tu en es.
+- Fiches de la bibliothèque parcourues d'un **swipe gauche / droite**.
+- Réalisateur et acteurs cliquables : leur filmographie, avec ce que tu as vu et tes étoiles.
 
 ### Profil
 
-- Compteurs (vus, duels, à voir, sur le serveur) qui ouvrent la bibliothèque filtrée.
-- **Bibliothèque** : recherche, tri A-Z, par Elo ou par année.
-- **Mes goûts en chiffres** : heures de cinéma, genres, réalisateurs, acteurs, décennies,
-  langues, thèmes, et tes films « à contre-courant » du public.
-- **Ma rétro de l'année** : films par mois, top de l'année, genre et cinéaste de l'année, à
-  partager en image.
-- **Mes listes** : tes propres listes (« Films de Noël », « À montrer à quelqu'un »…), avec
-  « Au hasard » pour choisir un film.
-- **Hall of Fame** : tes films les mieux classés.
+- Compteurs qui ouvrent la bibliothèque filtrée ; **bibliothèque** avec recherche et tris.
+- **Mes goûts en chiffres** (heures passées, genres, réalisateurs ou créateurs, acteurs,
+  décennies, langues, thèmes, titres « à contre-courant ») ; pour les séries : épisodes vus,
+  finies, en cours, décrochées.
+- **Ma rétro de l'année**, à partager en image ; **mes listes** ; **Hall of Fame**.
 
 ### Widgets
 
-- **Ce soir** (le film proposé, « Suivant »), **Mes stats** (4 chiffres au choix),
-  **Mon top** (3 à 6 affiches, tous genres ou un genre). Configurables.
+- **Ce soir**, **Mes stats**, **Mon top** : chacun en films ou en séries, configurable.
 
 ### Importer, sauvegarder, partager
 
-- **Import** de tes films vus et notes depuis **Letterboxd**, **Trakt**, **IMDb**, un **CSV**,
-  ou une sauvegarde CineSwipe. Les notes servent de point de départ à l'Arène.
-- **Sauvegarde automatique** chaque semaine dans le dossier de ton choix (téléphone, Nextcloud,
-  Syncthing…), et export JSON à la demande.
-- **Partager vers CineSwipe** depuis une autre appli : un lien TMDB, IMDb, Letterboxd,
-  SensCritique, JustWatch, Trakt, ou simplement « Titre (année) ».
+- **Import** depuis **Letterboxd**, **Trakt**, **IMDb**, un **CSV** ou une sauvegarde CineSwipe ;
+  pour les séries : Trakt (avec l'avancement), IMDb, CSV.
+- **Sauvegarde automatique** chaque semaine (films et séries dans la même archive) dans le dossier
+  de ton choix, et export JSON à la demande.
+- **Partager vers CineSwipe** un lien TMDB, IMDb, Letterboxd, SensCritique, JustWatch, Trakt, ou
+  simplement « Titre (année) ».
 
 ### Démo
 
-- **Essayer la démo** : un bac à sable avec les 100 films les plus vus, un profil fictif et un
-  homelab fictif (Plex et Seerr). Rien n'est enregistré.
-- **Tuto pas à pas** : chaque étape montre un élément ; « Montre-moi » fait le geste à ta place.
-- **Visite auto** : le tuto se joue tout seul, pratique pour filmer l'écran.
+- **Tuto et démo** dans un bac à sable (les 100 films, ou les 100 séries, les plus vus, un profil
+  fictif, un homelab fictif) : rien n'est enregistré. « Montre-moi » fait le geste à ta place.
+
+## Mode séries
+
+Un switch **Films | Séries** (en haut des écrans, ou un appui long sur l'icône) fait passer toute
+l'appli dans le monde des séries, en violet. Rien n'est partagé avec les films.
+
+- **Où tu en es** : en cours (avec la saison, ou « je ne sais plus »), finie, vue par épisodes
+  (au hasard, à la télé), décrochée. Au swipe, au recensement ou sur la fiche.
+- **Nouvelles saisons** : une notification quand une série vue a une nouvelle saison (sortie,
+  ou annoncée dans le mois), avec « Remettre en cours » et « Demander la saison ».
+- **Demandes saison par saison** à Seerr ou Sonarr : toute la série, ou quelques saisons.
+- **Plex et Jellyfin** savent où tu en es : une série commencée sur ton serveur passe « en cours »
+  sur la bonne saison, une série terminée passe « finie ».
+
+## Entre amis
+
+Profil › **Comparer avec un ami** : chacun montre son **QR code**, l'autre le scanne (ou reçoit le
+code par message). CineSwipe calcule votre **compatibilité** et propose ce qu'il y a **à voir
+ensemble**, ce que ton ami a adoré et que tu n'as pas vu, ce que tu peux lui conseiller, vos coups
+de cœur communs et vos plus gros désaccords. Tout se passe sur les téléphones, rien ne passe par
+Internet.
 
 ## Avec un homelab
 
@@ -144,64 +176,45 @@ Tout est optionnel et chaque service est indépendant. Réglages › Homelab :
 
 | Service | Ce qu'il apporte |
 |---|---|
-| **Plex** | Films vus (synchronisés), films disponibles (badge « Sur le serveur »), bouton « Plex » qui ouvre le film dans l'appli Plex. Connexion avec ton compte Plex ou un jeton. Pas besoin de Plex Pass. |
-| **Jellyfin** | Pareil : films vus, disponibles, bouton « Jellyfin ». Clé API ou identifiant et mot de passe. |
-| **Seerr** (Overseerr, Jellyseerr) | Le swipe à droite **demande** le film. Clé API, ou ton compte (Seerr, Plex, Jellyfin) pour que les demandes soient à ton nom. |
-| **Radarr** | Demandes directes : profil de qualité, dossier, recherche à l'ajout. |
+| **Plex** | Films et séries vus (synchronisés, avec l'avancement des séries), disponibles (badge « Sur le serveur »), bouton « Plex ». Compte Plex ou jeton ; pas besoin de Plex Pass. |
+| **Jellyfin** | Pareil : vus, disponibles, bouton « Jellyfin ». Clé API ou identifiant et mot de passe. |
+| **Seerr** (Overseerr, Jellyseerr) | Le swipe à droite **demande** le film ou la série (toute la série ou certaines saisons). |
+| **Radarr** | Demandes directes de films : profil de qualité, dossier, recherche à l'ajout. |
+| **Sonarr** | Demandes directes de séries, saisons choisies seulement surveillées. |
 
 - **Adresse au choix**, port compris : IP Tailscale, IP locale, nom de domaine, chemin de
-  reverse proxy (`https://exemple.fr/jellyfin`). En-têtes supplémentaires possibles (Cloudflare
-  Access…). Bouton « Tester la connexion ».
-- **Synchro** à l'ouverture, toutes les 6 h et à la demande : un film vu sur le serveur devient
-  « vu », avec sa vraie date. Une synchro ne retire jamais un film des vus.
-- **Après un film vu sur Plex ou Jellyfin**, une notification propose de le placer dans ton
-  classement (3 duels).
+  reverse proxy. En-têtes supplémentaires possibles (Cloudflare Access…). « Tester la connexion ».
+- **Synchro** à l'ouverture, toutes les 6 h et à la demande. Une synchro ne retire jamais un titre
+  des vus, et l'avancement d'une série ne recule jamais.
+- **Après un film vu, ou une série commencée ou finie** sur ton serveur, une notification propose
+  de la placer dans ton classement.
 - **Hors ligne** : les demandes attendent dans une file et partent dès que le serveur répond.
-  « Annuler » juste après un swipe ne laisse aucune trace (la demande part après 6 s).
-
-## Installer
-
-CineSwipe n'est pas (encore) sur le Play Store. Pour l'installer :
-
-1. Ouvre la page [Releases](../../releases) sur le téléphone et télécharge le dernier
-   `CineSwipe-x.y.z.apk`.
-2. Ouvre le fichier ; Android demande la première fois d'autoriser l'installation depuis le
-   navigateur.
-3. Les versions suivantes s'installent par-dessus, sans perdre tes données (même signature).
-
-Astuce : [Obtainium](https://github.com/ImranR98/Obtainium) peut suivre les releases de ce dépôt
-et te proposer chaque mise à jour.
-
-Android 8.0 ou plus récent.
 
 ## Premiers pas
 
 1. **Essaie la démo** depuis l'accueil (ou passe directement à la suite).
-2. **Clé TMDB** (gratuite) : le guide de l'appli montre chaque étape. Crée un compte sur
-   [themoviedb.org](https://www.themoviedb.org/signup), puis demande une clé API dans
-   Paramètres › API (usage personnel) et colle la « Clé d'API » dans CineSwipe.
-3. **Retrouve tes films** : importe-les (Letterboxd, Trakt, IMDb, CSV), et/ou fais un tour de
+2. **Retrouve ce que tu as vu** : importe (Letterboxd, Trakt, IMDb, CSV) et/ou fais un tour de
    recensement.
-4. **Joue quelques duels** dans l'Arène : à 8 duels par film environ, le classement est fiable.
-5. Si tu as un homelab, connecte tes services dans Réglages › Homelab.
+3. **Joue quelques duels** dans l'Arène : vers 8 duels par titre, le classement est fiable.
+4. Si tu as un homelab, connecte tes services dans Réglages › Homelab.
+
+Tu peux mettre **ta propre clé TMDB** (Réglages › Clé API TMDB) : elle remplace celle de l'appli.
 
 ## Données et vie privée
 
-- Tes films, duels, listes et réglages sont **sur le téléphone** (base SQLite), et dans les
-  sauvegardes que tu choisis de faire.
-- Les clés (TMDB, Plex, Jellyfin, Seerr, Radarr) sont **chiffrées** avec l'Android Keystore et
-  exclues des sauvegardes.
-- L'appli ne contacte que **TMDB** (fiches, affiches), **tes serveurs**, et plex.tv si tu
-  utilises Plex (connexion, lien vers le film). Pas de compte CineSwipe, pas de statistiques
-  d'usage, pas de publicité.
+- Tes films, séries, duels, listes et réglages sont **sur le téléphone**, et dans les sauvegardes
+  que tu choisis de faire.
+- Les clés de tes services sont **chiffrées** avec l'Android Keystore et exclues des sauvegardes.
+- L'appli ne contacte que **TMDB** (fiches, affiches), **tes serveurs**, plex.tv si tu utilises
+  Plex, et l'API de **GitHub** une fois par jour pour savoir s'il y a une nouvelle version.
+- La caméra ne sert qu'à scanner le QR code d'un ami.
+- Détails : [politique de confidentialité](docs/confidentialite.md).
 
 ## Téléphones compatibles
 
-- Tout téléphone Android 8.0+, en portrait.
+- Tout téléphone Android 8.0+, en portrait. Icône à thème sur Android 13+.
 - **Pliants** : écran externe et écran intérieur. Sur un grand écran (pliant ouvert, tablette,
-  multi-fenêtre), l'appli garde sa mise en page de téléphone, centrée. Les écrans courts
-  (petit téléphone, pliant ouvert en paysage) resserrent la carte des recos.
-- Captures sur plusieurs tailles d'écran : workflow manuel « Captures » (voir plus bas).
+  multi-fenêtre), l'appli garde sa mise en page de téléphone, centrée.
 
 ## Pour les développeurs
 
@@ -209,20 +222,22 @@ Android 8.0 ou plus récent.
 
 - **Kotlin** 2.3, **Jetpack Compose** (Material 3), **Navigation 3**, **Room** (KSP, schémas
   versionnés et migrations automatiques), DataStore, **Retrofit** / OkHttp, kotlinx.serialization,
-  Coil 3, **WorkManager**, **Glance** (widgets). Injection de dépendances à la main
-  (`AppContainer`).
+  Coil 3, **WorkManager**, **Glance** (widgets), **CameraX** et **ZXing** (QR codes). Injection de
+  dépendances à la main (`AppContainer`, un par monde : films et séries).
 - `minSdk 26`, `targetSdk 36`.
 
 ```
 app/src/main/java/io/github/deedg/cineswipe/
 ├── domain/        Classement (Bradley-Terry, incertitudes, étoiles), appariement, moteur des recos,
-│                  modèle du recensement : Kotlin pur, testé
+│                  recensement, temps passé, nouvelles saisons, codes de goûts : Kotlin pur, testé
 ├── data/
 │   ├── db/        Room : movie (cache TMDB), user_movie, duel, listes, file des demandes, recos
-│   ├── tmdb/      API TMDB et conversion vers le cache
-│   ├── homelab/   Clients Plex, Jellyfin, Seerr, Radarr ; synchro, file d'attente, notification
+│   ├── tmdb/      API TMDB, conversion vers le cache, adaptateur des séries
+│   ├── homelab/   Plex, Jellyfin, Seerr, Radarr, Sonarr ; synchro, file d'attente, notifications
 │   ├── importer/  Letterboxd, Trakt, IMDb, CSV, sauvegardes
-│   ├── demo/      Catalogue de la démo, TMDB et homelab simulés
+│   ├── series/    Nouvelles saisons
+│   ├── update/    Vérification des mises à jour (dépôt public)
+│   ├── demo/      Catalogues de la démo, TMDB et homelab simulés
 │   └── repository/
 ├── widget/        Widgets Glance
 └── ui/            Écrans Compose, tuto de la démo
@@ -231,17 +246,15 @@ app/src/main/java/io/github/deedg/cineswipe/
 ### Construire et tester
 
 - `./gradlew testDebugUnitTest` : tests unitaires et parcours des écrans avec **Robolectric**,
-  contre de faux serveurs (TMDB, Plex, Jellyfin, Seerr, Radarr).
-- `./gradlew assembleRelease` : APK (non signé sans clé ; signe-le avec ta propre clé, ou utilise
-  `assembleDebug` pour un APK installable directement).
+  contre de faux serveurs (TMDB, Plex, Jellyfin, Seerr, Radarr, Sonarr).
+- `./gradlew assembleDebug` : APK installable directement (sans clé TMDB intégrée : mets la tienne
+  dans les réglages, ou exporte `TMDB_BUILTIN_KEY` avant de compiler).
 - Chaque version de ce dépôt est compilée, testée et publiée dans les releases par GitHub Actions,
-  signée avec la clé du projet (gardée dans les secrets du dépôt) : les mises à jour s'installent
-  par-dessus sans perdre les données. Sur un fork sans ces secrets, la CI teste et compile
-  seulement. Une version que tu compiles toi-même porte une autre signature : désinstalle
-  (après un export de sauvegarde) avant de passer de l'une à l'autre.
-- Workflows manuels : **Captures** (le tour de la démo photographié sur 5 tailles d'écran, dont
-  les pliants) et **Classpath** (bibliothèques de compilation, pour vérifier les types hors de
-  Gradle).
+  signée avec la clé du projet et avec la clé TMDB intégrée (secrets du dépôt). Sur un fork sans
+  ces secrets, la CI teste et compile seulement. Une version compilée par toi porte une autre
+  signature : exporte une sauvegarde et désinstalle avant de passer de l'une à l'autre.
+- Workflows manuels : **Captures** (tour de la démo photographié sur 6 tailles d'écran, films et
+  séries) et **Classpath** (bibliothèques de compilation, pour vérifier les types hors de Gradle).
 
 ## Licence
 
@@ -251,8 +264,8 @@ licence, avec leur code source.
 
 ## Crédits
 
-Données et images de films : [TMDB](https://www.themoviedb.org). Ce produit utilise l'API TMDB
-mais n'est ni approuvé ni certifié par TMDB. Offres de streaming : JustWatch, via TMDB.
+Données et images : [TMDB](https://www.themoviedb.org). Ce produit utilise l'API TMDB mais n'est
+ni approuvé ni certifié par TMDB. Offres de streaming : JustWatch, via TMDB.
 
-Plex, Jellyfin, Seerr, Radarr, Letterboxd, Trakt et IMDb sont des marques de leurs
+Plex, Jellyfin, Seerr, Radarr, Sonarr, Letterboxd, Trakt et IMDb sont des marques de leurs
 propriétaires respectifs ; CineSwipe n'est affilié à aucun d'eux.

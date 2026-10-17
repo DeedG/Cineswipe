@@ -43,6 +43,8 @@ data class SettingsUiState(
     val exporting: Boolean = false,
     /** Réglages de la démo (bac à sable) : clé TMDB et homelab masqués. */
     val demo: Boolean = false,
+    /** Clé TMDB intégrée à l'appli : la sienne devient facultative. */
+    val builtinKey: Boolean = false,
 )
 
 class SettingsViewModel(
@@ -64,7 +66,7 @@ class SettingsViewModel(
 
     val state: StateFlow<SettingsUiState> = combine(
         combine(
-            settings.tmdbApiKey,
+            settings.userTmdbApiKey,
             keyCheck,
             settings.language,
             crash,
@@ -76,10 +78,10 @@ class SettingsViewModel(
                 crashLog = crashText,
             )
         },
-        settings.homelabConfig.map { config -> config.all.filter { it.isReady }.map { it.service } },
+        settings.savedHomelabConfig.map { config -> config.all.filter { it.isReady }.map { it.service } },
         settings.devToolsEnabled,
         exporting,
-    ) { base, homelab, devTools, export -> base.copy(homelabReady = homelab, devTools = devTools, exporting = export, demo = demo) }
+    ) { base, homelab, devTools, export -> base.copy(homelabReady = homelab, devTools = devTools, exporting = export, demo = demo, builtinKey = settings.hasBuiltinTmdbKey) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState(demo = demo))
 
     init {

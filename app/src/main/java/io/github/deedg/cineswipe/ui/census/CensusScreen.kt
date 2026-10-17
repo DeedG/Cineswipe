@@ -79,6 +79,7 @@ import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.domain.census.CensusChoice
 import io.github.deedg.cineswipe.domain.census.CensusFilter
 import io.github.deedg.cineswipe.ui.common.cineViewModel
+import io.github.deedg.cineswipe.ui.common.isSeriesWorld
 import io.github.deedg.cineswipe.ui.components.CineButton
 import io.github.deedg.cineswipe.ui.components.CineChip
 import io.github.deedg.cineswipe.ui.components.EmptyState
@@ -86,6 +87,7 @@ import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.GlassPillButton
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
+import io.github.deedg.cineswipe.ui.components.SeasonRequestSheet
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
@@ -109,7 +111,7 @@ object CensusTestTags {
 
 @Composable
 fun CensusRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit, onOpenSettings: () -> Unit) {
-    val viewModel = cineViewModel { CensusViewModel(it.census, it.settings) }
+    val viewModel = cineViewModel { CensusViewModel(it.census, it.settings, series = it.kind.isSeries, homelab = it.homelab, tmdb = it.tmdb) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showHelp by rememberSaveable { mutableStateOf(false) }
     val toaster = LocalToaster.current
@@ -123,6 +125,20 @@ fun CensusRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit, onOpenSettings:
                 CensusEvent.Undone -> toaster.show(resources.getString(R.string.census_undone))
             }
         }
+    }
+    // Séries mises à voir : quelles saisons demander (une feuille par série).
+    state.seasonQueue.firstOrNull()?.let { ask ->
+        val done = state.seasonQueueTotal - state.seasonQueue.size
+        SeasonRequestSheet(
+            request = ask.request,
+            service = ask.service,
+            onRequest = { seasons ->
+                viewModel.answerSeasons(request = true, seasons = seasons)
+                toaster.show(resources.getString(R.string.toast_requested, ask.service.displayName))
+            },
+            onLater = { viewModel.answerSeasons(request = false, seasons = null) },
+            position = if (state.seasonQueueTotal > 1) resources.getString(R.string.season_request_queue, done + 1, state.seasonQueueTotal) else null,
+        )
     }
     val tutorial = LocalTutorial.current
     // « Montre-moi » du tuto : la main touche l'affiche du milieu, puis « Suivant ».
@@ -383,6 +399,7 @@ private fun CensusCell(
     var menu by remember { mutableStateOf(false) }
     val movie = item.movie
     val style = choice.style()
+    val series = isSeriesWorld()
     Column(modifier) {
         Box(
             Modifier
@@ -400,7 +417,7 @@ private fun CensusCell(
                         menu = true
                     },
                     onClick = {
-                        haptics.performHapticFeedback(if (choice.next() == CensusChoice.NONE) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                        haptics.performHapticFeedback(if (choice.next(series) == CensusChoice.NONE) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
                         onTap()
                     },
                 ),
@@ -413,6 +430,21 @@ private fun CensusCell(
                 alpha = if (choice == CensusChoice.DISMISSED) 0.3f else 1f,
             )
             if (choice.seen) Box(Modifier.fillMaxSize().background(CineColors.Red.copy(alpha = 0.16f)))
+            // Séries : l'avancement en toutes lettres (quatre états à distinguer d'un coup d'œil).
+            if (choice in SERIES_CHOICES) {
+                Text(
+                    text = stringResource(style.label).uppercase(Locale.FRENCH),
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                        .background(style.badgeColor, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
             style.icon?.let { icon ->
                 Box(
                     Modifier
@@ -439,9 +471,11 @@ private fun CensusCell(
                 )
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = CineColors.SurfaceHigh) {
-                MenuItem(stringResource(R.string.census_choice_seen), CineIcons.Eye) { onChoose(CensusChoice.SEEN); menu = false }
-                MenuItem(stringResource(R.string.census_choice_loved), CineIcons.Heart) { onChoose(CensusChoice.LOVED); menu = false }
-                MenuItem(stringResource(R.string.census_choice_disliked), CineIcons.ThumbsDown) { onChoose(CensusChoice.DISLIKED); menu = false }
+                val seenChoices = if (series) SERIES_CHOICES else listOf(CensusChoice.SEEN, CensusChoice.LOVED, CensusChoice.DISLIKED)
+                seenChoices.forEach { option ->
+                    val optionStyle = option.style()
+                    MenuItem(stringResource(optionStyle.label), optionStyle.icon ?: CineIcons.Eye) { onChoose(option); menu = false }
+                }
                 MenuItem(stringResource(R.string.census_choice_watchlist), CineIcons.Bookmark) { onChoose(CensusChoice.WATCHLIST); menu = false }
                 MenuItem(stringResource(R.string.census_choice_dismissed), CineIcons.ThumbsDown) { onChoose(CensusChoice.DISMISSED); menu = false }
                 MenuItem(stringResource(R.string.census_open_movie), CineIcons.Info) { menu = false; onOpenMovie() }
@@ -488,7 +522,14 @@ private fun CensusChoice.style(): ChoiceStyle = when (this) {
     CensusChoice.DISLIKED -> ChoiceStyle(3.dp, CineColors.TextMuted, CineColors.BorderSoft, CineIcons.ThumbsDown, R.string.census_choice_disliked)
     CensusChoice.WATCHLIST -> ChoiceStyle(3.dp, CineColors.TmdbBlue, CineColors.TmdbBlue, CineIcons.Bookmark, R.string.census_choice_watchlist)
     CensusChoice.DISMISSED -> ChoiceStyle(1.dp, CineColors.Border, CineColors.SurfaceHigh, CineIcons.Close, R.string.census_choice_dismissed)
+    CensusChoice.FINISHED -> ChoiceStyle(3.dp, CineColors.Red, CineColors.Red, CineIcons.Check, R.string.series_progress_finished)
+    CensusChoice.IN_PROGRESS -> ChoiceStyle(3.dp, CineColors.RedLight, CineColors.RedLight, CineIcons.Play, R.string.series_progress_in_progress)
+    CensusChoice.EPISODES -> ChoiceStyle(3.dp, CineColors.TmdbBlue, CineColors.TmdbBlue, CineIcons.Shuffle, R.string.series_progress_episodes)
+    CensusChoice.ABANDONED -> ChoiceStyle(3.dp, CineColors.TextMuted, CineColors.BorderSoft, CineIcons.Skip, R.string.series_progress_abandoned)
 }
+
+/** Réponses « vue » d'une série, dans l'ordre des touchers. */
+private val SERIES_CHOICES = listOf(CensusChoice.FINISHED, CensusChoice.IN_PROGRESS, CensusChoice.EPISODES, CensusChoice.ABANDONED)
 
 @Composable
 private fun GridActions(state: CensusUiState, onNextPage: () -> Unit, onUndo: () -> Unit) {
@@ -546,6 +587,7 @@ private fun CardsContent(state: CensusUiState, onAnswer: (CensusChoice) -> Unit,
  */
 @Composable
 private fun SwipeCensusCard(item: CensusItem, onAnswer: (CensusChoice) -> Unit, onOpen: () -> Unit) {
+    val series = isSeriesWorld()
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val threshold = with(LocalDensity.current) { 100.dp.toPx() }
@@ -579,7 +621,7 @@ private fun SwipeCensusCard(item: CensusItem, onAnswer: (CensusChoice) -> Unit, 
                                 val x = offsetX.value
                                 val y = offsetY.value
                                 val choice = when {
-                                    x <= -threshold -> CensusChoice.SEEN
+                                    x <= -threshold -> if (series) CensusChoice.FINISHED else CensusChoice.SEEN
                                     x >= threshold -> CensusChoice.WATCHLIST
                                     y <= -threshold && abs(y) > abs(x) -> CensusChoice.NONE
                                     else -> null
@@ -682,9 +724,16 @@ private fun CardsActions(state: CensusUiState, onAnswer: (CensusChoice) -> Unit,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Dans l'ordre des gestes : les « vu » à gauche, « pas vu » au milieu, « à voir » à droite.
-            RoundAction(CensusChoice.SEEN, CineIcons.Eye, R.string.census_choice_seen, 60.dp, CineColors.SwipeLeft, enabled, onAnswer)
-            RoundAction(CensusChoice.LOVED, CineIcons.Heart, R.string.census_choice_loved, 48.dp, CineColors.Red, enabled, onAnswer)
-            RoundAction(CensusChoice.DISLIKED, CineIcons.ThumbsDown, R.string.census_choice_disliked, 48.dp, CineColors.BorderSoft, enabled, onAnswer)
+            if (isSeriesWorld()) {
+                // Séries : finie (comme un swipe à gauche), en cours, par épisodes.
+                RoundAction(CensusChoice.FINISHED, CineIcons.Check, R.string.series_progress_finished, 60.dp, CineColors.SwipeLeft, enabled, onAnswer)
+                RoundAction(CensusChoice.IN_PROGRESS, CineIcons.Play, R.string.series_progress_in_progress, 48.dp, CineColors.Red, enabled, onAnswer)
+                RoundAction(CensusChoice.EPISODES, CineIcons.Shuffle, R.string.series_progress_episodes, 48.dp, CineColors.BorderSoft, enabled, onAnswer)
+            } else {
+                RoundAction(CensusChoice.SEEN, CineIcons.Eye, R.string.census_choice_seen, 60.dp, CineColors.SwipeLeft, enabled, onAnswer)
+                RoundAction(CensusChoice.LOVED, CineIcons.Heart, R.string.census_choice_loved, 48.dp, CineColors.Red, enabled, onAnswer)
+                RoundAction(CensusChoice.DISLIKED, CineIcons.ThumbsDown, R.string.census_choice_disliked, 48.dp, CineColors.BorderSoft, enabled, onAnswer)
+            }
             RoundAction(CensusChoice.NONE, CineIcons.Skip, R.string.census_choice_none, 60.dp, CineColors.SurfaceHigh, enabled, onAnswer)
             RoundAction(CensusChoice.WATCHLIST, CineIcons.Bookmark, R.string.census_choice_watchlist, 54.dp, CineColors.SwipeRight, enabled, onAnswer)
         }

@@ -5,6 +5,7 @@ import io.github.deedg.cineswipe.data.db.DuelEntity
 import io.github.deedg.cineswipe.data.db.Impression
 import io.github.deedg.cineswipe.data.db.MovieEntity
 import io.github.deedg.cineswipe.data.db.RecoSourceEntity
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.UserMovieEntity
 import io.github.deedg.cineswipe.data.db.WatchSource
 import io.github.deedg.cineswipe.data.db.WatchStatus
@@ -163,6 +164,8 @@ class BackupRows(
                     censusAt = film.censusAt,
                     impression = film.impression?.let { enumOrNull<Impression>(it) },
                     importedRating = film.importedRating,
+                    progress = film.progress?.let { enumOrNull<SeriesProgress>(it) },
+                    currentSeason = film.currentSeason,
                 )
             }
             // Fiches du cache exporté (incomplètes : elles seront rechargées), ou titre et année seuls.

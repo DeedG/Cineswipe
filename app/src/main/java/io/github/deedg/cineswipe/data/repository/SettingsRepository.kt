@@ -18,6 +18,10 @@ import io.github.deedg.cineswipe.data.homelab.RequestTarget
 import io.github.deedg.cineswipe.data.homelab.SeerrAuthMode
 import io.github.deedg.cineswipe.data.homelab.ServiceConfig
 import io.github.deedg.cineswipe.data.homelab.SyncReport
+import io.github.deedg.cineswipe.data.model.MediaKind
+import io.github.deedg.cineswipe.domain.SeasonWatchState
+import io.github.deedg.cineswipe.domain.reco.RecoNudge
+import io.github.deedg.cineswipe.domain.reco.RecoNudges
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -36,14 +40,42 @@ class SettingsRepository(
     private val settings: DataStore<Preferences>,
     private val secrets: DataStore<Preferences>,
     private val cipher: SecretCipher,
+    /** Monde de ces réglages : l'état du recensement et le compte rendu de synchro lui sont propres, le reste est commun. */
+    private val world: MediaKind = MediaKind.FILMS,
+    /** Clé TMDB intégrée à l'appli (build officiel), utilisée tant que l'utilisateur n'a pas mis la sienne. */
+    private val builtinTmdbKey: String? = null,
 ) {
-    constructor(context: Context, cipher: SecretCipher) :
-        this(context.applicationContext.settingsStore, context.applicationContext.secretsStore, cipher)
+    constructor(context: Context, cipher: SecretCipher, world: MediaKind = MediaKind.FILMS, builtinTmdbKey: String? = null) :
+        this(context.applicationContext.settingsStore, context.applicationContext.secretsStore, cipher, world, builtinTmdbKey)
+
+    private val homelabReportKey = worldKey("homelab_last_report")
+    private val censusStateKey = worldKey("census_state")
+
+    /** Invitations des recos (recensement, duels) refusées ou suivies, propres à chaque monde. */
+    private val recoNudgesKey = worldKey("reco_nudges")
+
+    /** Accueil (et démo) vu : une fois par monde, le mode séries a le sien. */
+    private val onboardingKey = booleanPreferencesKey(if (world.isSeries) "series_onboarding_done" else "onboarding_done")
+
+    private fun worldKey(name: String) = stringPreferencesKey(if (world.isSeries) "series_$name" else name)
+
+    /** Dernier monde ouvert (l'appli y rouvre). Commun aux deux mondes. */
+    val mediaKind: Flow<MediaKind> = settings.data.map { prefs -> MediaKind.fromName(prefs[MEDIA_KIND]) }.distinctUntilChanged()
+
+    suspend fun setMediaKind(kind: MediaKind) {
+        settings.edit { prefs -> prefs[MEDIA_KIND] = kind.name }
+    }
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Clé API TMDB en clair, ou null si absente ou illisible (ex. restaurée sur un autre téléphone). */
-    val tmdbApiKey: Flow<String?> = secrets.data.map { prefs -> prefs[TMDB_API_KEY]?.let(::decryptKey) }
+    /** Clé TMDB de l'utilisateur en clair, ou null si absente ou illisible (ex. restaurée sur un autre téléphone). */
+    val userTmdbApiKey: Flow<String?> = secrets.data.map { prefs -> prefs[TMDB_API_KEY]?.let(::decryptKey) }
+
+    /** Clé TMDB en service : celle de l'utilisateur, sinon la clé intégrée (null si aucune). */
+    val tmdbApiKey: Flow<String?> = userTmdbApiKey.map { it ?: builtinTmdbKey?.takeIf(String::isNotBlank) }
+
+    /** L'appli a une clé intégrée : personne n'a besoin de créer la sienne. */
+    val hasBuiltinTmdbKey: Boolean get() = !builtinTmdbKey.isNullOrBlank()
 
     /**
      * Dernière clé déchiffrée, gardée en mémoire : chaque appel TMDB lit la clé, et le Keystore
@@ -62,16 +94,24 @@ class SettingsRepository(
 
     val language: Flow<String> = settings.data.map { prefs -> prefs[LANGUAGE] ?: DEFAULT_LANGUAGE }
 
-    /** Réglages du homelab ; les clés et en-têtes sont déchiffrés. */
-    val homelabConfig: Flow<HomelabConfig> = combine(settings.data, secrets.data) { prefs, secretPrefs ->
+    /**
+     * Réglages du homelab tels qu'enregistrés (communs aux deux mondes), pour les écrans de réglage.
+     * Les clés et en-têtes sont déchiffrés.
+     */
+    val savedHomelabConfig: Flow<HomelabConfig> = combine(settings.data, secrets.data) { prefs, secretPrefs ->
         HomelabConfig(
             jellyfin = readService(HomelabService.JELLYFIN, prefs, secretPrefs),
             plex = readService(HomelabService.PLEX, prefs, secretPrefs),
             seerr = readService(HomelabService.SEERR, prefs, secretPrefs),
             radarr = readService(HomelabService.RADARR, prefs, secretPrefs),
             requestTarget = prefs[REQUEST_TARGET]?.let { runCatching { RequestTarget.valueOf(it) }.getOrNull() } ?: RequestTarget.AUTO,
+            sonarr = readService(HomelabService.SONARR, prefs, secretPrefs),
+            series = world.isSeries,
         )
     }.distinctUntilChanged()
+
+    /** Homelab en service dans ce monde (Radarr pour les films, Sonarr pour les séries). */
+    val homelabConfig: Flow<HomelabConfig> get() = savedHomelabConfig
 
     /**
      * Vrai quand au moins un service du homelab est prêt. Sans homelab, la disponibilité des films
@@ -80,12 +120,12 @@ class SettingsRepository(
     val homelabConnected: Flow<Boolean> = homelabConfig.map { it.anyReady }.distinctUntilChanged()
 
     val homelabReport: Flow<SyncReport?> = settings.data.map { prefs ->
-        prefs[HOMELAB_REPORT]?.let { runCatching { json.decodeFromString(SyncReport.serializer(), it) }.getOrNull() }
+        prefs[homelabReportKey]?.let { runCatching { json.decodeFromString(SyncReport.serializer(), it) }.getOrNull() }
     }.distinctUntilChanged()
 
     /** Mémoire du recensement (modèle appris, avancement dans les listes TMDB). */
     val censusState: Flow<CensusState> = settings.data.map { prefs ->
-        prefs[CENSUS_STATE]?.let { runCatching { json.decodeFromString(CensusState.serializer(), it) }.getOrNull() } ?: CensusState()
+        prefs[censusStateKey]?.let { runCatching { json.decodeFromString(CensusState.serializer(), it) }.getOrNull() } ?: CensusState()
     }.distinctUntilChanged()
 
     /** Le recensement s'ouvre en cartes plutôt qu'en grille. */
@@ -122,7 +162,7 @@ class SettingsRepository(
     }
 
     /** L'écran d'accueil du premier lancement a été passé (démo essayée ou « Commencer »). */
-    val onboardingDone: Flow<Boolean> = settings.data.map { prefs -> prefs[ONBOARDING_DONE] ?: false }.distinctUntilChanged()
+    val onboardingDone: Flow<Boolean> = settings.data.map { prefs -> prefs[onboardingKey] ?: false }.distinctUntilChanged()
 
     /** Prévenir après un film vu sur Plex ou Jellyfin, pour le placer dans le classement (oui par défaut). */
     val watchedNotifications: Flow<Boolean> = settings.data.map { prefs -> prefs[WATCHED_NOTIFICATIONS] ?: true }.distinctUntilChanged()
@@ -131,15 +171,63 @@ class SettingsRepository(
         settings.edit { prefs -> prefs[WATCHED_NOTIFICATIONS] = enabled }
     }
 
+    /** Dernière version publiée connue (JSON), date de la dernière vérification, version écartée du profil. */
+    val latestUpdate: Flow<String?> = settings.data.map { prefs -> prefs[LATEST_UPDATE] }.distinctUntilChanged()
+    val updateCheckedAt: Flow<Long> = settings.data.map { prefs -> prefs[UPDATE_CHECKED_AT] ?: 0L }.distinctUntilChanged()
+    val dismissedUpdate: Flow<Int> = settings.data.map { prefs -> prefs[DISMISSED_UPDATE] ?: 0 }.distinctUntilChanged()
+
+    suspend fun setLatestUpdate(value: String) {
+        settings.edit { prefs -> prefs[LATEST_UPDATE] = value }
+    }
+
+    suspend fun setUpdateCheckedAt(at: Long) {
+        settings.edit { prefs -> prefs[UPDATE_CHECKED_AT] = at }
+    }
+
+    suspend fun setDismissedUpdate(versionCode: Int) {
+        settings.edit { prefs -> prefs[DISMISSED_UPDATE] = versionCode }
+    }
+
+    /** Prénom affiché dans le QR code de goûts (comparer avec un ami). */
+    val tasteName: Flow<String> = settings.data.map { prefs -> prefs[TASTE_NAME].orEmpty() }.distinctUntilChanged()
+
+    suspend fun setTasteName(name: String) {
+        settings.edit { prefs -> prefs[TASTE_NAME] = name.take(24) }
+    }
+
+    /** Prévenir quand une série suivie a une nouvelle saison (oui par défaut). */
+    val newSeasonNotifications: Flow<Boolean> = settings.data.map { prefs -> prefs[NEW_SEASON_NOTIFICATIONS] ?: true }.distinctUntilChanged()
+
+    suspend fun setNewSeasonNotifications(enabled: Boolean) {
+        settings.edit { prefs -> prefs[NEW_SEASON_NOTIFICATIONS] = enabled }
+    }
+
+    /** Suivi des nouvelles saisons : saisons connues de chaque série et alertes déjà envoyées. */
+    val seasonWatch: Flow<SeasonWatchState> = settings.data.map { prefs ->
+        prefs[SEASON_WATCH]?.let { runCatching { json.decodeFromString(SeasonWatchState.serializer(), it) }.getOrNull() } ?: SeasonWatchState()
+    }
+
+    suspend fun setSeasonWatch(state: SeasonWatchState) {
+        settings.edit { prefs -> prefs[SEASON_WATCH] = json.encodeToString(SeasonWatchState.serializer(), state) }
+    }
+
+    /** Jusqu'à quand chaque invitation des recos reste cachée. */
+    val recoNudgesHidden: Flow<Map<RecoNudge, Long>> =
+        settings.data.map { prefs -> RecoNudges.decode(prefs[recoNudgesKey]) }.distinctUntilChanged()
+
+    suspend fun hideRecoNudge(nudge: RecoNudge, until: Long) {
+        settings.edit { prefs -> prefs[recoNudgesKey] = RecoNudges.encode(RecoNudges.decode(prefs[recoNudgesKey]) + (nudge to until)) }
+    }
+
     suspend fun setOnboardingDone(done: Boolean) {
-        settings.edit { prefs -> prefs[ONBOARDING_DONE] = done }
+        settings.edit { prefs -> prefs[onboardingKey] = done }
     }
 
     suspend fun updateCensusState(transform: (CensusState) -> CensusState) {
         settings.edit { prefs ->
-            val current = prefs[CENSUS_STATE]?.let { runCatching { json.decodeFromString(CensusState.serializer(), it) }.getOrNull() }
+            val current = prefs[censusStateKey]?.let { runCatching { json.decodeFromString(CensusState.serializer(), it) }.getOrNull() }
                 ?: CensusState()
-            prefs[CENSUS_STATE] = json.encodeToString(CensusState.serializer(), transform(current))
+            prefs[censusStateKey] = json.encodeToString(CensusState.serializer(), transform(current))
         }
     }
 
@@ -170,7 +258,7 @@ class SettingsRepository(
             prefs[keys.authMode] = when (config.service) {
                 HomelabService.JELLYFIN -> config.jellyfinAuthMode.name
                 HomelabService.SEERR -> config.seerrAuthMode.name
-                HomelabService.PLEX, HomelabService.RADARR -> JellyfinAuthMode.API_KEY.name
+                HomelabService.PLEX, HomelabService.RADARR, HomelabService.SONARR -> JellyfinAuthMode.API_KEY.name
             }
             prefs.setOrRemove(keys.userId, config.userId)
             prefs.setOrRemove(keys.userName, config.userName)
@@ -206,7 +294,7 @@ class SettingsRepository(
 
     suspend fun setHomelabReport(report: SyncReport?) {
         settings.edit { prefs ->
-            if (report == null) prefs.remove(HOMELAB_REPORT) else prefs[HOMELAB_REPORT] = json.encodeToString(SyncReport.serializer(), report)
+            if (report == null) prefs.remove(homelabReportKey) else prefs[homelabReportKey] = json.encodeToString(SyncReport.serializer(), report)
         }
     }
 
@@ -263,12 +351,16 @@ class SettingsRepository(
         private val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
         private val LANGUAGE = stringPreferencesKey("tmdb_language")
         private val REQUEST_TARGET = stringPreferencesKey("homelab_request_target")
-        private val HOMELAB_REPORT = stringPreferencesKey("homelab_last_report")
-        private val CENSUS_STATE = stringPreferencesKey("census_state")
+        private val MEDIA_KIND = stringPreferencesKey("media_kind")
         private val CENSUS_CARDS = booleanPreferencesKey("census_cards")
         private val DEV_TOOLS = booleanPreferencesKey("dev_tools")
-        private val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         private val WATCHED_NOTIFICATIONS = booleanPreferencesKey("watched_notifications")
+        private val NEW_SEASON_NOTIFICATIONS = booleanPreferencesKey("new_season_notifications")
+        private val TASTE_NAME = stringPreferencesKey("taste_name")
+        private val LATEST_UPDATE = stringPreferencesKey("latest_update")
+        private val UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
+        private val DISMISSED_UPDATE = intPreferencesKey("dismissed_update")
+        private val SEASON_WATCH = stringPreferencesKey("series_season_watch")
         private val BACKUP_FOLDER = stringPreferencesKey("backup_folder")
         private val BACKUP_LAST_AT = longPreferencesKey("backup_last_at")
         private val BACKUP_LAST_FILE = stringPreferencesKey("backup_last_file")

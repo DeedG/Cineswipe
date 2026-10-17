@@ -52,6 +52,10 @@ data class PlexMetadataDto(
     /** Ancien format d'identifiant (agents historiques). */
     val guid: String? = null,
     @SerialName("Guid") val guids: List<PlexGuidDto> = emptyList(),
+    /** Série : nombre d'épisodes et épisodes vus ; saison : son numéro. */
+    val leafCount: Int? = null,
+    val viewedLeafCount: Int? = null,
+    val index: Int? = null,
 )
 
 @Serializable
@@ -215,6 +219,76 @@ class PlexClient(
         return movies
     }
 
+    /** Bibliothèques de séries. */
+    suspend fun showSections(url: HttpUrl, extraHeaders: Map<String, String>, token: String): List<PlexSection> =
+        http.decode(service, PlexSectionsDto.serializer(), http.get(service, url, "library/sections", headers(extraHeaders, token)))
+            .container.directories
+            .filter { it.type == "show" }
+            .map { PlexSection(key = it.key, title = it.title ?: it.key) }
+
+    /**
+     * Séries de toutes les bibliothèques de séries, avec leur avancement : finie si tous les
+     * épisodes du serveur sont vus, sinon la saison en cours (lue saison par saison, seulement pour
+     * les séries commencées).
+     */
+    suspend fun shows(config: ServiceConfig): List<ServerMovie> {
+        val url = HomelabUrls.parse(config.url) ?: throw HomelabException(service, HomelabException.Kind.BAD_URL, config.url)
+        val token = config.apiKey ?: throw HomelabException(service, HomelabException.Kind.NOT_CONFIGURED, "Jeton absent")
+        val extra = config.headerMap()
+        val shows = ArrayList<PlexMetadataDto>()
+        for (section in showSections(url, extra, token)) {
+            var start = 0
+            while (true) {
+                val page = http.decode(
+                    service,
+                    PlexMetadataPageDto.serializer(),
+                    http.get(
+                        service,
+                        url,
+                        "library/sections/${section.key}/all",
+                        headers(extra, token),
+                        mapOf(
+                            "type" to "2",
+                            "includeGuids" to "1",
+                            "X-Plex-Container-Start" to start.toString(),
+                            "X-Plex-Container-Size" to PAGE_SIZE.toString(),
+                        ),
+                    ),
+                ).container
+                shows += page.metadata
+                start += page.metadata.size
+                val total = page.totalSize
+                if (page.metadata.isEmpty() || (total != null && start >= total) || (total == null && page.metadata.size < PAGE_SIZE)) break
+            }
+        }
+        return shows.map { show ->
+            val episodes = show.leafCount ?: 0
+            val viewed = show.viewedLeafCount ?: 0
+            val started = viewed > 0
+            val finished = started && viewed >= episodes
+            val season = if (started && !finished && show.ratingKey != null) {
+                runCatching { SeriesWatch.currentSeason(seasons(url, extra, token, show.ratingKey)) }.getOrNull()
+            } else {
+                null
+            }
+            ServerMovie(
+                tmdbId = tmdbIdOf(show),
+                title = show.title?.trim().orEmpty(),
+                year = show.year,
+                watched = started,
+                lastWatchedAt = show.lastViewedAt?.takeIf { it > 0 }?.times(1000),
+                itemId = show.ratingKey,
+                finished = finished,
+                currentSeason = season,
+            )
+        }
+    }
+
+    private suspend fun seasons(url: HttpUrl, extra: Map<String, String>, token: String, ratingKey: String): List<SeasonWatch> =
+        http.decode(service, PlexMetadataPageDto.serializer(), http.get(service, url, "library/metadata/$ratingKey/children", headers(extra, token)))
+            .container.metadata
+            .map { SeasonWatch(number = it.index ?: 0, episodes = it.leafCount ?: 0, watched = it.viewedLeafCount ?: 0) }
+
     private fun PlexMetadataDto.toServerMovie(): ServerMovie = ServerMovie(
         tmdbId = tmdbIdOf(this),
         title = title?.trim().orEmpty(),
@@ -228,14 +302,14 @@ class PlexClient(
      * Identifiant « lisible » du film chez Plex (« dune-2021 »), pour son lien watch.plex.tv :
      * l'appli Plex ouvre ce lien sur la fiche du film, avec la lecture depuis le serveur.
      */
-    suspend fun discoverSlug(tmdbId: Long, config: ServiceConfig): String? {
+    suspend fun discoverSlug(tmdbId: Long, config: ServiceConfig, show: Boolean = false): String? {
         val token = config.apiKey ?: return null
         val reply = http.get(
             service,
             METADATA_PROVIDER,
             "library/metadata/matches",
             accountHeaders(token) + ("Accept" to "application/json"),
-            mapOf("type" to "1", "guid" to "tmdb://$tmdbId"),
+            mapOf("type" to if (show) "2" else "1", "guid" to "tmdb://$tmdbId"),
         )
         return http.decode(service, PlexMatchesDto.serializer(), reply).container.metadata.firstNotNullOfOrNull { it.slug?.takeIf(String::isNotBlank) }
     }
@@ -254,7 +328,7 @@ class PlexClient(
         val METADATA_PROVIDER = "https://metadata.provider.plex.tv/".toHttpUrl()
 
         /** Fiche d'un film dans l'appli Plex (lien universel watch.plex.tv, ouvert par l'appli Android). */
-        fun watchUrl(slug: String): String = "https://watch.plex.tv/movie/$slug"
+        fun watchUrl(slug: String, show: Boolean = false): String = "https://watch.plex.tv/${if (show) "show" else "movie"}/$slug"
 
         /** Fiche d'un film dans Plex Web (app.plex.tv), si l'appli n'est pas installée. */
         fun webUrl(machineIdentifier: String, ratingKey: String): String =

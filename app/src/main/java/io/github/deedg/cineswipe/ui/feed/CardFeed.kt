@@ -2,6 +2,7 @@ package io.github.deedg.cineswipe.ui.feed
 
 import io.github.deedg.cineswipe.data.db.Availability
 import io.github.deedg.cineswipe.data.db.MovieEntity
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.repository.ActionRecord
@@ -12,6 +13,7 @@ import io.github.deedg.cineswipe.data.repository.FeedRequest
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.TmdbException
 import io.github.deedg.cineswipe.domain.reco.RecoReason
+import io.github.deedg.cineswipe.ui.components.SeasonRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -61,6 +63,12 @@ sealed interface FeedEvent {
     /** [service] : service qui recevra la demande, pour l'action [CardAction.REQUEST]. */
     data class Acted(val action: CardAction, val service: HomelabService? = null) : FeedEvent
     data class Restored(val tmdbId: Long) : FeedEvent
+
+    /** Série envoyée à droite : quelles saisons demander à [service] ? [confirm] envoie la demande. */
+    data class AskSeasons(val request: SeasonRequest, val service: HomelabService, val confirm: (List<Int>?) -> Unit) : FeedEvent
+
+    /** Série envoyée à gauche (vue) : finie, en cours, par épisodes ou décrochée ? [save] l'enregistre. */
+    data class AskProgress(val request: SeasonRequest, val save: (SeriesProgress, Int?) -> Unit) : FeedEvent
 }
 
 /**
@@ -212,7 +220,27 @@ class CardFeed(
             undoStack.addLast(UndoEntry(index, record, card.reason))
             while (undoStack.size > MAX_UNDO) undoStack.removeFirst()
             content.update { it.copy(undoCount = undoStack.size) }
-            _events.send(FeedEvent.Acted(record.action, record.request?.service))
+            val askFrom = record.askSeasons
+            if (askFrom != null) {
+                val movie = card.movie
+                _events.send(
+                    FeedEvent.AskSeasons(SeasonRequest(movie.tmdbId, movie.title, movie.seasonCount), askFrom) { seasons ->
+                        scope.launch {
+                            repository.requestSeasons(movie, seasons)?.let { _events.send(FeedEvent.Acted(CardAction.REQUEST, it.service)) }
+                        }
+                    },
+                )
+            } else {
+                _events.send(FeedEvent.Acted(record.action, record.request?.service))
+                if (record.action == CardAction.WATCHED && repository.series) {
+                    val movie = card.movie
+                    _events.send(
+                        FeedEvent.AskProgress(SeasonRequest(movie.tmdbId, movie.title, movie.seasonCount)) { progress, season ->
+                            scope.launch { repository.setProgress(movie.tmdbId, progress, season) }
+                        },
+                    )
+                }
+            }
         }
     }
 

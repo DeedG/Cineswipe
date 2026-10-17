@@ -43,6 +43,7 @@ class HomelabRepository(
     private val plex: PlexClient,
     private val seerr: SeerrClient,
     private val radarr: RadarrClient,
+    private val sonarr: SonarrClient,
     private val scheduler: HomelabScheduler,
     /** Portée de l'appli : la synchro et les envois continuent quand on quitte l'écran. */
     private val scope: CoroutineScope,
@@ -53,6 +54,8 @@ class HomelabRepository(
     private val notifier: WatchedNotifier = WatchedNotifier.None,
     /** Démo : les serveurs sont fictifs, « Regarder » ne fait que le dire. */
     private val demo: Boolean = false,
+    /** Monde des séries : séries de Plex et Jellyfin, demandes à Seerr (séries) ou Sonarr. */
+    private val series: Boolean = false,
 ) {
     private val outbox = database.outboxDao()
     private val dao = database.homelabDao()
@@ -68,7 +71,7 @@ class HomelabRepository(
     private val _events = MutableSharedFlow<HomelabEvent>(extraBufferCapacity = 16)
     val events: SharedFlow<HomelabEvent> = _events.asSharedFlow()
 
-    val config: Flow<HomelabConfig> get() = settings.homelabConfig
+    val config: Flow<HomelabConfig> get() = settings.savedHomelabConfig
     val report: Flow<SyncReport?> get() = settings.homelabReport
     val pendingCount: Flow<Int> get() = outbox.observePendingCount()
     val failed: Flow<List<OutboxEntity>> get() = outbox.observeFailed()
@@ -112,7 +115,7 @@ class HomelabRepository(
     suspend fun sync(): SyncReport? {
         if (!syncMutex.tryLock()) return null
         val report = try {
-            val ready = settings.homelabConfig.first().all.filter { it.isReady }
+            val ready = settings.homelabConfig.first().active.filter { it.isReady }
             if (ready.isEmpty()) return null
             _syncing.value = true
             flushOutbox()
@@ -149,7 +152,7 @@ class HomelabRepository(
         val movies = database.movieDao()
         val notices = recent.sortedByDescending { it.watchedAt }.map { watch ->
             val title = movies.get(watch.tmdbId)?.title?.takeIf { it != "?" } ?: snapshot.titles[watch.tmdbId]?.title ?: "?"
-            WatchedNotice(watch.tmdbId, title, watch.source)
+            WatchedNotice(watch.tmdbId, title, watch.source, series = series)
         }
         runCatching { notifier.show(notices) }
     }
@@ -158,7 +161,7 @@ class HomelabRepository(
      * Demande un film au service choisi (Seerr ou Radarr). Le film passe tout de suite dans la
      * liste À voir, marqué « demandé » ; l'envoi part après [graceMs]. Null sans service de demandes.
      */
-    suspend fun requestMovie(movie: MovieEntity): RequestTicket? {
+    suspend fun requestMovie(movie: MovieEntity, seasons: List<Int>? = null): RequestTicket? {
         val service = settings.homelabConfig.first().requestService ?: return null
         val now = clock()
         val previous = dao.applyRequest(movie, now)
@@ -171,6 +174,7 @@ class HomelabRepository(
                 year = movie.year,
                 createdAt = now,
                 updatedAt = now,
+                seasons = OutboxEntity.encodeSeasons(seasons.takeIf { series }),
             ),
         )
         scope.launch {
@@ -326,6 +330,17 @@ class HomelabRepository(
                     radarrRootFolders = radarr.rootFolders(url, headers, key),
                 )
             }
+            HomelabService.SONARR -> {
+                if (key.isEmpty()) throw missingKey()
+                val status = sonarr.status(url, headers, key)
+                if (status.version == null || status.appName?.contains("Radarr", ignoreCase = true) == true) throw notThisService()
+                ConnectionInfo(
+                    serverName = status.instanceName ?: status.appName,
+                    version = status.version,
+                    radarrProfiles = sonarr.qualityProfiles(url, headers, key),
+                    radarrRootFolders = sonarr.rootFolders(url, headers, key),
+                )
+            }
         }
     }
 
@@ -366,10 +381,10 @@ class HomelabRepository(
         return when (service) {
             HomelabService.PLEX -> {
                 val machine = index.machineIdentifier ?: return null
-                val slug = runCatching { plex.discoverSlug(tmdbId, config) }.getOrNull()
+                val slug = runCatching { plex.discoverSlug(tmdbId, config, show = series) }.getOrNull()
                 WatchLink(
                     service = HomelabService.PLEX,
-                    appUri = slug?.let(PlexClient::watchUrl),
+                    appUri = slug?.let { PlexClient.watchUrl(it, show = series) },
                     appPackage = PlexClient.ANDROID_PACKAGE,
                     webUrl = PlexClient.webUrl(machine, itemId),
                 )
@@ -396,8 +411,8 @@ class HomelabRepository(
         val now = clock()
         serverIndexes[config.service]?.takeIf { now - it.loadedAt < INDEX_TTL_MS }?.let { return@withLock it }
         val movies = when (config.service) {
-            HomelabService.PLEX -> plex.movies(config)
-            HomelabService.JELLYFIN -> jellyfin.movies(config)
+            HomelabService.PLEX -> if (series) plex.shows(config) else plex.movies(config)
+            HomelabService.JELLYFIN -> if (series) jellyfin.series(config) else jellyfin.movies(config)
             else -> emptyList()
         }
         val machine = if (config.service == HomelabService.PLEX) plex.machineIdentifier(config) else null
@@ -466,8 +481,14 @@ class HomelabRepository(
             when (entry.type) {
                 OutboxType.REQUEST -> {
                     val (remoteId, already) = when (entry.service) {
-                        HomelabService.SEERR -> seerr.request(config, entry.tmdbId).let { it.requestId to it.alreadyRequested }
+                        HomelabService.SEERR -> seerr.request(config, entry.tmdbId, tv = series, seasons = entry.seasonList).let { it.requestId to it.alreadyRequested }
                         HomelabService.RADARR -> radarr.addMovie(config, entry.tmdbId).let { it.radarrId to it.alreadyPresent }
+                        HomelabService.SONARR -> {
+                            // Sonarr repère les séries par leur identifiant TVDB, donné par TMDB.
+                            val tvdb = runCatching { tmdb.tvdbId(entry.tmdbId) }.getOrNull()
+                                ?: throw HomelabException(entry.service, HomelabException.Kind.NOT_FOUND, "Pas d'identifiant TVDB pour « ${entry.title} »")
+                            sonarr.addSeries(config, tvdb, seasons = entry.seasonList).let { it.sonarrId to it.alreadyPresent }
+                        }
                         HomelabService.JELLYFIN, HomelabService.PLEX ->
                             throw HomelabException(entry.service, HomelabException.Kind.NOT_CONFIGURED, "Pas de demandes sur ${entry.service.displayName}")
                     }
@@ -489,6 +510,7 @@ class HomelabRepository(
                         when (entry.service) {
                             HomelabService.SEERR -> seerr.deleteRequest(config, remoteId)
                             HomelabService.RADARR -> radarr.deleteMovie(config, remoteId)
+                            HomelabService.SONARR -> sonarr.deleteSeries(config, remoteId)
                             HomelabService.JELLYFIN, HomelabService.PLEX -> Unit
                         }
                     }
@@ -550,8 +572,17 @@ class HomelabRepository(
     }
 
     private suspend fun fetchData(config: ServiceConfig): ServiceData = when (config.service) {
-        HomelabService.JELLYFIN -> mediaServerData(jellyfin.movies(config), WatchSource.JELLYFIN)
-        HomelabService.PLEX -> mediaServerData(plex.movies(config), WatchSource.PLEX)
+        HomelabService.JELLYFIN -> mediaServerData(if (series) jellyfin.series(config) else jellyfin.movies(config), WatchSource.JELLYFIN)
+        HomelabService.PLEX -> mediaServerData(if (series) plex.shows(config) else plex.movies(config), WatchSource.PLEX)
+        HomelabService.SONARR -> {
+            val shows = sonarr.series(config).mapNotNull { show -> tmdbIdOf(show)?.let { it to show } }
+            ServiceData(
+                available = shows.filter { (_, show) -> (show.statistics?.episodeFileCount ?: 0) > 0 }.mapTo(HashSet()) { it.first },
+                // Surveillée sans aucun épisode : demandée, en attente de téléchargement.
+                requested = shows.filter { (_, show) -> show.monitored && (show.statistics?.episodeFileCount ?: 0) == 0 }.mapTo(HashSet()) { it.first },
+                titles = shows.associate { (id, show) -> id to ServerTitle(show.title.orEmpty(), show.year?.takeIf { year -> year > 0 }) },
+            )
+        }
         HomelabService.RADARR -> {
             val movies = radarr.movies(config).filter { it.tmdbId > 0 }
             ServiceData(
@@ -562,10 +593,10 @@ class HomelabRepository(
             )
         }
         HomelabService.SEERR -> {
-            val requested = seerr.movieRequests(config)
+            val requested = seerr.movieRequests(config, tv = series)
                 .filter { it.status == SeerrClient.REQUEST_PENDING || it.status == SeerrClient.REQUEST_APPROVED }
                 .mapNotNullTo(HashSet()) { request -> request.media?.takeIf { it.status != SeerrClient.MEDIA_AVAILABLE }?.tmdbId }
-            ServiceData(available = seerr.availableMovies(config), requested = requested)
+            ServiceData(available = seerr.availableMovies(config, tv = series), requested = requested)
         }
     }
 
@@ -583,7 +614,12 @@ class HomelabRepository(
             available += id
             if (id !in titles) titles[id] = ServerTitle(movie.title, movie.year)
             // Plusieurs versions du même film (4K, 1080p) : vu si l'une l'est.
-            if (movie.watched) watched[id] = latest(watched[id], WatchedOnServer(source, movie.lastWatchedAt))
+            if (movie.watched) {
+                watched[id] = latest(
+                    watched[id],
+                    WatchedOnServer(source, movie.lastWatchedAt, series = series, finished = movie.finished, season = movie.currentSeason),
+                )
+            }
         }
         return ServiceData(watched = watched, available = available, titles = titles, unmatched = unmatched)
     }
@@ -613,8 +649,26 @@ class HomelabRepository(
         return Merged(snapshot, unmatched)
     }
 
-    /** Visionnage le plus récent connu. */
+    /** Identifiant TMDB d'une série de Sonarr (donné par Sonarr v4, sinon retrouvé par TVDB et gardé en mémoire). */
+    private val tvdbToTmdb = HashMap<Long, Long?>()
+
+    private suspend fun tmdbIdOf(show: SonarrSeriesDto): Long? {
+        if (show.tmdbId > 0) return show.tmdbId
+        if (show.tvdbId <= 0) return null
+        if (show.tvdbId in tvdbToTmdb) return tvdbToTmdb[show.tvdbId]
+        val found = runCatching { tmdb.findByTvdb(show.tvdbId) }.getOrNull()
+        tvdbToTmdb[show.tvdbId] = found
+        return found
+    }
+
+    /** Visionnage le plus récent connu ; pour une série, le plus avancé (deux serveurs). */
     private fun latest(current: WatchedOnServer?, candidate: WatchedOnServer): WatchedOnServer {
+        if (current != null && candidate.series) {
+            if (candidate.finished != current.finished) return if (candidate.finished) candidate else current
+            val currentSeason = current.season ?: 0
+            val candidateSeason = candidate.season ?: 0
+            if (candidateSeason != currentSeason) return if (candidateSeason > currentSeason) candidate else current
+        }
         if (current == null) return candidate
         val currentAt = current.watchedAt ?: return if (candidate.watchedAt != null) candidate else current
         val candidateAt = candidate.watchedAt ?: return current

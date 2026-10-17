@@ -6,7 +6,9 @@ import io.github.deedg.cineswipe.data.model.TmdbGenre
 import io.github.deedg.cineswipe.data.tmdb.TmdbApi
 import io.github.deedg.cineswipe.data.tmdb.TmdbAuth
 import io.github.deedg.cineswipe.data.tmdb.TmdbCollectionDto
+import io.github.deedg.cineswipe.data.tmdb.TmdbEpisodeDto
 import io.github.deedg.cineswipe.data.tmdb.TmdbMapper
+import io.github.deedg.cineswipe.data.tmdb.TmdbMovieDetailsDto
 import io.github.deedg.cineswipe.data.tmdb.TmdbMovieSummaryDto
 import io.github.deedg.cineswipe.data.tmdb.TmdbPageDto
 import io.github.deedg.cineswipe.data.tmdb.TmdbPersonDto
@@ -21,6 +23,10 @@ import retrofit2.HttpException
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+
+
+/** Dernier épisode diffusé et prochain annoncé d'une série. */
+data class ShowEpisodes(val last: TmdbEpisodeDto?, val next: TmdbEpisodeDto?)
 
 /** Erreurs TMDB, traduites en messages par l'interface. */
 sealed class TmdbException(message: String, cause: Throwable? = null) : Exception(message, cause) {
@@ -199,6 +205,14 @@ class TmdbRepository(
 
     private val providerCache = ConcurrentHashMap<Long, Pair<Long, WatchProviders>>()
 
+    /** Identifiant TVDB d'une série (pour Sonarr), ou null. */
+    suspend fun tvdbId(tmdbId: Long): Long? =
+        call { auth, _ -> api.externalIds(tmdbId, auth).tvdbId?.takeIf { it > 0 } }
+
+    /** Série d'après son identifiant TVDB (séries de Sonarr v3, qui ne donne pas l'identifiant TMDB). */
+    suspend fun findByTvdb(tvdbId: Long): Long? =
+        call { auth, language -> api.find(tvdbId.toString(), "tvdb_id", language, auth).movieResults.firstOrNull()?.id }
+
     /** Films correspondant à un identifiant IMDb (« tt0111161 »). */
     suspend fun findByImdb(imdbId: String): List<TmdbMovieSummaryDto> =
         call { auth, language -> api.find(imdbId, "imdb_id", language, auth).movieResults }
@@ -222,10 +236,18 @@ class TmdbRepository(
     /** Recharge la fiche depuis TMDB, sans repli sur le cache : l'erreur est levée telle quelle. */
     suspend fun refreshDetails(tmdbId: Long): MovieEntity = fetchDetails(tmdbId)
 
-    private suspend fun fetchDetails(tmdbId: Long): MovieEntity {
+    /** Série rechargée depuis TMDB, avec son dernier épisode diffusé et le prochain annoncé. */
+    suspend fun refreshShow(tmdbId: Long): Pair<MovieEntity, ShowEpisodes> {
+        var episodes = ShowEpisodes(null, null)
+        val entity = fetchDetails(tmdbId) { dto -> episodes = ShowEpisodes(dto.lastEpisode, dto.nextEpisode) }
+        return entity to episodes
+    }
+
+    private suspend fun fetchDetails(tmdbId: Long, onDto: (TmdbMovieDetailsDto) -> Unit = {}): MovieEntity {
         val entity = call { auth, language ->
             val primary = TmdbMapper.primaryLanguage(language)
             val dto = api.movie(tmdbId, language, TmdbMapper.APPEND_TO_RESPONSE, TmdbMapper.videoLanguages(language), auth)
+            onDto(dto)
             var overview = TmdbMapper.cleanText(dto.overview)
             var overviewLanguage = primary
             if (overview == null && primary != "en") {

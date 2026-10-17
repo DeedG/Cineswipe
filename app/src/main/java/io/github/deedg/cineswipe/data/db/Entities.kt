@@ -20,6 +20,28 @@ enum class WatchSource { MANUAL, IMPORT, JELLYFIN, PLEX }
 /** Présence du film sur le serveur homelab. */
 enum class Availability { NONE, REQUESTED, AVAILABLE }
 
+/**
+ * Où en est une série vue ([WatchStatus.WATCHED]) : en cours (saison [UserMovieEntity.currentSeason]),
+ * finie ou abandonnée. Null pour un film.
+ */
+enum class SeriesProgress {
+    IN_PROGRESS,
+    FINISHED,
+
+    /** Vue par épisodes, au hasard (souvent à la télé), sans ordre ni saison. */
+    EPISODES,
+    ABANDONED,
+}
+
+/** Une saison d'une série (fiche série). */
+@Serializable
+data class TvSeason(
+    val number: Int,
+    val name: String? = null,
+    val episodeCount: Int? = null,
+    val year: Int? = null,
+)
+
 /** Première impression donnée en marquant un film vu (recensement) : point de départ de l'Arène. */
 enum class Impression { LOVED, DISLIKED }
 
@@ -67,6 +89,11 @@ data class MovieEntity(
     @ColumnInfo(defaultValue = "0") val detailsVersion: Int = 0,
     /** Saga TMDB du film (« Matrix », « Le Parrain »…), pour proposer les autres épisodes. */
     val collectionId: Long? = null,
+    /** Série : nombre de saisons, statut de diffusion TMDB, année de la dernière diffusion, saisons. */
+    val seasonCount: Int? = null,
+    val airStatus: String? = null,
+    val endYear: Int? = null,
+    @ColumnInfo(defaultValue = "'[]'") val seasons: List<TvSeason> = emptyList(),
 )
 
 /**
@@ -108,6 +135,10 @@ data class UserMovieEntity(
     val impression: Impression? = null,
     /** Note reprise d'une autre appli (Letterboxd, IMDb, Trakt…), sur 10 : point de départ dans l'Arène. */
     val importedRating: Double? = null,
+    /** Série vue : en cours, finie ou abandonnée (null pour un film). */
+    val progress: SeriesProgress? = null,
+    /** Série en cours ou abandonnée : saison où l'utilisateur en est. */
+    val currentSeason: Int? = null,
 )
 
 /** Journal des duels de l'Arène, en ajout seul : il permet d'annuler et de recalculer. */
@@ -161,7 +192,16 @@ data class OutboxEntity(
     val lastError: String? = null,
     val createdAt: Long,
     val updatedAt: Long,
-)
+    /** Série : saisons demandées (« 1,3 ») ; null = toute la série. */
+    val seasons: String? = null,
+) {
+    /** Saisons demandées, ou null pour toute la série. */
+    val seasonList: List<Int>? get() = seasons?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.takeIf { it.isNotEmpty() }
+
+    companion object {
+        fun encodeSeasons(seasons: List<Int>?): String? = seasons?.distinct()?.sorted()?.takeIf { it.isNotEmpty() }?.joinToString(",")
+    }
+}
 
 /** Nature d'un lien entre deux films sur TMDB. */
 enum class RecoLinkKind {

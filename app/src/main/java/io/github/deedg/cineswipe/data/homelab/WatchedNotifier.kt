@@ -17,8 +17,8 @@ import io.github.deedg.cineswipe.data.db.WatchSource
 import io.github.deedg.cineswipe.widget.WidgetLinks
 import java.time.LocalTime
 
-/** Un film tout juste vu sur un serveur média. */
-data class WatchedNotice(val tmdbId: Long, val title: String, val source: WatchSource)
+/** Un film (ou une série commencée ou finie, [series]) tout juste vu sur un serveur média. */
+data class WatchedNotice(val tmdbId: Long, val title: String, val source: WatchSource, val series: Boolean = false)
 
 /** Prévient qu'un film vient d'être vu sur Plex ou Jellyfin, pour le placer dans le classement. */
 fun interface WatchedNotifier {
@@ -28,14 +28,24 @@ fun interface WatchedNotifier {
         /** Rien (tests, démo). */
         val None = WatchedNotifier { }
 
-        /** Lien « placer ces films dans l'Arène » (ouvert par la notification). */
-        fun rankLink(ids: List<Long>): String = RANK_PREFIX + ids.joinToString(",")
+        /** Lien « placer ces films (ou ces séries) dans l'Arène » (ouvert par la notification). */
+        fun rankLink(ids: List<Long>, series: Boolean = false): String = (if (series) SERIES_RANK_PREFIX else RANK_PREFIX) + ids.joinToString(",")
 
-        /** Films à placer d'après le lien, ou null si ce n'en est pas un. */
-        fun parseRankLink(link: String): List<Long>? =
-            link.takeIf { it.startsWith(RANK_PREFIX) }?.removePrefix(RANK_PREFIX)?.split(',')?.mapNotNull { it.trim().toLongOrNull() }?.takeIf { it.isNotEmpty() }
+        /** Films ou séries à placer d'après le lien, ou null si ce n'en est pas un. */
+        fun parseRankLink(link: String): List<Long>? {
+            val ids = when {
+                link.startsWith(SERIES_RANK_PREFIX) -> link.removePrefix(SERIES_RANK_PREFIX)
+                link.startsWith(RANK_PREFIX) -> link.removePrefix(RANK_PREFIX)
+                else -> return null
+            }
+            return ids.split(',').mapNotNull { it.trim().toLongOrNull() }.takeIf { it.isNotEmpty() }
+        }
+
+        /** Vrai si le lien vise l'Arène des séries. */
+        fun isSeriesLink(link: String): Boolean = link.startsWith(SERIES_RANK_PREFIX)
 
         private const val RANK_PREFIX = "rank:"
+        private const val SERIES_RANK_PREFIX = "rank-series:"
     }
 }
 
@@ -50,33 +60,34 @@ class AndroidWatchedNotifier(private val context: Context) : WatchedNotifier {
         }
         val manager = NotificationManagerCompat.from(context)
         ensureChannel()
+        val series = films.any { it.series }
         val server = films.map { it.source }.distinct().singleOrNull()?.let(::serverName)
         val title = if (films.size == 1) {
             if (server != null) {
-                context.getString(R.string.notify_watched_one_on, server, films.first().title)
+                context.getString(if (series) R.string.notify_series_one_on else R.string.notify_watched_one_on, server, films.first().title)
             } else {
                 context.getString(R.string.notify_watched_one, films.first().title)
             }
         } else {
-            context.resources.getQuantityString(R.plurals.notify_watched_many, films.size, films.size)
+            context.resources.getQuantityString(if (series) R.plurals.notify_series_many else R.plurals.notify_watched_many, films.size, films.size)
         }
         val text = if (films.size == 1) {
-            context.getString(R.string.notify_watched_text_one)
+            context.getString(if (series) R.string.notify_series_text_one else R.string.notify_watched_text_one)
         } else {
             context.getString(R.string.notify_watched_text_many, films.take(MAX_TITLES).joinToString(", ") { it.title })
         }
         val open = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            .putExtra(WidgetLinks.EXTRA_OPEN, WatchedNotifier.rankLink(films.map { it.tmdbId }))
+            .putExtra(WidgetLinks.EXTRA_OPEN, WatchedNotifier.rankLink(films.map { it.tmdbId }, series))
         val pending = PendingIntent.getActivity(
             context,
-            REQUEST_CODE,
+            if (series) SERIES_REQUEST_CODE else REQUEST_CODE,
             open,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(ACCENT)
+            .setColor(if (series) SERIES_ACCENT else ACCENT)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -87,7 +98,7 @@ class AndroidWatchedNotifier(private val context: Context) : WatchedNotifier {
             // La nuit, la notification arrive sans bruit.
             .setSilent(isNight())
             .build()
-        runCatching { manager.notify(NOTIFICATION_ID, notification) }
+        runCatching { manager.notify(if (series) SERIES_NOTIFICATION_ID else NOTIFICATION_ID, notification) }
     }
 
     private fun ensureChannel() {
@@ -118,5 +129,8 @@ class AndroidWatchedNotifier(private val context: Context) : WatchedNotifier {
         private const val NIGHT_START = 23
         private const val NIGHT_END = 8
         private const val ACCENT = 0xFFED1C24.toInt()
+        private const val SERIES_ACCENT = 0xFF7C3AED.toInt()
+        private const val SERIES_NOTIFICATION_ID = 4202
+        private const val SERIES_REQUEST_CODE = 4202
     }
 }

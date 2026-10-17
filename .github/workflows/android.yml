@@ -18,6 +18,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      # Clé TMDB intégrée à l'APK (facultative : sans ce secret, chacun met la sienne dans l'appli).
+      TMDB_BUILTIN_KEY: ${{ secrets.TMDB_BUILTIN_KEY }}
     steps:
       - uses: actions/checkout@v6
 
@@ -59,13 +62,21 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | grep -v -- '-----' | tr -d '\r\n ' | base64 -d > keystore/cineswipe.jks
           printf 'storePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore/keystore.properties
 
+      - name: Clé TMDB intégrée
+        run: |
+          if [ -n "$TMDB_BUILTIN_KEY" ]; then
+            echo "::notice::Clé TMDB intégrée à l'APK : rien à configurer pour les utilisateurs."
+          else
+            echo "::warning::Pas de secret TMDB_BUILTIN_KEY : chaque utilisateur devra mettre sa propre clé TMDB."
+          fi
+
       - name: Tests unitaires et APK signé
         env:
           CINESWIPE_VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew --no-daemon --stacktrace :app:dependencies --configuration releaseRuntimeClasspath testDebugUnitTest assembleRelease 2>&1 | tee build.log
+          ./gradlew --no-daemon --stacktrace :app:dependencies --configuration releaseRuntimeClasspath testDebugUnitTest assembleRelease bundleRelease 2>&1 | tee build.log
 
       - name: Erreurs de compilation en annotations
         if: failure()
@@ -107,7 +118,10 @@ jobs:
 
       - name: Nommer l'APK
         if: success() && env.SIGNED == 'true'
-        run: cp app/build/outputs/apk/release/app-release.apk "CineSwipe-0.1.${{ env.VERSION_CODE }}.apk"
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "CineSwipe-0.1.${{ env.VERSION_CODE }}.apk"
+          # Paquet pour le Play Store (même signature : sert de clé d'envoi).
+          cp app/build/outputs/bundle/release/app-release.aab "CineSwipe-0.1.${{ env.VERSION_CODE }}.aab"
 
       - name: Publier la version
         if: success() && env.SIGNED == 'true'
@@ -116,7 +130,9 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           name: CineSwipe 0.1.${{ env.VERSION_CODE }}
           make_latest: true
-          files: CineSwipe-0.1.${{ env.VERSION_CODE }}.apk
+          files: |
+            CineSwipe-0.1.${{ env.VERSION_CODE }}.apk
+            CineSwipe-0.1.${{ env.VERSION_CODE }}.aab
           body: |
             Compilation automatique du commit ${{ github.sha }}.
             Sur le téléphone : télécharger l'APK ci-dessous puis l'ouvrir pour l'installer.

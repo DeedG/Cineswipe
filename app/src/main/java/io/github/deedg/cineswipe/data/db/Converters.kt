@@ -37,6 +37,12 @@ class Converters {
 
     @TypeConverter
     fun stringsFromJson(value: String): List<String> = DbJson.decodeStrings(value)
+
+    @TypeConverter
+    fun seasonsToJson(value: List<TvSeason>): String = DbJson.encodeSeasons(value)
+
+    @TypeConverter
+    fun seasonsFromJson(value: String): List<TvSeason> = DbJson.decodeSeasons(value)
 }
 
 internal object DbJson {
@@ -45,6 +51,12 @@ internal object DbJson {
     private val tagsSerializer: KSerializer<List<TmdbTag>> = ListSerializer(TmdbTag.serializer())
     private val intsSerializer: KSerializer<List<Int>> = ListSerializer(Int.serializer())
     private val stringsSerializer: KSerializer<List<String>> = ListSerializer(String.serializer())
+    private val seasonsSerializer: KSerializer<List<TvSeason>> = ListSerializer(TvSeason.serializer())
+
+    fun encodeSeasons(value: List<TvSeason>): String = json.encodeToString(seasonsSerializer, value)
+
+    fun decodeSeasons(value: String): List<TvSeason> =
+        runCatching { json.decodeFromString(seasonsSerializer, value) }.getOrDefault(emptyList())
 
     fun encodeCast(value: List<CastMember>): String = json.encodeToString(castSerializer, value)
 

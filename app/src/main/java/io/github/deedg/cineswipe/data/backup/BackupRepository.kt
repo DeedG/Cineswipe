@@ -152,8 +152,8 @@ class BackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker
 enum class BackupResult { DONE, DISABLED, FAILED, SKIPPED }
 
 /**
- * Sauvegarde automatique : chaque semaine, toutes les données (le même JSON que l'export, dans
- * une archive ZIP) sont écrites dans un dossier choisi par l'utilisateur. Les 8 dernières sont
+ * Sauvegarde automatique : chaque semaine, toutes les données (le même JSON que l'export, un
+ * fichier par monde, films et séries, dans une archive ZIP) sont écrites dans un dossier choisi par l'utilisateur. Les 8 dernières sont
  * gardées. Une sauvegarde se restaure avec l'import (Réglages › Mes données).
  */
 class BackupRepository(
@@ -162,6 +162,8 @@ class BackupRepository(
     private val storage: BackupStorage,
     private val scheduler: BackupScheduler,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Les autres mondes (les séries), sauvegardés dans la même archive. */
+    private val otherWorlds: suspend () -> List<DiagnosticsRepository> = { emptyList() },
 ) {
     private val mutex = Mutex()
 
@@ -196,14 +198,20 @@ class BackupRepository(
         val folder = settings.backupFolder.first() ?: return@withLock BackupResult.DISABLED
         val now = clock()
         try {
-            val data = diagnostics.exportData()
-            if (data.films.none { it.status == "WATCHED" || it.status == "WATCHLIST" }) {
+            val stamp = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.FRANCE).format(Date(now))
+            // Un fichier par monde (films, séries) dans la même archive ; les mondes vides sont laissés de côté.
+            val worlds = (listOf(diagnostics) + otherWorlds()).mapNotNull { world ->
+                val data = world.exportData()
+                if (data.films.none { it.status == "WATCHED" || it.status == "WATCHLIST" }) return@mapNotNull null
+                val prefix = if (data.kind == "SERIES") "cineswipe-series" else "cineswipe"
+                "$prefix-$stamp.json" to world.encode(data).toByteArray()
+            }
+            if (worlds.isEmpty()) {
                 // Bibliothèque vide (tout effacé, nouveau téléphone) : les sauvegardes précédentes restent intactes.
                 settings.recordBackup(now, null, ERROR_EMPTY)
                 return@withLock BackupResult.SKIPPED
             }
-            val stamp = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.FRANCE).format(Date(now))
-            val bytes = withContext(Dispatchers.Default) { zip("cineswipe-$stamp.json", diagnostics.encode(data).toByteArray()) }
+            val bytes = withContext(Dispatchers.Default) { zip(worlds) }
             val name = "$PREFIX$stamp.zip"
             withContext(Dispatchers.IO) {
                 storage.write(folder, name, "application/zip", bytes)
@@ -231,12 +239,14 @@ class BackupRepository(
             .forEach { runCatching { storage.delete(folder, it) } }
     }
 
-    private fun zip(name: String, content: ByteArray): ByteArray {
+    private fun zip(files: List<Pair<String, ByteArray>>): ByteArray {
         val output = ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
-            zip.putNextEntry(ZipEntry(name))
-            zip.write(content)
-            zip.closeEntry()
+            files.forEach { (name, content) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content)
+                zip.closeEntry()
+            }
         }
         return output.toByteArray()
     }

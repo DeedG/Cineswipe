@@ -28,12 +28,24 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
+ * L'appli telle quelle, sans la clé TMDB intégrée (secret de la CI) ni la vérification des mises
+ * à jour : le parcours sans clé reste testé, et aucun appel réseau ne part.
+ */
+class SmokeApp : CineSwipeApp() {
+    private fun config() = AppConfig(builtinTmdbKey = null, updateUrl = null)
+
+    override fun createContainer(): AppContainer = AppContainer(this, config())
+
+    override fun createSeriesContainer(): AppContainer = AppContainer(this, config(), kind = io.github.deedg.cineswipe.data.model.MediaKind.SERIES)
+}
+
+/**
  * Lance la vraie appli (Robolectric) et parcourt les écrans, pour détecter un plantage au
  * démarrage ou à la navigation, à vide puis avec une petite bibliothèque. Sans clé TMDB,
  * aucun appel réseau ne part.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi")
+@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = SmokeApp::class)
 class AppSmokeTest {
 
     @get:Rule
@@ -81,7 +93,8 @@ class AppSmokeTest {
             compose.onNodeWithContentDescription("Retour").performClick()
 
             compose.waitForText("Hall of Fame")
-            compose.onNodeWithContentDescription("Réglages").performClick()
+            // Le profil est resté défilé jusqu'au bouton de la bibliothèque : on remonte aux réglages.
+            compose.onNodeWithContentDescription("Réglages").performScrollTo().performClick()
             compose.waitForText("Clé API TMDB")
             compose.waitForText("Mes données")
             compose.waitForText("Recommencer le classement")

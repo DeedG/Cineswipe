@@ -62,6 +62,7 @@ import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.ui.common.ExportEffect
 import io.github.deedg.cineswipe.ui.common.cineViewModel
+import io.github.deedg.cineswipe.ui.common.isSeriesWorld
 import io.github.deedg.cineswipe.ui.components.CineButton
 import io.github.deedg.cineswipe.ui.components.CineChip
 import io.github.deedg.cineswipe.ui.components.CineSecondaryButton
@@ -69,10 +70,14 @@ import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.ScreenTitle
 import io.github.deedg.cineswipe.ui.components.SectionCard
+import io.github.deedg.cineswipe.ui.components.WorldSwitch
 import io.github.deedg.cineswipe.ui.demo.DemoRestartEffect
 import io.github.deedg.cineswipe.ui.demo.demoViewModel
+import io.github.deedg.cineswipe.ui.homelab.SeasonNotificationsSection
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
+import io.github.deedg.cineswipe.ui.update.UpdateSection
 import kotlinx.coroutines.launch
 
 private const val TMDB_API_SETTINGS_URL = "https://www.themoviedb.org/settings/api"
@@ -163,8 +168,12 @@ fun SettingsScreen(
         if (state.demo) {
             DemoSection(onStopDemo)
         } else {
+            ModeSection()
+            // Séries : prévenir des nouvelles saisons.
+            if (isSeriesWorld()) SeasonNotificationsSection()
             TmdbSection(
                 maskedKey = state.tmdbKeyMasked,
+                builtinKey = state.builtinKey,
                 keyCheck = state.keyCheck,
                 onSave = onSaveTmdbKey,
                 onKeyCheckShown = onKeyCheckShown,
@@ -178,6 +187,7 @@ fun SettingsScreen(
         if (!state.demo) backupSection()
         if (state.devTools) DevToolsSection(onOpenDiagnostics)
         CrashSection(state.crashLog, onClearCrash)
+        if (!state.demo) UpdateSection()
         AboutSection(
             devTools = state.devTools,
             onUnlockDevTools = onUnlockDevTools,
@@ -287,6 +297,7 @@ private fun DevToolsSection(onOpen: () -> Unit) {
 @Composable
 private fun TmdbSection(
     maskedKey: String?,
+    builtinKey: Boolean,
     keyCheck: KeyCheckState,
     onSave: (String) -> Unit,
     onKeyCheckShown: () -> Unit,
@@ -317,10 +328,14 @@ private fun TmdbSection(
     SectionCard {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle(CineIcons.Film, stringResource(R.string.settings_tmdb_title))
-            BodyText(stringResource(R.string.settings_tmdb_body))
+            BodyText(stringResource(if (builtinKey) R.string.settings_tmdb_body_builtin else R.string.settings_tmdb_body))
             Text(
-                text = maskedKey?.let { stringResource(R.string.settings_tmdb_saved, it) } ?: stringResource(R.string.settings_tmdb_missing),
-                color = if (maskedKey != null) CineColors.Red else CineColors.TextMuted,
+                text = when {
+                    maskedKey != null -> stringResource(R.string.settings_tmdb_saved, maskedKey)
+                    builtinKey -> stringResource(R.string.settings_tmdb_builtin)
+                    else -> stringResource(R.string.settings_tmdb_missing)
+                },
+                color = if (maskedKey != null || builtinKey) CineColors.Red else CineColors.TextMuted,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
             )
@@ -392,6 +407,18 @@ private fun TmdbSection(
     }
 }
 
+/** Mode Films | Séries : deux mondes séparés. */
+@Composable
+private fun ModeSection() {
+    SectionCard {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SectionTitle(CineIcons.Layers, stringResource(R.string.settings_mode_title))
+            BodyText(stringResource(R.string.settings_mode_body))
+            WorldSwitch(tabName = Tab.PROFILE.name)
+        }
+    }
+}
+
 /** Accès à l'écran Homelab, avec les services actifs. */
 @Composable
 private fun HomelabSection(ready: List<HomelabService>, onOpen: () -> Unit) {
@@ -454,6 +481,7 @@ private fun DataSection(exporting: Boolean, onExport: () -> Unit, onImport: () -
                     .fillMaxWidth()
                     .testTag(SettingsTestTags.EXPORT),
             )
+            // Séries : seule la sauvegarde CineSwipe des séries (textes « _series »).
             BodyText(stringResource(R.string.settings_data_import_body))
             CineSecondaryButton(
                 text = stringResource(R.string.settings_data_import),

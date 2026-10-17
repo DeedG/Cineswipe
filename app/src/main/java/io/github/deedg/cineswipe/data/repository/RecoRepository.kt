@@ -27,13 +27,13 @@ import io.github.deedg.cineswipe.domain.reco.TasteProfile
 import io.github.deedg.cineswipe.domain.reco.TmdbTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 /** Carte des recos : la fiche du film et pourquoi il est proposé. */
@@ -46,6 +46,9 @@ data class TonightPick(
     val requested: Boolean = false,
     val score: Double,
     val reason: RecoReason?,
+    /** Série en cours à reprendre (Ce soir, monde des séries), et sa saison si elle est connue. */
+    val resume: Boolean = false,
+    val season: Int? = null,
 )
 
 data class RecoCard(
@@ -186,7 +189,27 @@ class RecoRepository(
      * écartés seulement ; un film de la liste À voir passe un peu devant, et l'ordre varie
      * légèrement d'un jour à l'autre sans bouger dans la journée.
      */
-    suspend fun tonight(): List<TonightPick> = withContext(Dispatchers.Default) { computeTonight() }
+    /** [series] : les séries en cours passent devant (« À reprendre »), de la plus récente à la plus ancienne. */
+    suspend fun tonight(series: Boolean = false): List<TonightPick> = withContext(Dispatchers.Default) {
+        val resume = if (series) resumePicks() else emptyList()
+        resume + computeTonight().filter { pick -> resume.none { it.movie.tmdbId == pick.movie.tmdbId } }
+    }
+
+    private suspend fun resumePicks(): List<TonightPick> {
+        val withServer = settings.homelabConnected.first()
+        return dao.inProgress().mapIndexed { index, row ->
+            TonightPick(
+                movie = row.movie,
+                inWatchlist = false,
+                available = withServer && row.availability == Availability.AVAILABLE,
+                requested = withServer && row.availability == Availability.REQUESTED,
+                score = RESUME_SCORE - index,
+                reason = null,
+                resume = true,
+                season = row.currentSeason,
+            )
+        }
+    }
 
     private suspend fun computeTonight(): List<TonightPick> {
         val withServer = settings.homelabConnected.first()
@@ -482,6 +505,8 @@ class RecoRepository(
     }
 
     companion object {
+        /** Score des séries à reprendre : toujours devant les nouveautés. */
+        const val RESUME_SCORE = 1_000_000.0
         const val BATCH_SIZE = 10
 
         /** « Ce soir » : un film qu'on a mis de côté passe un peu devant. */

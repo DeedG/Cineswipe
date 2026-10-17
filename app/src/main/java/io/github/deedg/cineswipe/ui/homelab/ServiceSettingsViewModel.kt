@@ -147,7 +147,7 @@ class ServiceSettingsViewModel(
                         val draft = _state.value.draft
                         applySession(draft, homelab.seerrLogin(draft.url, draft.headers, SeerrAuthMode.PLEX, "", token))
                     }
-                    HomelabService.JELLYFIN, HomelabService.RADARR -> Unit
+                    HomelabService.JELLYFIN, HomelabService.RADARR, HomelabService.SONARR -> Unit
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -243,7 +243,7 @@ class ServiceSettingsViewModel(
         HomelabService.PLEX -> draft.copy(
             plexSections = draft.plexSections.filterTo(LinkedHashSet()) { key -> info.plexSections.any { it.key == key } },
         )
-        HomelabService.RADARR -> draft.copy(
+        HomelabService.RADARR, HomelabService.SONARR -> draft.copy(
             qualityProfileId = draft.qualityProfileId?.takeIf { id -> info.radarrProfiles.any { it.id == id } }
                 ?: info.radarrProfiles.firstOrNull()?.id,
             rootFolder = draft.rootFolder?.takeIf { path -> info.radarrRootFolders.any { it.path == path } }

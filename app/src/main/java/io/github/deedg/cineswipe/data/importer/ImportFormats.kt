@@ -35,6 +35,9 @@ data class ImportItem(
     val watchlist: Boolean = false,
     val rating10: Double? = null,
     val watchedAt: Long? = null,
+    /** Série (Trakt) : dernière saison commencée et épisodes vus dans cette saison. */
+    val season: Int? = null,
+    val seasonEpisodes: Int? = null,
 ) {
     /** Clé de regroupement : le même film peut apparaître dans plusieurs fichiers. */
     internal val key: String
@@ -52,6 +55,8 @@ data class ImportItem(
         watched = watched || other.watched,
         watchlist = (watchlist || other.watchlist) && !(watched || other.watched),
         rating10 = other.rating10 ?: rating10,
+        season = listOfNotNull(season, other.season).maxOrNull(),
+        seasonEpisodes = if ((other.season ?: -1) > (season ?: -1)) other.seasonEpisodes else seasonEpisodes ?: other.seasonEpisodes,
         // Première date connue : le journal Letterboxd a la vraie date, watched.csv celle de l'ajout.
         watchedAt = listOfNotNull(watchedAt, other.watchedAt).minOrNull(),
     )
@@ -82,11 +87,12 @@ data class ImportBatch(
 object ImportFormats {
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun parse(files: List<ImportFile>): ImportBatch {
+    /** [series] : dans une sauvegarde à deux mondes (films et séries), celle des séries est prise. */
+    fun parse(files: List<ImportFile>, series: Boolean = false): ImportBatch {
         val sources = LinkedHashSet<ImportSource>()
         val items = ArrayList<ImportItem>()
         val ignored = ArrayList<String>()
-        var backup: ExportFile? = null
+        val backups = ArrayList<ExportFile>()
         files.forEach { original ->
             val expanded = runCatching { expand(original) }.getOrElse {
                 ignored += original.name
@@ -97,11 +103,11 @@ object ImportFormats {
             val archive = expanded.size != 1 || expanded.first() !== original
             var recognised = false
             expanded.forEach { file ->
-                val result = runCatching { parseFile(file) }.getOrNull()
+                val result = runCatching { parseFile(file, series) }.getOrNull()
                 when {
                     result == null -> if (!archive) ignored += file.name
                     result.backup != null -> {
-                        backup = result.backup
+                        backups += result.backup
                         sources += ImportSource.CINESWIPE
                         recognised = true
                     }
@@ -115,6 +121,7 @@ object ImportFormats {
             }
             if (archive && !recognised) ignored += original.name
         }
+        val backup = backups.firstOrNull { (it.kind == "SERIES") == series } ?: backups.firstOrNull()
         backup?.let { saved -> items += saved.films.mapNotNull(::backupItem) }
         return ImportBatch(sources, merge(items), backup, ignored)
     }
@@ -150,18 +157,19 @@ object ImportFormats {
         return result
     }
 
-    private fun parseFile(file: ImportFile): Parsed {
+    private fun parseFile(file: ImportFile, series: Boolean): Parsed {
         val name = file.name.substringAfterLast('/').lowercase(Locale.ROOT)
         val path = file.name.lowercase(Locale.ROOT)
         if (path.contains("deleted/") || path.contains("orphaned/")) return Parsed(null, silent = true)
         val text = file.bytes.decodeToString().removePrefix("﻿")
         val trimmed = text.trimStart()
-        return if (trimmed.startsWith("{") || trimmed.startsWith("[")) parseJson(name, json.parseToJsonElement(trimmed)) else parseCsv(name, path, text)
+        return if (trimmed.startsWith("{") || trimmed.startsWith("[")) parseJson(name, json.parseToJsonElement(trimmed), series) else parseCsv(name, path, text, series)
     }
 
     // --- JSON : CineSwipe, Trakt ---
 
-    private fun parseJson(name: String, root: JsonElement): Parsed {
+    /** [series] : les séries de Trakt (« show ») au lieu des films (« movie »). */
+    private fun parseJson(name: String, root: JsonElement, series: Boolean = false): Parsed {
         if (root is JsonObject && root.string("app") == "CineSwipe") {
             return Parsed(ImportSource.CINESWIPE, backup = json.decodeFromJsonElement(ExportFile.serializer(), root))
         }
@@ -171,9 +179,15 @@ object ImportFormats {
         if (entries.none { "movie" in it || "show" in it || "episode" in it }) return Parsed(null)
         if (name.contains("collection") || name.contains("lists")) return Parsed(null, silent = true)
         val watchlistFile = name.contains("watchlist")
+        // Notes d'épisodes ou de saisons : pas une note de la série.
         val items = entries.mapNotNull { entry ->
-            val movie = entry["movie"] as? JsonObject ?: return@mapNotNull null
+            if (series && entry.string("type").let { it == "episode" || it == "season" }) return@mapNotNull null
+            val movie = entry[if (series) "show" else "movie"] as? JsonObject ?: return@mapNotNull null
             val ids = movie["ids"] as? JsonObject
+            // Séries vues : la dernière saison commencée et ses épisodes vus.
+            val lastSeason = (entry["seasons"] as? JsonArray)?.filterIsInstance<JsonObject>()
+                ?.filter { season -> (season["episodes"] as? JsonArray)?.isNotEmpty() == true }
+                ?.maxByOrNull { (it["number"] as? JsonPrimitive)?.intOrNull ?: 0 }
             val rating = (entry["rating"] as? JsonPrimitive)?.doubleOrNull
             val watchedAt = entry.string("last_watched_at") ?: entry.string("watched_at")
             val watched = !watchlistFile && (rating != null || watchedAt != null || "plays" in entry)
@@ -186,6 +200,8 @@ object ImportFormats {
                 watchlist = watchlistFile,
                 rating10 = rating?.takeIf { it in 1.0..10.0 },
                 watchedAt = parseInstant(watchedAt ?: entry.string("rated_at")).takeIf { watched },
+                season = lastSeason?.let { (it["number"] as? JsonPrimitive)?.intOrNull }?.takeIf { it >= 1 },
+                seasonEpisodes = (lastSeason?.get("episodes") as? JsonArray)?.size,
             )
         }
         return Parsed(ImportSource.TRAKT, items, silent = items.isEmpty())
@@ -195,7 +211,7 @@ object ImportFormats {
 
     // --- CSV : Letterboxd, IMDb, générique ---
 
-    private fun parseCsv(name: String, path: String, text: String): Parsed {
+    private fun parseCsv(name: String, path: String, text: String, series: Boolean = false): Parsed {
         if (text.startsWith("Letterboxd list export")) return Parsed(null, silent = true)
         val rows = Csv.parse(text)
         if (rows.isEmpty()) return Parsed(null)
@@ -208,6 +224,8 @@ object ImportFormats {
 
         if ("letterboxd uri" in header) {
             if (name == "profile.csv" || name == "comments.csv" || path.contains("lists/")) return Parsed(null, silent = true)
+            // Letterboxd ne connaît que des films : rien à reprendre en mode séries.
+            if (series) return Parsed(ImportSource.LETTERBOXD)
             val title = column("name")
             val year = column("year")
             val rating = column("rating")
@@ -237,7 +255,9 @@ object ImportFormats {
             val watchlist = "position" in header
             val items = data.mapNotNull { row ->
                 val kind = row.at(type)?.lowercase(Locale.ROOT)?.replace(" ", "")
-                if (kind != null && kind != "movie" && kind != "tvmovie" && kind != "video") return@mapNotNull null
+                // Films (film, téléfilm, vidéo) ou séries (série, mini-série) selon le monde.
+                val wanted = if (series) setOf("tvseries", "tvminiseries") else setOf("movie", "tvmovie", "video")
+                if (if (series) kind !in wanted else kind != null && kind !in wanted) return@mapNotNull null
                 val score = row.at(rating)?.toDoubleOrNull()?.takeIf { it in 1.0..10.0 }
                 val watched = !watchlist || score != null
                 ImportItem(

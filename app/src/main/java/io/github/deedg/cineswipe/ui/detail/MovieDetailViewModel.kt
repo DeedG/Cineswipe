@@ -1,26 +1,27 @@
 package io.github.deedg.cineswipe.ui.detail
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.CancellationException
-import io.github.deedg.cineswipe.data.repository.WatchProviders
-import io.github.deedg.cineswipe.data.homelab.WatchLink
-import io.github.deedg.cineswipe.data.db.Availability
 import androidx.lifecycle.viewModelScope
+import io.github.deedg.cineswipe.data.db.Availability
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.homelab.HomelabRepository
 import io.github.deedg.cineswipe.data.homelab.HomelabService
+import io.github.deedg.cineswipe.data.homelab.WatchLink
 import io.github.deedg.cineswipe.data.model.MovieDetails
 import io.github.deedg.cineswipe.data.repository.LibraryRepository
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.TmdbException
 import io.github.deedg.cineswipe.data.repository.TmdbRepository
+import io.github.deedg.cineswipe.data.repository.WatchProviders
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -115,15 +116,20 @@ class MovieDetailViewModel(
         viewModelScope.launch { library.unmarkWatched(tmdbId) }
     }
 
+    /** Série : en cours (saison [season]), finie ou abandonnée. */
+    fun setProgress(progress: SeriesProgress, season: Int?) {
+        viewModelScope.launch { library.setProgress(tmdbId, progress, season) }
+    }
+
     fun setStatus(status: WatchStatus) {
         viewModelScope.launch { library.setStatus(tmdbId, status) }
     }
 
     /** Demande le film au homelab ; [onRequested] reçoit le service choisi (pour le toast). */
-    fun request(onRequested: (HomelabService) -> Unit) {
+    fun request(seasons: List<Int>? = null, onRequested: (HomelabService) -> Unit) {
         val movie = state.value.details?.movie ?: return
         viewModelScope.launch {
-            homelab.requestMovie(movie)?.let { onRequested(it.service) }
+            homelab.requestMovie(movie, seasons)?.let { onRequested(it.service) }
         }
     }
 }

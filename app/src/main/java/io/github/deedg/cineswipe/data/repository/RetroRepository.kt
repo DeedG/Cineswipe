@@ -1,7 +1,10 @@
 package io.github.deedg.cineswipe.data.repository
 
 import io.github.deedg.cineswipe.data.db.CineSwipeDatabase
+import io.github.deedg.cineswipe.data.db.SeriesProgress
+import io.github.deedg.cineswipe.data.db.TvSeason
 import io.github.deedg.cineswipe.data.db.WatchSource
+import io.github.deedg.cineswipe.domain.SeriesTime
 import io.github.deedg.cineswipe.domain.StarScale
 import io.github.deedg.cineswipe.domain.reco.TmdbTag
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +26,14 @@ data class RetroRow(
     val watchedAt: Long?,
     val censusAt: Long?,
     val watchedSource: WatchSource?,
-)
+    val seasonCount: Int? = null,
+    val seasons: List<TvSeason> = emptyList(),
+    val progress: SeriesProgress? = null,
+    val currentSeason: Int? = null,
+) {
+    /** Minutes passées devant : la durée du film, ou les épisodes vus d'une série. */
+    val minutes: Int get() = SeriesTime.minutes(runtimeMinutes, seasonCount, seasons, progress, currentSeason)
+}
 
 /** Un film mis en avant dans la rétro, avec ses étoiles (sur tout le classement). */
 data class RetroFilm(
@@ -112,7 +122,7 @@ class RetroRepository(
                 year = year,
                 films = seen.size,
                 backfill = ofYear.size - seen.size,
-                hours = seen.sumOf { it.runtimeMinutes ?: 0 } / 60,
+                hours = seen.sumOf { it.minutes } / 60,
                 months = months,
                 bestMonth = months.indices.maxByOrNull { months[it] }?.takeIf { months[it] > 0 },
                 duels = duelTimes.count { yearOf(it, zone) == year },

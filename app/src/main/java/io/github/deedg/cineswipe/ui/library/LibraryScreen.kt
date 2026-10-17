@@ -48,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.ui.common.cineViewModel
+import io.github.deedg.cineswipe.ui.common.isSeriesWorld
 import io.github.deedg.cineswipe.ui.components.CineChip
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
@@ -67,6 +69,8 @@ fun LibraryRoute(
     onBack: () -> Unit,
     onOpenMovie: (Long) -> Unit,
     onOpenCensus: () -> Unit,
+    /** Fiche ouverte avec ses voisines (ordre de la liste) : un swipe passe à la précédente ou à la suivante. */
+    onOpenMovieIn: ((Long, List<Long>) -> Unit)? = null,
 ) {
     val viewModel = cineViewModel { LibraryViewModel(it.library, it.settings, initialFilter) }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -80,6 +84,7 @@ fun LibraryRoute(
         onBack = onBack,
         onOpenMovie = onOpenMovie,
         onOpenCensus = onOpenCensus,
+        onOpenMovieIn = onOpenMovieIn,
     )
 }
 
@@ -93,6 +98,7 @@ fun LibraryScreen(
     onBack: () -> Unit,
     onOpenMovie: (Long) -> Unit,
     onOpenCensus: () -> Unit,
+    onOpenMovieIn: ((Long, List<Long>) -> Unit)? = null,
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -138,7 +144,13 @@ fun LibraryScreen(
                     color = CineColors.TextMuted,
                     modifier = Modifier.align(Alignment.TopCenter).padding(top = 40.dp),
                 )
-                else -> LibraryList(sections = state.sections, onOpenMovie = onOpenMovie)
+                else -> LibraryList(
+                    sections = state.sections,
+                    onOpenMovie = { id ->
+                        val ids = state.sections.flatMap { section -> section.rows.map { it.tmdbId } }
+                        if (onOpenMovieIn != null && ids.size > 1) onOpenMovieIn(id, ids) else onOpenMovie(id)
+                    },
+                )
             }
         }
     }
@@ -181,7 +193,8 @@ private fun Controls(
     onSortChange: (LibrarySort) -> Unit,
     onFilterChange: (LibraryFilter) -> Unit,
 ) {
-    val filters = LibraryFilter.entries.filter { showAvailability || it != LibraryFilter.AVAILABLE }
+    val series = isSeriesWorld()
+    val filters = LibraryFilter.entries.filter { (showAvailability || it != LibraryFilter.AVAILABLE) && (series || it != LibraryFilter.IN_PROGRESS) }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             CineChip(
@@ -212,6 +225,7 @@ private val LibraryFilter.label: Int
     get() = when (this) {
         LibraryFilter.ALL -> R.string.library_filter_all
         LibraryFilter.WATCHED -> R.string.library_filter_watched
+        LibraryFilter.IN_PROGRESS -> R.string.series_progress_in_progress
         LibraryFilter.AVAILABLE -> R.string.library_filter_available
         LibraryFilter.WATCHLIST -> R.string.library_filter_watchlist
     }
@@ -321,7 +335,16 @@ private fun LibraryRow(row: LibraryRowUi, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                if (row.watched) StatusBadge(stringResource(R.string.badge_watched), CineColors.Red, icon = CineIcons.Eye, compact = true)
+                if (row.watched) {
+                    val label = when (row.progress) {
+                        SeriesProgress.IN_PROGRESS -> row.currentSeason?.let { stringResource(R.string.series_progress_in_season, it) }
+                            ?: stringResource(R.string.series_progress_in_progress)
+                        SeriesProgress.ABANDONED -> stringResource(R.string.series_progress_abandoned)
+                        SeriesProgress.EPISODES -> stringResource(R.string.series_progress_episodes)
+                        SeriesProgress.FINISHED, null -> stringResource(R.string.badge_watched)
+                    }
+                    StatusBadge(label, CineColors.Red, icon = CineIcons.Eye, compact = true)
+                }
                 if (row.available) StatusBadge(stringResource(R.string.badge_available), CineColors.TextSecondary, icon = CineIcons.Server, compact = true)
                 if (row.requested) StatusBadge(stringResource(R.string.badge_requested), CineColors.Warning, compact = true)
                 if (row.watchlist) StatusBadge(stringResource(R.string.badge_watchlist), CineColors.TmdbBlue, icon = CineIcons.Bookmark, compact = true)

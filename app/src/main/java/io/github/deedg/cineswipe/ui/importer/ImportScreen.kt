@@ -51,6 +51,7 @@ import io.github.deedg.cineswipe.data.importer.ImportSource
 import io.github.deedg.cineswipe.data.importer.ImportState
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.ui.common.cineViewModel
+import io.github.deedg.cineswipe.ui.common.isSeriesWorld
 import io.github.deedg.cineswipe.ui.components.CineButton
 import io.github.deedg.cineswipe.ui.components.CineSecondaryButton
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
@@ -232,13 +233,24 @@ private fun Waiting(text: String) {
 @Composable
 private fun HowTo() {
     Text(stringResource(R.string.import_how_title), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-    val guides = listOf(
-        R.string.import_how_cineswipe_title to R.string.import_how_cineswipe_body,
-        R.string.import_how_letterboxd_title to R.string.import_how_letterboxd_body,
-        R.string.import_how_trakt_title to R.string.import_how_trakt_body,
-        R.string.import_how_imdb_title to R.string.import_how_imdb_body,
-        R.string.import_how_other_title to R.string.import_how_other_body,
-    )
+    val cineswipe = R.string.import_how_cineswipe_title to R.string.import_how_cineswipe_body
+    // Séries : sauvegarde CineSwipe, Trakt, IMDb et CSV (Letterboxd n'a que des films).
+    val guides = if (isSeriesWorld()) {
+        listOf(
+            cineswipe,
+            R.string.import_how_trakt_title to R.string.import_how_trakt_body,
+            R.string.import_how_imdb_title to R.string.import_how_imdb_body,
+            R.string.import_how_other_title to R.string.import_how_other_body,
+        )
+    } else {
+        listOf(
+            cineswipe,
+            R.string.import_how_letterboxd_title to R.string.import_how_letterboxd_body,
+            R.string.import_how_trakt_title to R.string.import_how_trakt_body,
+            R.string.import_how_imdb_title to R.string.import_how_imdb_body,
+            R.string.import_how_other_title to R.string.import_how_other_body,
+        )
+    }
     var open by rememberSaveable { mutableStateOf(-1) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         guides.forEachIndexed { index, (title, body) ->
@@ -399,6 +411,8 @@ private fun Failed(reason: ImportFailure, onPick: () -> Unit, onReset: () -> Uni
                 ImportFailure.INVALID_KEY -> R.string.import_failed_invalid_key
                 ImportFailure.NETWORK -> R.string.import_failed_network
                 ImportFailure.ERROR -> R.string.import_failed_error
+                ImportFailure.WRONG_WORLD -> R.string.import_failed_wrong_world
+                ImportFailure.SERIES_BACKUP_ONLY -> R.string.import_failed_series_backup_only
             },
         ),
         CineColors.TextSecondary,

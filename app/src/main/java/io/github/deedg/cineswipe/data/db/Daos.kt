@@ -39,7 +39,8 @@ import kotlin.math.abs
 private const val LIBRARY_QUERY = """
     SELECT u.tmdbId AS tmdbId, m.title AS title, m.year AS year, m.posterPath AS posterPath,
            u.status AS status, u.rating AS rating, u.duels AS duels, u.confidence AS confidence,
-           u.availability AS availability, u.watchedAt AS watchedAt
+           u.availability AS availability, u.watchedAt AS watchedAt,
+           u.progress AS progress, u.currentSeason AS currentSeason
     FROM user_movie AS u
     INNER JOIN movie AS m ON m.tmdbId = u.tmdbId
     WHERE u.status IN ('WATCHED', 'WATCHLIST') OR u.availability != 'NONE'
@@ -132,7 +133,8 @@ interface UserMovieDao {
         SELECT u.tmdbId AS tmdbId, m.title AS title, m.year AS year, m.posterPath AS posterPath,
                m.runtimeMinutes AS runtimeMinutes, m.genres AS genres, m.keywords AS keywords,
                m.directors AS directors, m.`cast` AS `cast`, m.originalLanguage AS originalLanguage,
-               m.tmdbRating AS tmdbRating, m.voteCount AS voteCount, u.rating AS rating
+               m.tmdbRating AS tmdbRating, m.voteCount AS voteCount, u.rating AS rating,
+               m.seasonCount AS seasonCount, m.seasons AS seasons, u.progress AS progress, u.currentSeason AS currentSeason
         FROM user_movie AS u
         INNER JOIN movie AS m ON m.tmdbId = u.tmdbId
         WHERE u.status = 'WATCHED'
@@ -145,7 +147,8 @@ interface UserMovieDao {
         """
         SELECT u.tmdbId AS tmdbId, m.title AS title, m.year AS year, m.posterPath AS posterPath,
                m.runtimeMinutes AS runtimeMinutes, m.genres AS genres, m.directors AS directors,
-               u.rating AS rating, u.watchedAt AS watchedAt, u.censusAt AS censusAt, u.watchedSource AS watchedSource
+               u.rating AS rating, u.watchedAt AS watchedAt, u.censusAt AS censusAt, u.watchedSource AS watchedSource,
+               m.seasonCount AS seasonCount, m.seasons AS seasons, u.progress AS progress, u.currentSeason AS currentSeason
         FROM user_movie AS u
         INNER JOIN movie AS m ON m.tmdbId = u.tmdbId
         WHERE u.status = 'WATCHED'
@@ -434,6 +437,10 @@ abstract class LibraryDao {
     @Query("DELETE FROM user_movie WHERE tmdbId = :tmdbId")
     abstract suspend fun deleteUserMovie(tmdbId: Long)
 
+    /** Série : en cours (saison [season]), finie ou abandonnée. */
+    @Query("UPDATE user_movie SET progress = :progress, currentSeason = :season, updatedAt = :now WHERE tmdbId = :tmdbId")
+    abstract suspend fun setProgress(tmdbId: Long, progress: SeriesProgress?, season: Int?, now: Long)
+
     /** Marquer vu / retirer des vus. Le classement et les duels sont toujours conservés. */
     @Transaction
     open suspend fun setWatched(tmdbId: Long, watched: Boolean, now: Long) {
@@ -705,6 +712,14 @@ data class TonightRow(
     val availability: Availability,
 )
 
+/** Série en cours (Ce soir, « À reprendre ») : sa saison et la date du dernier changement. */
+data class ResumeRow(
+    @Embedded val movie: MovieEntity,
+    val availability: Availability,
+    val currentSeason: Int?,
+    val updatedAt: Long,
+)
+
 /**
  * Films ni vus ni écartés, à voir ou disponibles sur le serveur (quand le homelab est actif).
  * Une fiche sans affiche (tout juste venue du serveur) attend d'être complétée.
@@ -741,6 +756,29 @@ abstract class RecoDao {
 
     @Query(TONIGHT_QUERY)
     abstract suspend fun tonight(withServer: Boolean): List<TonightRow>
+
+    /** Séries suivies pour les nouvelles saisons : vues (finies ou en cours), toujours diffusées ou sans statut connu. */
+    @Query(
+        """
+        SELECT m.* FROM user_movie AS u
+        INNER JOIN movie AS m ON m.tmdbId = u.tmdbId
+        WHERE u.status = 'WATCHED' AND (u.progress IS NULL OR u.progress IN ('FINISHED', 'IN_PROGRESS'))
+          AND (m.airStatus IS NULL OR m.airStatus NOT IN ('Ended', 'Canceled'))
+        """,
+    )
+    abstract suspend fun followedShows(): List<MovieEntity>
+
+    /** Séries en cours, de la plus récemment touchée à la plus ancienne. */
+    @Query(
+        """
+        SELECT m.*, u.availability AS availability, u.currentSeason AS currentSeason, u.updatedAt AS updatedAt
+        FROM user_movie AS u
+        INNER JOIN movie AS m ON m.tmdbId = u.tmdbId
+        WHERE u.status = 'WATCHED' AND u.progress = 'IN_PROGRESS' AND m.posterPath IS NOT NULL
+        ORDER BY u.updatedAt DESC
+        """,
+    )
+    abstract suspend fun inProgress(): List<ResumeRow>
 
     /** Liens TMDB qui mènent à ces films (pour le score collaboratif de « Ce soir »). */
     @Query("SELECT * FROM reco_link WHERE movieId IN (:ids)")
@@ -919,6 +957,15 @@ abstract class CensusDao {
                         CensusChoice.DISLIKED -> Impression.DISLIKED
                         else -> current.impression
                     },
+                    progress = when (choice) {
+                        CensusChoice.FINISHED -> SeriesProgress.FINISHED
+                        CensusChoice.IN_PROGRESS -> SeriesProgress.IN_PROGRESS
+                        CensusChoice.EPISODES -> SeriesProgress.EPISODES
+                        CensusChoice.ABANDONED -> SeriesProgress.ABANDONED
+                        else -> current.progress
+                    },
+                    // Une saison n'a de sens qu'en cours ou décrochée (inconnue au recensement).
+                    currentSeason = current.currentSeason.takeIf { choice == CensusChoice.IN_PROGRESS || choice == CensusChoice.ABANDONED },
                     censusAt = now,
                     updatedAt = now,
                 )
@@ -944,6 +991,10 @@ abstract class CensusDao {
 
     @Query("SELECT COUNT(*) FROM user_movie WHERE status = 'WATCHED'")
     abstract fun observeWatched(): Flow<Int>
+
+    /** Réponses données au recensement (vu, pas vu, à voir…). */
+    @Query("SELECT COUNT(*) FROM user_movie WHERE censusAt IS NOT NULL")
+    abstract fun observeCensusAnswered(): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM census_pool")
     abstract suspend fun poolSize(): Int

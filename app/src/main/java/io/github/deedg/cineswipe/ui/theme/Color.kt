@@ -1,13 +1,44 @@
 package io.github.deedg.cineswipe.ui.theme
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import io.github.deedg.cineswipe.data.model.MediaKind
+
+/**
+ * Couleur d'accent d'un monde : le rouge des films, le violet des séries. [CineColors.Red] et ses
+ * variantes suivent l'accent en service, qui peut glisser d'une couleur à l'autre (switch).
+ */
+data class Accent(val main: Color, val light: Color, val deep: Color) {
+    companion object {
+        val Films = Accent(main = Color(0xFFED1C24), light = Color(0xFFFF4B52), deep = Color(0xFF1A0505))
+        val Series = Accent(main = Color(0xFF7C3AED), light = Color(0xFF9A66F2), deep = Color(0xFF0F0A1F))
+
+        fun of(kind: MediaKind): Accent = if (kind.isSeries) Series else Films
+
+        /** Mélange de deux accents (fondu du switch), [fraction] de 0 (départ) à 1 (arrivée). */
+        fun lerp(from: Accent, to: Accent, fraction: Float): Accent = Accent(
+            main = androidx.compose.ui.graphics.lerp(from.main, to.main, fraction),
+            light = androidx.compose.ui.graphics.lerp(from.light, to.light, fraction),
+            deep = androidx.compose.ui.graphics.lerp(from.deep, to.deep, fraction),
+        )
+    }
+}
+
+/** Accent en service (lu par la composition : un changement redessine tout ce qui l'utilise). */
+object CineAccent {
+    var current: Accent by mutableStateOf(Accent.Films)
+}
 
 /** Couleurs de la DA CineSwipe (reprises de la V4). */
 object CineColors {
     val Black = Color(0xFF000000)
-    val Red = Color(0xFFED1C24)
-    val RedLight = Color(0xFFFF4B52)
-    val RedDeep = Color(0xFF1A0505)
+
+    /** Accent du monde en service : rouge (films) ou violet (séries). */
+    val Red: Color get() = CineAccent.current.main
+    val RedLight: Color get() = CineAccent.current.light
+    val RedDeep: Color get() = CineAccent.current.deep
     val Surface = Color(0xFF111111)
     val SurfaceHigh = Color(0xFF1A1A1A)
     val Card = Color(0xFF121212)

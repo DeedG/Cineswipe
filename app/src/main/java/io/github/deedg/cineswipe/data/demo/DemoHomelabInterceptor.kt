@@ -25,11 +25,14 @@ import java.util.concurrent.atomic.AtomicLong
  * les demandes. Ainsi la démo montre « Sur le serveur », « Regarder sur Plex » et les demandes
  * d'un swipe, comme avec un vrai homelab.
  */
-class DemoHomelabInterceptor(private val catalog: DemoCatalog) : Interceptor {
+class DemoHomelabInterceptor(private val catalog: DemoCatalog, private val series: Boolean = false) : Interceptor {
     private val nextRequest = AtomicLong(100)
 
+    /** Type Seerr des œuvres du catalogue. */
+    private val type = if (series) "tv" else "movie"
+
     /** Films « sur le serveur » : ceux vus du profil, puis un sur trois du catalogue. */
-    val available: Set<Long> by lazy { availableIds(catalog) }
+    val available: Set<Long> by lazy { availableIds(catalog, series) }
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -102,7 +105,7 @@ class DemoHomelabInterceptor(private val catalog: DemoCatalog) : Interceptor {
         path == "api/v1/status" -> """{"version":"démo"}"""
         path == "api/v1/auth/me" -> """{"id":1,"displayName":"Démo"}"""
         path == "api/v1/request" && method == "GET" -> buildJsonObject {
-            val pending = DemoSeeder.WATCHLIST.take(1)
+            val pending = (if (series) DemoSeeder.WATCHLIST_SERIES else DemoSeeder.WATCHLIST).take(1)
             putJsonObject("pageInfo") {
                 put("pages", 1)
                 put("page", 1)
@@ -113,10 +116,10 @@ class DemoHomelabInterceptor(private val catalog: DemoCatalog) : Interceptor {
                     addJsonObject {
                         put("id", index + 1)
                         put("status", 2)
-                        put("type", "movie")
+                        put("type", type)
                         putJsonObject("media") {
                             put("tmdbId", id)
-                            put("mediaType", "movie")
+                            put("mediaType", type)
                             put("status", 3)
                         }
                     }
@@ -128,10 +131,10 @@ class DemoHomelabInterceptor(private val catalog: DemoCatalog) : Interceptor {
             buildJsonObject {
                 put("id", nextRequest.incrementAndGet())
                 put("status", 2)
-                put("type", "movie")
+                put("type", type)
                 putJsonObject("media") {
                     put("tmdbId", tmdbId)
-                    put("mediaType", "movie")
+                    put("mediaType", type)
                     put("status", 3)
                 }
             }.toString()
@@ -149,7 +152,7 @@ class DemoHomelabInterceptor(private val catalog: DemoCatalog) : Interceptor {
                         JsonObject(
                             mapOf(
                                 "tmdbId" to Json.parseToJsonElement(id.toString()),
-                                "mediaType" to Json.parseToJsonElement("\"movie\""),
+                                "mediaType" to Json.parseToJsonElement("\"$type\""),
                                 "status" to Json.parseToJsonElement("5"),
                             ),
                         ),
@@ -163,10 +166,11 @@ class DemoHomelabInterceptor(private val catalog: DemoCatalog) : Interceptor {
     companion object {
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
 
-        fun availableIds(catalog: DemoCatalog): Set<Long> {
+        fun availableIds(catalog: DemoCatalog, series: Boolean = false): Set<Long> {
             val known = catalog.films.map { it.id }.toSet()
-            val watched = DemoSeeder.WATCHED.filter { it in known }
-            val others = catalog.films.map { it.id }.filter { it !in watched && it !in DemoSeeder.WATCHLIST }
+            val watched = (if (series) DemoSeeder.WATCHED_SERIES else DemoSeeder.WATCHED).filter { it in known }
+            val watchlist = if (series) DemoSeeder.WATCHLIST_SERIES else DemoSeeder.WATCHLIST
+            val others = catalog.films.map { it.id }.filter { it !in watched && it !in watchlist }
             return (watched + others.filterIndexed { index, _ -> index % 3 == 0 }).toSet()
         }
     }

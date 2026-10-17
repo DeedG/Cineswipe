@@ -32,6 +32,19 @@ object FakeHomelabServer {
     /** Surveillé par Radarr, pas encore téléchargé. */
     const val RADARR_WANTED_ID = 1003L
 
+    // --- Séries ---
+    const val SONARR_KEY = "cle-sonarr"
+    const val SONARR_SERIES_ID = 31L
+
+    /** Série commencée sur Jellyfin (saison 2 en cours), connue du faux TMDB. */
+    const val SHOW_IN_PROGRESS_ID = 3001L
+
+    /** Série surveillée par Sonarr, sans épisode téléchargé (demandée). */
+    const val SHOW_WANTED_ID = 3002L
+
+    /** Identifiant TVDB d'une série du faux TMDB (`/tv/{id}/external_ids`). */
+    fun tvdbOf(tmdbId: Long): Long = 90_000 + tmdbId
+
     /** Requêtes reçues, pour les vérifications. */
     val requests: MutableList<RecordedRequest> = CopyOnWriteArrayList()
 
@@ -59,6 +72,7 @@ object FakeHomelabServer {
                 path.startsWith("/jellyfin/") -> jellyfin(request, path.removePrefix("/jellyfin"))
                 path.startsWith("/radarr/") -> radarr(request, path.removePrefix("/radarr"))
                 path.startsWith("/seerr/") -> seerr(request, path.removePrefix("/seerr"))
+                path.startsWith("/sonarr/") -> sonarr(request, path.removePrefix("/sonarr"))
                 else -> json(404, "{}")
             }
         }
@@ -69,8 +83,21 @@ object FakeHomelabServer {
         if (!request.headers["Authorization"].orEmpty().contains("""Token="$JELLYFIN_KEY"""")) return json(401, "{}")
         return when (path) {
             "/Users" -> json(200, """[{"Id":"$JELLYFIN_USER","Name":"Alex"},{"Id":"u2","Name":"Invité"}]""")
+            "/Shows/jf-show/Episodes" -> json(
+                200,
+                """{"Items":[{"ParentIndexNumber":1,"UserData":{"Played":true}},{"ParentIndexNumber":2,"UserData":{"Played":true}},
+                    {"ParentIndexNumber":2,"UserData":{"Played":false}},{"ParentIndexNumber":3,"UserData":{"Played":false}}]}""",
+            )
             "/Items" -> if (request.url.queryParameter("userId") != JELLYFIN_USER) {
                 json(400, "{}")
+            } else if (request.url.queryParameter("IncludeItemTypes") == "Series") {
+                json(
+                    200,
+                    """{"Items":[
+                        {"Id":"jf-show","Name":"Série Reco Un","ProductionYear":2015,"ProviderIds":{"Tmdb":"$SHOW_IN_PROGRESS_ID"},
+                         "UserData":{"Played":false,"UnplayedItemCount":2,"PlayedPercentage":50,"LastPlayedDate":"$WATCHED_AT"}}
+                    ],"TotalRecordCount":1}""",
+                )
             } else {
                 json(
                     200,
@@ -108,6 +135,25 @@ object FakeHomelabServer {
             }
             path == "/api/v3/movie" && request.method == "POST" -> json(201, """{"id":$RADARR_MOVIE_ID}""")
             path == "/api/v3/movie/$RADARR_MOVIE_ID" && request.method == "DELETE" -> json(200, "{}")
+            else -> json(404, "{}")
+        }
+    }
+
+    private fun sonarr(request: RecordedRequest, path: String): MockResponse {
+        if (request.headers["X-Api-Key"] != SONARR_KEY) return json(401, "{}")
+        val wanted = """{"id":5,"tvdbId":${tvdbOf(SHOW_WANTED_ID)},"tmdbId":$SHOW_WANTED_ID,"title":"Série Reco Deux","year":2018,"monitored":true,"statistics":{"episodeFileCount":0}}"""
+        return when {
+            path == "/api/v3/system/status" -> json(200, """{"appName":"Sonarr","instanceName":"Sonarr","version":"4.0.14"}""")
+            path == "/api/v3/qualityprofile" -> json(200, """[{"id":4,"name":"HD-1080p"}]""")
+            path == "/api/v3/rootfolder" -> json(200, """[{"id":1,"path":"/tv","accessible":true}]""")
+            path == "/api/v3/series" && request.method == "GET" -> json(200, "[$wanted]")
+            path == "/api/v3/series/lookup" -> {
+                val tvdb = request.url.queryParameter("term").orEmpty().removePrefix("tvdb:")
+                json(200, """[{"title":"Série $tvdb","tvdbId":$tvdb,"year":2020,"seasons":[],"id":0}]""")
+            }
+            path == "/api/v3/languageprofile" -> json(404, "{}")
+            path == "/api/v3/series" && request.method == "POST" -> json(201, """{"id":$SONARR_SERIES_ID}""")
+            path == "/api/v3/series/$SONARR_SERIES_ID" && request.method == "DELETE" -> json(200, "{}")
             else -> json(404, "{}")
         }
     }

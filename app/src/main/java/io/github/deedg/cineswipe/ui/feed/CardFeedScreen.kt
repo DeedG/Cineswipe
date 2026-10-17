@@ -25,7 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +45,7 @@ import io.github.deedg.cineswipe.ui.components.CineSecondaryButton
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassPillButton
 import io.github.deedg.cineswipe.ui.components.LocalToaster
+import io.github.deedg.cineswipe.ui.components.SeasonRequestSheet
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
@@ -81,6 +85,9 @@ fun CardFeedScreen(
     modifier: Modifier = Modifier,
     onEndAction: (() -> Unit)? = null,
     topStart: (@Composable () -> Unit)? = null,
+    topEnd: (@Composable () -> Unit)? = null,
+    /** Bandeau sous la barre du haut (invitation des recos), sur les cartes. */
+    banner: (@Composable () -> Unit)? = null,
 ) {
     val toaster = LocalToaster.current
     val resources = LocalResources.current
@@ -93,6 +100,28 @@ fun CardFeedScreen(
     val restoredMessage = stringResource(R.string.toast_restored)
     val currentCards by rememberUpdatedState(state.cards)
     val pagerState = key(state.session) { rememberPagerState(pageCount = { currentCards.size + 1 }) }
+    // Série envoyée à droite : choix des saisons à demander.
+    var askSeasons by remember { mutableStateOf<FeedEvent.AskSeasons?>(null) }
+    askSeasons?.let { ask ->
+        SeasonRequestSheet(
+            request = ask.request,
+            service = ask.service,
+            onRequest = { seasons ->
+                askSeasons = null
+                ask.confirm(seasons)
+            },
+            onLater = {
+                askSeasons = null
+                actionMessages[CardAction.WATCHLIST]?.let(toaster::show)
+            },
+        )
+    }
+
+    // Série envoyée à gauche : où en est-on ?
+    var askProgress by remember { mutableStateOf<FeedEvent.AskProgress?>(null) }
+    askProgress?.let { ask ->
+        SeriesProgressSheet(request = ask.request, onChange = ask.save, onDone = { askProgress = null })
+    }
 
     LaunchedEffect(events, pagerState) {
         events.collect { event ->
@@ -106,6 +135,8 @@ fun CardFeedScreen(
                     }
                     message?.let(toaster::show)
                 }
+                is FeedEvent.AskSeasons -> askSeasons = event
+                is FeedEvent.AskProgress -> askProgress = event
                 is FeedEvent.Restored -> {
                     toaster.show(restoredMessage)
                     val index = withTimeoutOrNull(RESTORE_TIMEOUT_MS) {
@@ -171,6 +202,22 @@ fun CardFeedScreen(
             ) {
                 GlassPillButton(text = stringResource(R.string.action_cancel), icon = CineIcons.Undo, onClick = onUndo)
             }
+        }
+        if (banner != null && (state.phase == FeedPhase.READY || state.phase == FeedPhase.EMPTY)) {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(start = 15.dp, end = 15.dp, top = 68.dp),
+            ) { banner() }
+        }
+        if (topEnd != null) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 19.dp, end = 15.dp),
+            ) { topEnd() }
         }
     }
 }

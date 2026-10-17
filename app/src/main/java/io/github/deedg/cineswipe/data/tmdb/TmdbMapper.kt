@@ -2,6 +2,7 @@ package io.github.deedg.cineswipe.data.tmdb
 
 import io.github.deedg.cineswipe.data.db.CastMember
 import io.github.deedg.cineswipe.data.db.MovieEntity
+import io.github.deedg.cineswipe.data.db.TvSeason
 import io.github.deedg.cineswipe.domain.reco.TmdbTag
 
 /** Conversion des réponses TMDB vers le cache local, sans dépendance Android (testée en local). */
@@ -19,6 +20,9 @@ object TmdbMapper {
      * - 2 : saga du film (recensement).
      */
     const val DETAILS_VERSION = 2
+
+    /** Version des fiches de séries : 4 = durée d'un épisode (finals courts acceptés, 0.1.65). */
+    const val SERIES_DETAILS_VERSION = 4
 
     /** Première version dont les fiches ont mots-clés et personnes (profil de goût). */
     const val TASTE_DETAILS_VERSION = 1
@@ -140,9 +144,22 @@ object TmdbMapper {
         directors = directors(dto.credits?.crew.orEmpty()),
         originalLanguage = language(dto.originalLanguage),
         popularity = dto.popularity,
-        detailsVersion = DETAILS_VERSION,
+        detailsVersion = if (dto.numberOfSeasons != null) SERIES_DETAILS_VERSION else DETAILS_VERSION,
         collectionId = dto.collection?.id,
+        seasonCount = dto.numberOfSeasons?.takeIf { it > 0 },
+        airStatus = cleanText(dto.status)?.takeIf { dto.numberOfSeasons != null },
+        endYear = year(dto.lastAirDate),
+        seasons = seasons(dto.seasons),
     )
+
+    /** Saisons d'une série, sans la saison 0 (épisodes spéciaux) ni les saisons sans épisode. */
+    fun seasons(seasons: List<TmdbSeasonDto>): List<TvSeason> =
+        seasons.asSequence()
+            .filter { it.number > 0 && (it.episodeCount ?: 0) > 0 }
+            .distinctBy { it.number }
+            .sortedBy { it.number }
+            .map { TvSeason(number = it.number, name = cleanText(it.name), episodeCount = it.episodeCount, year = year(it.airDate)) }
+            .toList()
 
     /**
      * Fiche partielle tirée d'une liste, quand la fiche complète n'a pas pu être chargée.
@@ -185,6 +202,7 @@ object TmdbMapper {
         val fetchedAt = movie.fetchedAt ?: return true
         if (movie.voteCount == null) return true
         if (movie.detailsVersion < DETAILS_VERSION) return true
+        if (movie.seasonCount != null && movie.detailsVersion < SERIES_DETAILS_VERSION) return true
         if (now - fetchedAt > MAX_AGE_MS) return true
         val overviewLanguage = movie.overviewLanguage ?: return movie.overview == null
         return overviewLanguage != primaryLanguage(language) && overviewLanguage != "en" && overviewLanguage != NO_OVERVIEW

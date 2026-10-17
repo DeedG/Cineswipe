@@ -80,10 +80,10 @@ class WorkManagerScheduler(private val context: Context) : HomelabScheduler {
 /** Synchro périodique (films vus, disponibilités, demandes), même appli fermée. */
 class HomelabSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        // Toujours les vraies données, même si la démo tourne au premier plan.
-        val homelab = (applicationContext as CineSwipeApp).mainContainer.homelab
+        // Toujours les vraies données (films et séries), même si la démo tourne au premier plan.
+        val homelabs = (applicationContext as CineSwipeApp).homelabs()
         return try {
-            homelab.sync()
+            homelabs.forEach { it.sync() }
             Result.success()
         } catch (error: CancellationException) {
             throw error
@@ -96,9 +96,10 @@ class HomelabSyncWorker(context: Context, params: WorkerParameters) : CoroutineW
 /** Envoie la file d'attente ; réessaie plus tard tant qu'il reste des demandes à envoyer. */
 class OutboxWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        val homelab = (applicationContext as CineSwipeApp).mainContainer.homelab
+        val homelabs = (applicationContext as CineSwipeApp).homelabs()
         return try {
-            if (homelab.flushOutbox() > 0) Result.retry() else Result.success()
+            val remaining = homelabs.sumOf { it.flushOutbox() }
+            if (remaining > 0) Result.retry() else Result.success()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

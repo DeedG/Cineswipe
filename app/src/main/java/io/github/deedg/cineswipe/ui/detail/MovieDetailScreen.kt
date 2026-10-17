@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -52,11 +55,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
 import io.github.deedg.cineswipe.data.db.Availability
 import io.github.deedg.cineswipe.data.db.CastMember
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.model.MovieDetails
 import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.ui.common.cineViewModel
+import io.github.deedg.cineswipe.ui.common.isSeriesWorld
 import io.github.deedg.cineswipe.ui.components.ActorAvatar
 import io.github.deedg.cineswipe.ui.components.BlurredBackdrop
 import io.github.deedg.cineswipe.ui.components.CineButton
@@ -68,6 +73,8 @@ import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
 import io.github.deedg.cineswipe.ui.components.RatingPill
+import io.github.deedg.cineswipe.ui.components.SeasonRequest
+import io.github.deedg.cineswipe.ui.components.SeasonRequestSheet
 import io.github.deedg.cineswipe.ui.components.StarRow
 import io.github.deedg.cineswipe.ui.components.StatusBadge
 import io.github.deedg.cineswipe.ui.components.WatchButtons
@@ -89,7 +96,29 @@ private class DetailActions(
     val onLightning: () -> Unit,
     val onRequest: () -> Unit,
     val onWatch: (HomelabService) -> Unit,
+    val onSetProgress: (SeriesProgress, Int?) -> Unit,
 )
+
+object DetailPagerTestTags {
+    const val PAGER = "detail_pager"
+}
+
+/**
+ * Fiches de la bibliothèque, l'une après l'autre : un swipe horizontal passe à la précédente ou à
+ * la suivante (le défilement vertical reste celui de la fiche).
+ */
+@Composable
+fun MovieDetailPager(ids: List<Long>, startId: Long, onBack: () -> Unit, onLightning: (Long) -> Unit) {
+    val pagerState = rememberPagerState(initialPage = ids.indexOf(startId).coerceAtLeast(0)) { ids.size }
+    HorizontalPager(
+        state = pagerState,
+        beyondViewportPageCount = 1,
+        key = { ids[it] },
+        modifier = Modifier.fillMaxSize().testTag(DetailPagerTestTags.PAGER),
+    ) { page ->
+        MovieDetailRoute(tmdbId = ids[page], onBack = onBack, onLightning = onLightning)
+    }
+}
 
 @Composable
 fun MovieDetailRoute(tmdbId: Long, onBack: () -> Unit, onLightning: (Long) -> Unit) {
@@ -113,6 +142,21 @@ fun MovieDetailRoute(tmdbId: Long, onBack: () -> Unit, onLightning: (Long) -> Un
     val missingFormat = stringResource(R.string.tonight_not_on_server)
     val demoWatch = stringResource(R.string.demo_watch)
     val cantOpen = stringResource(R.string.watch_cant_open)
+    val series = isSeriesWorld()
+    var askSeasons by rememberSaveable { mutableStateOf(false) }
+    val requestService = state.requestService
+    val movie = state.details?.movie
+    if (askSeasons && requestService != null && movie != null) {
+        SeasonRequestSheet(
+            request = SeasonRequest(movie.tmdbId, movie.title, movie.seasonCount),
+            service = requestService,
+            onRequest = { seasons ->
+                askSeasons = false
+                viewModel.request(seasons) { service -> toaster.show(resources.getString(R.string.toast_requested, service.displayName)) }
+            },
+            onLater = { askSeasons = false },
+        )
+    }
     LaunchedEffect(viewModel) {
         viewModel.links.collect { result ->
             when (result) {
@@ -146,9 +190,15 @@ fun MovieDetailRoute(tmdbId: Long, onBack: () -> Unit, onLightning: (Long) -> Un
             },
             onLightning = { onLightning(tmdbId) },
             onRequest = {
-                viewModel.request { service -> toaster.show(resources.getString(R.string.toast_requested, service.displayName)) }
+                // Série : toute la série ou quelques saisons, au choix.
+                if (series) {
+                    askSeasons = true
+                } else {
+                    viewModel.request { service -> toaster.show(resources.getString(R.string.toast_requested, service.displayName)) }
+                }
             },
             onWatch = viewModel::watch,
+            onSetProgress = viewModel::setProgress,
         ),
     )
 }
@@ -184,6 +234,7 @@ private fun MovieDetailContent(
     val requestService = state.requestService
     val movie = details.movie
     val status = details.user?.status ?: WatchStatus.NONE
+    val series = isSeriesWorld()
     val uriHandler = LocalUriHandler.current
     var confirmUnwatch by rememberSaveable { mutableStateOf(false) }
 
@@ -222,7 +273,10 @@ private fun MovieDetailContent(
                     modifier = Modifier.tutorialTarget(TutorialTarget.BACK),
                 )
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (details.isWatched) StatusBadge(stringResource(R.string.badge_watched), CineColors.Red, icon = CineIcons.Eye)
+                    if (details.isWatched) {
+                        val label = if (series) details.user?.let { progressLabel(it) } else null
+                        StatusBadge(label ?: stringResource(R.string.badge_watched), CineColors.Red, icon = CineIcons.Eye)
+                    }
                     if (status == WatchStatus.WATCHLIST) {
                         StatusBadge(stringResource(R.string.badge_watchlist), CineColors.TmdbBlue, icon = CineIcons.Bookmark)
                     }
@@ -252,7 +306,7 @@ private fun MovieDetailContent(
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
             )
-            YearAndRuntime(year = movie.year, runtimeMinutes = movie.runtimeMinutes)
+            if (series) SeriesInfoLine(movie) else YearAndRuntime(year = movie.year, runtimeMinutes = movie.runtimeMinutes)
             DirectedBy(movie, color = CineColors.TextSoft, fontSize = 15.sp, textAlign = TextAlign.Center)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
@@ -265,6 +319,9 @@ private fun MovieDetailContent(
                     details.user?.let { EloBadge(rating = it.rating, large = true) }
                     details.stars?.let { StarRow(stars = it, provisional = details.provisional, starSize = 18.dp) }
                 }
+            }
+            if (series && details.isWatched) {
+                details.user?.let { user -> SeriesProgressSection(user, movie.seasonCount, onChange = actions.onSetProgress) }
             }
             if (movie.cast.isNotEmpty()) CastRow(movie.cast)
             Synopsis(text = movie.overview ?: stringResource(R.string.detail_no_overview))

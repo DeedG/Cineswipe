@@ -41,6 +41,10 @@ data class DemoFilm(
     val popularity: Double? = null,
     val trailer: String? = null,
     val collection: Long? = null,
+    /** Série : nombre de saisons, statut de diffusion TMDB, année de la dernière diffusion. */
+    val seasonCount: Int? = null,
+    val status: String? = null,
+    val endYear: Int? = null,
 ) {
     val directors: List<String> get() = director?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
 }
@@ -79,6 +83,9 @@ data class DemoCatalog(
         originalLanguage = film.language,
         popularity = film.popularity,
         collection = film.collection?.let { TmdbCollectionRefDto(it) },
+        numberOfSeasons = film.seasonCount,
+        status = film.status,
+        lastAirDate = film.endYear?.let { "$it-06-01" },
     )
 
     /** Film dans une liste, comme dans les recos ou la découverte. */
@@ -102,6 +109,9 @@ data class DemoCatalog(
     companion object {
         const val ASSET = "demo/films.json"
 
+        /** Démo des séries : les 100 séries les plus votées. */
+        const val SERIES_ASSET = "demo/series.json"
+
         /** Les identifiants de personnes inventés pour la démo commencent ici (loin de ceux de TMDB). */
         private const val PERSON_ID_BASE = 9_000_000_000L
 
@@ -109,7 +119,8 @@ data class DemoCatalog(
 
         fun parse(text: String): DemoCatalog = json.decodeFromString(serializer(), text)
 
-        fun load(context: Context): DemoCatalog = context.assets.open(ASSET).use { parse(it.readBytes().decodeToString()) }
+        fun load(context: Context, series: Boolean = false): DemoCatalog =
+            context.assets.open(if (series) SERIES_ASSET else ASSET).use { parse(it.readBytes().decodeToString()) }
 
         /** Identifiant stable d'un réalisateur ou d'un acteur de la démo, tiré de son nom. */
         fun personId(name: String): Long = PERSON_ID_BASE + (name.trim().lowercase().hashCode().toLong() and 0x7fffffffL)

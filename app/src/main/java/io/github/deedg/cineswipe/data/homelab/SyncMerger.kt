@@ -1,6 +1,7 @@
 package io.github.deedg.cineswipe.data.homelab
 
 import io.github.deedg.cineswipe.data.db.Availability
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.UserMovieEntity
 import io.github.deedg.cineswipe.data.db.WatchSource
 import io.github.deedg.cineswipe.data.db.WatchStatus
@@ -19,7 +20,20 @@ data class HomelabSnapshot(
     val pendingRequests: Set<Long> = emptySet(),
 )
 
-data class WatchedOnServer(val source: WatchSource, val watchedAt: Long?)
+/**
+ * Visionnage connu d'un serveur média. Pour une série ([series]) : au moins un épisode vu,
+ * [finished] si tous les épisodes du serveur le sont, sinon la saison en cours ([season]).
+ */
+data class WatchedOnServer(
+    val source: WatchSource,
+    val watchedAt: Long?,
+    val series: Boolean = false,
+    val finished: Boolean = false,
+    val season: Int? = null,
+) {
+    /** Avancement à noter pour une série. */
+    val progress: SeriesProgress? get() = if (!series) null else if (finished) SeriesProgress.FINISHED else SeriesProgress.IN_PROGRESS
+}
 
 data class ServerTitle(val title: String, val year: Int?)
 
@@ -40,7 +54,10 @@ data class SyncChanges(
  * - un film vu sur un serveur devient « vu » ; un film n'est jamais retiré des vus par une synchro
  *   (le classement est précieux) ;
  * - disponible sur un serveur > demandé > rien ; une disponibilité n'est retirée que si tous les
- *   services ont répondu.
+ *   services ont répondu ;
+ * - séries : l'avancement suit le serveur (en cours à la saison N, ou finie) sans jamais reculer :
+ *   une série finie, décrochée ou vue par épisodes ne repasse pas « en cours », et la saison ne
+ *   redescend pas.
  */
 object SyncMerger {
 
@@ -57,9 +74,26 @@ object SyncMerger {
                     status = WatchStatus.WATCHED,
                     watchedAt = row.watchedAt ?: info.watchedAt ?: now,
                     watchedSource = row.watchedSource ?: info.source,
+                    progress = info.progress ?: row.progress,
+                    currentSeason = if (info.series) info.season.takeIf { !info.finished } else row.currentSeason,
                     updatedAt = now,
                 )
                 fresh += FreshWatch(id, info.source, info.watchedAt)
+            } else if (info.series) {
+                if (info.finished) {
+                    if (row.progress != SeriesProgress.FINISHED) {
+                        changed[id] = row.copy(progress = SeriesProgress.FINISHED, currentSeason = null, updatedAt = now)
+                        // Série tout juste finie : de quoi la (re)placer dans le classement.
+                        fresh += FreshWatch(id, info.source, info.watchedAt)
+                    }
+                } else if (row.progress == null || row.progress == SeriesProgress.IN_PROGRESS) {
+                    // En cours : la saison n'avance que vers l'avant (on a pu regarder ailleurs que sur le serveur).
+                    val season = listOfNotNull(row.currentSeason, info.season).maxOrNull()
+                    if (row.progress != SeriesProgress.IN_PROGRESS || row.currentSeason != season) {
+                        changed[id] = row.copy(progress = SeriesProgress.IN_PROGRESS, currentSeason = season, updatedAt = now)
+                    }
+                }
+                // Finie, décrochée ou vue par épisodes d'après l'utilisateur : le serveur ne la fait pas reculer.
             }
         }
 

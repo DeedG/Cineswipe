@@ -39,7 +39,7 @@ import java.io.File
  * l'Arène, le résumé se copie et l'export JSON part dans le partage Android.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi")
+@Config(sdk = [30], qualifiers = "w412dp-h915dp-xxhdpi", application = SmokeApp::class)
 class DiagnosticsFlowTest {
 
     @get:Rule
@@ -93,7 +93,8 @@ class DiagnosticsFlowTest {
             val export = File(app.cacheDir, DiagnosticsRepository.EXPORT_DIRECTORY).listFiles()!!.single()
             val json = Json.parseToJsonElement(export.readText()).jsonObject
             assertEquals("CineSwipe", json.getValue("app").jsonPrimitive.content)
-            assertEquals(6, json.getValue("schema").jsonPrimitive.int)
+            assertEquals(7, json.getValue("schema").jsonPrimitive.int)
+            assertEquals("FILMS", json.getValue("kind").jsonPrimitive.content)
             assertEquals(2, json.getValue("duels").jsonArray.size)
             val films = json.getValue("films").jsonArray.map { it.jsonObject }
             assertEquals(5, films.size)

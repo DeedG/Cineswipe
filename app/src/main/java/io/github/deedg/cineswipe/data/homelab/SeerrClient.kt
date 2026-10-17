@@ -2,6 +2,8 @@ package io.github.deedg.cineswipe.data.homelab
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.Headers
@@ -178,18 +180,26 @@ class SeerrClient(private val http: HomelabHttp) {
         }
     }
 
-    suspend fun request(config: ServiceConfig, tmdbId: Long): SeerrRequestResult {
+    /**
+     * Demande un film, ou une série ([tv], vers le Sonarr par défaut de Seerr) : toutes ses saisons,
+     * ou seulement [seasons].
+     */
+    suspend fun request(config: ServiceConfig, tmdbId: Long, tv: Boolean = false, seasons: List<Int>? = null): SeerrRequestResult {
         val url = baseUrl(config)
         val body = buildJsonObject {
-            put("mediaType", "movie")
+            put("mediaType", if (tv) "tv" else "movie")
             put("mediaId", tmdbId)
-            // Options choisies dans les réglages ; sinon Seerr applique ses valeurs par défaut.
-            config.targetServerId?.let {
-                put("serverId", it)
-                put("is4k", config.targetServer4k)
+            if (tv) {
+                if (seasons.isNullOrEmpty()) put("seasons", "all") else put("seasons", JsonArray(seasons.map { JsonPrimitive(it) }))
+            } else {
+                // Options choisies dans les réglages (serveur Radarr) ; sinon Seerr applique ses valeurs par défaut.
+                config.targetServerId?.let {
+                    put("serverId", it)
+                    put("is4k", config.targetServer4k)
+                }
+                config.qualityProfileId?.let { put("profileId", it) }
+                config.rootFolder?.let { put("rootFolder", it) }
             }
-            config.qualityProfileId?.let { put("profileId", it) }
-            config.rootFolder?.let { put("rootFolder", it) }
         }.toString()
         return try {
             val created = http.decode(service, SeerrRequestDto.serializer(), http.post(service, url, "api/v1/request", headers(config), body))
@@ -204,8 +214,9 @@ class SeerrClient(private val http: HomelabHttp) {
         http.delete(service, baseUrl(config), "api/v1/request/$requestId", headers(config))
     }
 
-    /** Demandes de films (toutes avec la clé API, celles de l'utilisateur avec sa session). */
-    suspend fun movieRequests(config: ServiceConfig): List<SeerrRequestDto> {
+    /** Demandes de films, ou de séries ([tv]) : toutes avec la clé API, celles de l'utilisateur avec sa session. */
+    suspend fun movieRequests(config: ServiceConfig, tv: Boolean = false): List<SeerrRequestDto> {
+        val type = if (tv) "tv" else "movie"
         val url = baseUrl(config)
         val all = ArrayList<SeerrRequestDto>()
         var skip = 0
@@ -221,15 +232,16 @@ class SeerrClient(private val http: HomelabHttp) {
                     mapOf("take" to PAGE_SIZE.toString(), "skip" to skip.toString(), "filter" to "all", "sort" to "added"),
                 ),
             )
-            page.results.filterTo(all) { it.type == null || it.type == "movie" }
+            page.results.filterTo(all) { it.type == type || (it.type == null && !tv) }
             skip += page.results.size
             if (page.results.size < PAGE_SIZE || skip >= page.pageInfo.results) break
         }
         return all
     }
 
-    /** Films que Seerr sait disponibles sur le serveur média. */
-    suspend fun availableMovies(config: ServiceConfig): Set<Long> {
+    /** Films (ou séries, [tv], même en partie) que Seerr sait disponibles sur le serveur média. */
+    suspend fun availableMovies(config: ServiceConfig, tv: Boolean = false): Set<Long> {
+        val type = if (tv) "tv" else "movie"
         val url = baseUrl(config)
         val ids = HashSet<Long>()
         var skip = 0
@@ -242,12 +254,15 @@ class SeerrClient(private val http: HomelabHttp) {
                     url,
                     "api/v1/media",
                     headers(config),
-                    mapOf("take" to PAGE_SIZE.toString(), "skip" to skip.toString(), "filter" to "available"),
+                    // Séries : disponibles en entier ou en partie (« allavailable »).
+                    mapOf("take" to PAGE_SIZE.toString(), "skip" to skip.toString(), "filter" to if (tv) "allavailable" else "available"),
                 ),
             )
             page.results.forEach { media ->
                 val id = media.tmdbId
-                if (id != null && (media.mediaType == null || media.mediaType == "movie") && media.status == MEDIA_AVAILABLE) ids += id
+                val typeOk = media.mediaType == type || (media.mediaType == null && !tv)
+                val availableOk = media.status == MEDIA_AVAILABLE || (tv && media.status == MEDIA_PARTIAL)
+                if (id != null && typeOk && availableOk) ids += id
             }
             skip += page.results.size
             if (page.results.size < PAGE_SIZE || skip >= page.pageInfo.results) break

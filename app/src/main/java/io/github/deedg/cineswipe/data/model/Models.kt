@@ -2,6 +2,7 @@ package io.github.deedg.cineswipe.data.model
 
 import io.github.deedg.cineswipe.data.db.Availability
 import io.github.deedg.cineswipe.data.db.MovieEntity
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.UserMovieEntity
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.domain.StarScale
@@ -19,6 +20,9 @@ data class LibraryItem(
     val confidence: Double,
     val availability: Availability,
     val watchedAt: Long?,
+    /** Série vue : en cours, finie ou abandonnée (null pour un film). */
+    val progress: SeriesProgress? = null,
+    val currentSeason: Int? = null,
 )
 
 /** Compteurs du profil. */

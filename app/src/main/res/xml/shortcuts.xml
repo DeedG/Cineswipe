@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Appui long sur l'icône : ouvrir directement les films ou les séries. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_films"
+        android:shortcutId="films"
+        android:shortcutLongLabel="@string/shortcut_films_long"
+        android:shortcutShortLabel="@string/shortcut_films">
+        <intent
+            android:action="io.github.deedg.cineswipe.FILMS"
+            android:targetClass="io.github.deedg.cineswipe.MainActivity"
+            android:targetPackage="io.github.deedg.cineswipe" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_series"
+        android:shortcutId="series"
+        android:shortcutLongLabel="@string/shortcut_series_long"
+        android:shortcutShortLabel="@string/shortcut_series">
+        <intent
+            android:action="io.github.deedg.cineswipe.SERIES"
+            android:targetClass="io.github.deedg.cineswipe.MainActivity"
+            android:targetPackage="io.github.deedg.cineswipe" />
+    </shortcut>
+</shortcuts>

@@ -9,6 +9,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import io.github.deedg.cineswipe.data.model.MediaKind
 
 /**
  * - Version 2 (étape 3) : file d'attente `outbox` des demandes au homelab.
@@ -18,6 +19,9 @@ import androidx.sqlite.execSQL
  *   sagas des films).
  * - Version 5 : notes reprises d'autres applis (import Letterboxd, IMDb, Trakt…).
  * - Version 6 : listes perso.
+ * - Version 7 : séries (saisons, statut de diffusion, saison en cours, série finie ou abandonnée).
+ *   Les séries ont leur propre fichier ([SERIES_NAME]) avec le même schéma.
+ * - Version 8 : saisons demandées d'une série (file d'attente des demandes).
  *
  * Migrations automatiques grâce aux schémas versionnés dans `app/schemas`.
  */
@@ -34,7 +38,7 @@ import androidx.sqlite.execSQL
         UserListEntity::class,
         UserListItemEntity::class,
     ],
-    version = 6,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -42,6 +46,8 @@ import androidx.sqlite.execSQL
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
+        AutoMigration(from = 6, to = 7),
+        AutoMigration(from = 7, to = 8),
     ],
 )
 @TypeConverters(Converters::class)
@@ -72,6 +78,9 @@ abstract class CineSwipeDatabase : RoomDatabase() {
     companion object {
         private const val NAME = "cineswipe.db"
 
+        /** Base du monde des séries : même schéma, fichier à part (les identifiants TMDB des séries et des films se chevauchent). */
+        const val SERIES_NAME = "cineswipe-series.db"
+
         internal const val PRIORS_FROM_ELO = """
             UPDATE user_movie SET
                 priorRating = COALESCE(
@@ -84,9 +93,11 @@ abstract class CineSwipeDatabase : RoomDatabase() {
                 priorDuels = MAX(0, duels - (SELECT COUNT(*) FROM duel AS d WHERE d.winnerId = user_movie.tmdbId OR d.loserId = user_movie.tmdbId))
         """
 
-        fun create(context: Context): CineSwipeDatabase =
-            Room.databaseBuilder(context.applicationContext, CineSwipeDatabase::class.java, NAME)
+        fun create(context: Context, kind: MediaKind = MediaKind.FILMS): CineSwipeDatabase =
+            Room.databaseBuilder(context.applicationContext, CineSwipeDatabase::class.java, fileName(kind))
                 .build()
+
+        fun fileName(kind: MediaKind): String = if (kind == MediaKind.SERIES) SERIES_NAME else NAME
 
         /** Base de la démo : en mémoire, elle disparaît en quittant la démo. */
         fun createInMemory(context: Context): CineSwipeDatabase =

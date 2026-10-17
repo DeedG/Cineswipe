@@ -224,6 +224,7 @@ private fun ConnectionSection(state: ServiceSettingsUiState, actions: ServiceAct
                 HomelabService.PLEX -> PlexAuth(state, actions, busy)
                 HomelabService.SEERR -> SeerrAuth(state, actions, busy)
                 HomelabService.RADARR -> KeyField(draft, actions.onEdit, R.string.service_key_label_api, R.string.service_key_hint_radarr)
+                HomelabService.SONARR -> KeyField(draft, actions.onEdit, R.string.service_key_label_api, R.string.service_key_hint_sonarr)
             }
 
             val loginOnly = (service == HomelabService.JELLYFIN && draft.jellyfinAuthMode == JellyfinAuthMode.LOGIN) ||
@@ -483,7 +484,7 @@ private fun ChoicesSection(draft: ServiceConfig, info: ConnectionInfo?, test: Te
                 HintText(stringResource(R.string.service_plex_sections_hint))
             }
         }
-        HomelabService.RADARR -> SectionCard {
+        HomelabService.RADARR, HomelabService.SONARR -> SectionCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 val profiles = info?.radarrProfiles.orEmpty()
                 val folders = info?.radarrRootFolders.orEmpty()
@@ -516,7 +517,7 @@ private fun ChoicesSection(draft: ServiceConfig, info: ConnectionInfo?, test: Te
                 }
                 CineSwitchRow(
                     title = stringResource(R.string.service_radarr_search),
-                    subtitle = stringResource(R.string.service_radarr_search_hint),
+                    subtitle = stringResource(if (draft.service == HomelabService.SONARR) R.string.service_sonarr_search_hint else R.string.service_radarr_search_hint),
                     checked = draft.searchOnAdd,
                     onCheckedChange = { search -> onEdit { it.copy(searchOnAdd = search) } },
                 )

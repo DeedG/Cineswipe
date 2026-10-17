@@ -44,12 +44,15 @@ import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.PosterImage
 import io.github.deedg.cineswipe.ui.components.ScreenTitle
 import io.github.deedg.cineswipe.ui.components.StarRow
+import io.github.deedg.cineswipe.ui.components.WorldSwitch
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.library.LibraryFilter
 import io.github.deedg.cineswipe.ui.lists.ListsShelfRoute
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
 import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
+import io.github.deedg.cineswipe.ui.update.UpdateBanner
 
 @Composable
 fun ProfileRoute(
@@ -61,6 +64,7 @@ fun ProfileRoute(
     onOpenStats: () -> Unit = {},
     onOpenList: (Long) -> Unit = {},
     onOpenRetro: () -> Unit = {},
+    onOpenFriends: () -> Unit = {},
 ) {
     val viewModel = cineViewModel { ProfileViewModel(it.library, it.settings) }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -73,12 +77,15 @@ fun ProfileRoute(
         onOpenMovie = onOpenMovie,
         onOpenStats = onOpenStats,
         onOpenRetro = onOpenRetro,
+        onOpenFriends = onOpenFriends,
         listsSection = { ListsShelfRoute(onOpenList = onOpenList, modifier = Modifier.padding(top = 6.dp)) },
+        updateBanner = { UpdateBanner() },
     )
 }
 
 /** Repères pour les tests d'interface. */
 object ProfileTestTags {
+    const val FRIENDS = "profile_friends"
     const val WATCHED = "profile-watched"
     const val DUELS = "profile-duels"
     const val STATS = "profile-stats"
@@ -95,8 +102,11 @@ fun ProfileScreen(
     onOpenMovie: (Long) -> Unit,
     onOpenStats: () -> Unit = {},
     onOpenRetro: () -> Unit = {},
+    onOpenFriends: () -> Unit = {},
     /** « Mes listes » (listes perso), sous les stats. */
     listsSection: @Composable () -> Unit = {},
+    /** Nouvelle version disponible (bandeau sous le titre). */
+    updateBanner: @Composable () -> Unit = {},
 ) {
     Column(
         Modifier
@@ -109,6 +119,7 @@ fun ProfileScreen(
         ScreenTitle(
             text = stringResource(R.string.profile_title),
             trailing = {
+                WorldSwitch(tabName = Tab.PROFILE.name)
                 GlassIconButton(
                     icon = CineIcons.Settings,
                     contentDescription = stringResource(R.string.profile_settings),
@@ -117,6 +128,7 @@ fun ProfileScreen(
                 )
             },
         )
+        updateBanner()
         StatCard(
             icon = CineIcons.Eye,
             label = stringResource(R.string.profile_stat_watched),
@@ -168,6 +180,12 @@ fun ProfileScreen(
             icon = CineIcons.Calendar,
             onClick = onOpenRetro,
             modifier = Modifier.fillMaxWidth().testTag(ProfileTestTags.RETRO),
+        )
+        CineSecondaryButton(
+            text = stringResource(R.string.friends_open),
+            icon = CineIcons.QrCode,
+            onClick = onOpenFriends,
+            modifier = Modifier.fillMaxWidth().testTag(ProfileTestTags.FRIENDS),
         )
         listsSection()
         // Juste au-dessus du Hall of Fame.

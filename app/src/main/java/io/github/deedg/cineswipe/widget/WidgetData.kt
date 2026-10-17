@@ -17,23 +17,31 @@ import coil3.toBitmap
 import io.github.deedg.cineswipe.AppContainer
 import io.github.deedg.cineswipe.CineSwipeApp
 import io.github.deedg.cineswipe.MainActivity
+import io.github.deedg.cineswipe.data.model.MediaKind
 import io.github.deedg.cineswipe.data.repository.TonightPick
 import io.github.deedg.cineswipe.domain.StarScale
 import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.domain.TmdbImages
+import io.github.deedg.cineswipe.ui.common.SeriesContext
 import kotlinx.coroutines.CancellationException
 
 /** Écrans de l'appli qu'un widget peut ouvrir. */
 object WidgetLinks {
     const val EXTRA_OPEN = "io.github.deedg.cineswipe.OPEN"
+
+    /** Monde ouvert par le widget (FILMS, SERIES). */
+    const val EXTRA_WORLD = "io.github.deedg.cineswipe.WORLD"
     const val TONIGHT = "tonight"
     const val STATS = "stats"
     const val TOP = "top"
     fun movie(tmdbId: Long) = "movie:$tmdbId"
 
-    fun intent(context: Context, target: String): Intent = Intent(context, MainActivity::class.java)
+    fun intent(context: Context, target: String, world: MediaKind = MediaKind.FILMS): Intent = Intent(context, MainActivity::class.java)
         .setAction(Intent.ACTION_VIEW)
+        // Une action par monde : deux PendingIntent ne se confondent pas.
+        .setData(android.net.Uri.parse("cineswipe://widget/${world.name.lowercase()}/$target"))
         .putExtra(EXTRA_OPEN, target)
+        .putExtra(EXTRA_WORLD, world.name)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 }
 
@@ -57,6 +65,9 @@ object WidgetKeys {
     /** Top : genre (vide = tous). */
     val GENRE = stringPreferencesKey("genre")
 
+    /** Films ou séries (nom de [MediaKind]). */
+    val WORLD = stringPreferencesKey("world")
+
     /** Actualisation demandée par l'appli : changer cette valeur fait recharger les données. */
     val REFRESH = longPreferencesKey("refresh")
 }
@@ -64,22 +75,32 @@ object WidgetKeys {
 /** Chiffres proposés par le widget de stats. */
 enum class WidgetStat { WATCHED, HOURS, DUELS, RELIABILITY, WATCHLIST, TOP_GENRE, TOP_DIRECTOR, DECADE }
 
+/** Monde du widget (films par défaut). */
+fun Preferences.world(): MediaKind = MediaKind.fromName(this[WidgetKeys.WORLD])
+
+/** Textes du widget : ceux des séries (variantes « _series ») dans le monde des séries. */
+fun MediaKind.texts(context: Context): Context = if (isSeries) SeriesContext(context) else context
+
 val DEFAULT_STATS = listOf(WidgetStat.WATCHED, WidgetStat.RELIABILITY, WidgetStat.HOURS, WidgetStat.TOP_GENRE)
 
 fun Preferences.stats(): List<WidgetStat> =
     this[WidgetKeys.STATS]?.split(',')?.mapNotNull { name -> WidgetStat.entries.firstOrNull { it.name == name } }?.takeIf { it.isNotEmpty() }
         ?: DEFAULT_STATS
 
-/** Données des widgets : toujours les vraies données (jamais la démo). */
+/** Données des widgets : toujours les vraies données (jamais la démo), des films ou des séries. */
 object WidgetData {
-    fun container(context: Context): AppContainer = (context.applicationContext as CineSwipeApp).mainContainer
+    fun container(context: Context, world: MediaKind = MediaKind.FILMS): AppContainer {
+        val app = context.applicationContext as CineSwipeApp
+        return if (world.isSeries) app.seriesWorld() else app.mainContainer
+    }
 
     /** Films de « Ce soir » selon les réglages du widget. */
-    suspend fun tonight(context: Context, source: String?, maxMinutes: Int): List<TonightPick> = safe(emptyList()) {
-        container(context).recos.tonight().filter { pick ->
+    suspend fun tonight(context: Context, source: String?, maxMinutes: Int, world: MediaKind = MediaKind.FILMS): List<TonightPick> = safe(emptyList()) {
+        container(context, world).recos.tonight(world.isSeries).filter { pick ->
             val sourceOk = when (source) {
                 "server" -> pick.available
                 "watchlist" -> pick.inWatchlist
+                "resume" -> pick.resume
                 else -> true
             }
             val runtime = pick.movie.runtimeMinutes
@@ -90,8 +111,8 @@ object WidgetData {
     data class TopFilm(val tmdbId: Long, val title: String, val posterPath: String?, val stars: Float)
 
     /** Les mieux classés de l'Arène, éventuellement d'un genre. */
-    suspend fun top(context: Context, count: Int, genre: String?): List<TopFilm> = safe(emptyList()) {
-        val database = container(context).database
+    suspend fun top(context: Context, count: Int, genre: String?, world: MediaKind = MediaKind.FILMS): List<TopFilm> = safe(emptyList()) {
+        val database = container(context, world).database
         val ranked = database.userMovieDao().ranked()
         val stars = StarScale.computeStars(ranked.associate { it.tmdbId to it.rating })
         val movies = database.recoDao().movies(ranked.map { it.tmdbId }).associateBy { it.tmdbId }
@@ -113,8 +134,8 @@ object WidgetData {
         val decade: String?,
     )
 
-    suspend fun stats(context: Context): StatValues? = safe(null) {
-        val container = container(context)
+    suspend fun stats(context: Context, world: MediaKind = MediaKind.FILMS): StatValues? = safe(null) {
+        val container = container(context, world)
         val stats = container.stats.load()
         val ranked = container.database.userMovieDao().ranked()
         val reliability = if (ranked.isEmpty()) 0 else (ranked.sumOf { it.confidence } / ranked.size * 100).toInt()
@@ -132,7 +153,8 @@ object WidgetData {
     }
 
     /** Genres proposés pour le widget « Top » (ceux d'au moins 3 films vus). */
-    suspend fun genres(context: Context): List<String> = safe(emptyList()) { container(context).stats.load().genres.map { it.name }.sorted() }
+    suspend fun genres(context: Context, world: MediaKind = MediaKind.FILMS): List<String> =
+        safe(emptyList()) { container(context, world).stats.load().genres.map { it.name }.sorted() }
 
     /** Affiche prête pour un widget (taille réduite, pas en mémoire graphique). */
     suspend fun poster(context: Context, path: String?, size: TmdbImageSize = TmdbImageSize.Thumb, width: Int = 220): Bitmap? {

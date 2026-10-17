@@ -12,21 +12,30 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.demo.DemoSeeder
+import io.github.deedg.cineswipe.data.model.MediaKind
+import io.github.deedg.cineswipe.testing.FakeTmdbServer
 import io.github.deedg.cineswipe.testing.TestCineSwipeApp
 import io.github.deedg.cineswipe.ui.arena.ArenaTestTags
+import io.github.deedg.cineswipe.ui.detail.SeriesTestTags
 import io.github.deedg.cineswipe.ui.discover.DiscoverTestTags
+import io.github.deedg.cineswipe.ui.feed.FeedTestTags
 import io.github.deedg.cineswipe.ui.profile.ProfileTestTags
 import io.github.deedg.cineswipe.ui.retro.RetroTestTags
 import io.github.deedg.cineswipe.ui.tutorial.TutorialTestTags
 import io.github.deedg.cineswipe.widget.WidgetLinks
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -64,7 +73,12 @@ class ScreenCaptureTest {
 
     @After
     fun tearDown() {
-        if (System.getProperty("cineswipe.captures") == "true") app.stopDemo()
+        if (System.getProperty("cineswipe.captures") != "true") return
+        app.stopDemo()
+        runBlocking {
+            app.switchWorld(MediaKind.FILMS)
+            app.mainContainer.settings.setTmdbApiKey(null)
+        }
     }
 
     @Test
@@ -86,6 +100,109 @@ class ScreenCaptureTest {
     @Test
     @Config(qualifiers = "w360dp-h380dp-xhdpi")
     fun flipCoverScreen() = tour("5-ecran-externe-clapet-360x380")
+
+    /** Le monde des séries (pastille, violet, fiche en cours), sur un Pixel. */
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    fun seriesPixel() = seriesTour("6-series-pixel-412x915")
+
+    private fun seriesTour(size: String) {
+        folder = File(System.getProperty("cineswipe.capturesDir"), size).apply { mkdirs() }
+        // Hors démo, contre le faux TMDB des tests.
+        app.stopDemo()
+        runBlocking {
+            app.mainContainer.settings.setTmdbApiKey(FakeTmdbServer.API_KEY)
+            app.mainContainer.settings.setOnboardingDone(true)
+        }
+        // Profil des films d'abord, pour comparer.
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            this.scenario = scenario
+            tab("Profil")
+            waitForTag(ProfileTestTags.STATS)
+            settle()
+            shot("films-profil")
+        }
+
+        runBlocking(Dispatchers.IO) {
+            app.switchWorld(MediaKind.SERIES)
+            val library = app.container.library
+            app.container.tmdb.ensureDetails(FakeTmdbServer.GUARDIANS.id)
+            FakeTmdbServer.SHOWS.forEach { app.container.tmdb.ensureDetails(it.id) }
+            library.setProgress(FakeTmdbServer.GUARDIANS.id, SeriesProgress.IN_PROGRESS, 2)
+            // La première série des recos reste à découvrir (sinon plus aucune carte).
+            library.setProgress(FakeTmdbServer.SHOWS[1].id, SeriesProgress.ABANDONED, 1)
+        }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            this.scenario = scenario
+            // Première arrivée dans le mode séries : son accueil (démo des séries ou commencer).
+            waitUntil { compose.onAllNodesWithText("Commencer").fetchSemanticsNodes().isNotEmpty() }
+            settle()
+            shot("accueil")
+            compose.onNodeWithText("Commencer").performScrollTo().performClick()
+            waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
+            settle()
+            shot("recos")
+
+            tab("Arène")
+            waitForTag(ArenaTestTags.FIGHTER_A)
+            settle()
+            shot("arene")
+
+            tab("Recherche")
+            waitUntil { compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
+            shot("recherche")
+            compose.onAllNodes(hasSetTextAction())[0].performTextInput("gardiens")
+            compose.onNodeWithContentDescription("Lancer la recherche").performClick()
+            waitForTag(FeedTestTags.card(FakeTmdbServer.GUARDIANS.id))
+            settle()
+            compose.onNodeWithTag(FeedTestTags.card(FakeTmdbServer.GUARDIANS.id)).performClick()
+            waitForTag(SeriesTestTags.INFO)
+            settle()
+            shot("fiche")
+            compose.onNodeWithTag(SeriesTestTags.season(2)).performScrollTo()
+            settle()
+            shot("fiche-avancement")
+            compose.onNodeWithContentDescription("Retour").performClick()
+
+            tab("Découverte")
+            settle()
+            shot("decouverte")
+
+            // Recensement des séries : l'avancement d'un toucher (finie, en cours…).
+            compose.onNodeWithTag(DiscoverTestTags.CENSUS).performScrollTo().performClick()
+            waitUntil { compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().isNotEmpty() }
+            settle()
+            compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().forEachIndexed { index, node ->
+                val tag = node.config[SemanticsProperties.TestTag]
+                repeat(index % 4 + 1) { compose.onNodeWithTag(tag).performClick() }
+            }
+            settle()
+            shot("recensement")
+            compose.onAllNodesWithContentDescription("Retour")[0].performClick()
+
+            tab("Profil")
+            waitForTag(ProfileTestTags.STATS)
+            settle()
+            shot("profil")
+        }
+
+        // La démo des séries : 100 séries, un profil fictif, le tuto en violet.
+        runBlocking { app.startDemo(MediaKind.SERIES) }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            this.scenario = scenario
+            waitForTag(TutorialTestTags.step(0))
+            settle()
+            shot("demo-tuto")
+            app.container.tutorial.stop()
+            waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
+            settle()
+            shot("demo-recos")
+            tab("Profil")
+            waitForTag(ProfileTestTags.STATS)
+            settle()
+            shot("demo-profil")
+        }
+    }
 
     private fun tour(size: String) {
         folder = File(System.getProperty("cineswipe.capturesDir"), size).apply { mkdirs() }

@@ -50,6 +50,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.repository.StatsFilm
 import io.github.deedg.cineswipe.data.repository.StatsGroup
 import io.github.deedg.cineswipe.data.repository.StatsRepository
@@ -137,6 +138,21 @@ private fun StatsContent(stats: TasteStats, onOpenMovie: (Long) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile(format.format(stats.duels), stringResource(R.string.stats_tile_duels), Modifier.weight(1f))
             Tile(format.format(stats.directorCount), stringResource(R.string.stats_tile_directors), Modifier.weight(1f))
+        }
+        // Séries : épisodes vus (estimés) et avancement.
+        if (stats.progress.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Tile(format.format(stats.episodes), stringResource(R.string.stats_tile_episodes), Modifier.weight(1f))
+                Tile(format.format(stats.progress[SeriesProgress.FINISHED] ?: 0), stringResource(R.string.stats_tile_finished), Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Tile(format.format(stats.progress[SeriesProgress.IN_PROGRESS] ?: 0), stringResource(R.string.stats_tile_in_progress), Modifier.weight(1f))
+                Tile(
+                    format.format((stats.progress[SeriesProgress.ABANDONED] ?: 0)),
+                    stringResource(R.string.stats_tile_abandoned, stats.progress[SeriesProgress.EPISODES] ?: 0),
+                    Modifier.weight(1f),
+                )
+            }
         }
 
         // En une phrase.

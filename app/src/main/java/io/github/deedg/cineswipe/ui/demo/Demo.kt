@@ -41,7 +41,8 @@ class DemoViewModel(private val app: CineSwipeApp) : ViewModel() {
         mutableStarting.value = true
         viewModelScope.launch {
             try {
-                app.startDemo()
+                // Démo du monde ouvert : films, ou séries.
+                app.startDemo(app.kind)
                 restartEvents.send(Unit)
             } finally {
                 mutableStarting.value = false

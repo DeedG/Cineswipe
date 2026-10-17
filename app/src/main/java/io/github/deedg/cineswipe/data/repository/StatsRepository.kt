@@ -2,6 +2,9 @@ package io.github.deedg.cineswipe.data.repository
 
 import io.github.deedg.cineswipe.data.db.CastMember
 import io.github.deedg.cineswipe.data.db.CineSwipeDatabase
+import io.github.deedg.cineswipe.data.db.SeriesProgress
+import io.github.deedg.cineswipe.data.db.TvSeason
+import io.github.deedg.cineswipe.domain.SeriesTime
 import io.github.deedg.cineswipe.domain.StarScale
 import io.github.deedg.cineswipe.domain.reco.TmdbTag
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +25,17 @@ data class StatsRow(
     val tmdbRating: Double?,
     val voteCount: Int?,
     val rating: Double,
-)
+    /** Série : saisons, avancement et saison en cours (le temps passé s'estime par épisodes). */
+    val seasonCount: Int? = null,
+    val seasons: List<TvSeason> = emptyList(),
+    val progress: SeriesProgress? = null,
+    val currentSeason: Int? = null,
+) {
+    /** Minutes passées devant : la durée du film, ou les épisodes vus d'une série. */
+    val minutes: Int get() = SeriesTime.minutes(runtimeMinutes, seasonCount, seasons, progress, currentSeason)
+
+    val isSeries: Boolean get() = SeriesTime.isSeries(seasonCount, seasons, progress)
+}
 
 /**
  * Un groupe de films (un genre, un réalisateur, une décennie…) : nombre de films vus et
@@ -68,6 +81,10 @@ data class TasteStats(
     val dislikedAgainst: List<StatsFilm>,
     val mostWatchedDirector: StatsGroup?,
     val favoriteDecade: StatsGroup?,
+    /** Séries : combien de finies, en cours, vues par épisodes et décrochées. */
+    val progress: Map<SeriesProgress, Int> = emptyMap(),
+    /** Séries : épisodes vus (estimés). */
+    val episodes: Int = 0,
 ) {
     companion object {
         /** Prudence : un groupe compte comme s'il avait ce nombre de films « moyens » en plus. */
@@ -128,7 +145,7 @@ data class TasteStats(
 
             return TasteStats(
                 watched = rows.size,
-                hours = rows.sumOf { it.runtimeMinutes ?: 0 } / 60,
+                hours = rows.sumOf { it.minutes } / 60,
                 duels = duels,
                 directorCount = directorsAll.size,
                 genres = genres,
@@ -141,6 +158,8 @@ data class TasteStats(
                 dislikedAgainst = dislikedAgainst,
                 mostWatchedDirector = directorsAll.maxWithOrNull(compareBy<StatsGroup> { it.films }.thenBy { it.score })?.takeIf { it.films >= 2 },
                 favoriteDecade = decades.filter { it.films >= 5 }.maxByOrNull { it.score },
+                progress = rows.filter { it.isSeries }.groupingBy { it.progress ?: SeriesProgress.FINISHED }.eachCount(),
+                episodes = rows.filter { it.isSeries }.sumOf { SeriesTime.episodes(it.seasonCount, it.seasons, it.progress, it.currentSeason) },
             )
         }
     }

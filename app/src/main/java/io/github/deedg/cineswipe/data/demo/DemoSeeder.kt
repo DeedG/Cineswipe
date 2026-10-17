@@ -1,6 +1,7 @@
 package io.github.deedg.cineswipe.data.demo
 
 import io.github.deedg.cineswipe.AppContainer
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.homelab.ServiceConfig
@@ -45,20 +46,29 @@ class DemoSeeder(
             )
         }
         val known = catalog.films.mapTo(HashSet()) { it.id }
-        val watched = WATCHED.filter { it in known }
+        val series = container.kind.isSeries
+        val watched = (if (series) WATCHED_SERIES else WATCHED).filter { it in known }
         watched.forEachIndexed { index, id -> library.setWatched(id, watched = true, now = now - (watched.size - index) * HOUR_MS) }
-        WATCHLIST.filter { it in known }.forEach { library.applyStatus(it, WatchStatus.WATCHLIST, now) }
+        (if (series) WATCHLIST_SERIES else WATCHLIST).filter { it in known }.forEach { library.applyStatus(it, WatchStatus.WATCHLIST, now) }
+        if (series) {
+            // Quelques avancements : en cours (avec ou sans saison), par épisodes, décrochée ; le reste est fini.
+            watched.forEach { id ->
+                val (progress, season) = SERIES_PROGRESS[id] ?: (SeriesProgress.FINISHED to null)
+                library.setProgress(id, progress, season, now)
+            }
+        }
         playDuels(watched, now)
-        connectHomelab()
+        connectHomelab(series)
     }
 
     /**
      * Homelab fictif : un Plex (films sur le serveur, regarder) et un Seerr (demandes d'un swipe
      * droit), servis par [DemoHomelabInterceptor]. Première synchro tout de suite.
      */
-    private suspend fun connectHomelab() {
+    private suspend fun connectHomelab(series: Boolean) {
         val settings = container.settings
-        settings.saveService(ServiceConfig(HomelabService.PLEX, enabled = true, url = DemoHomelab.PLEX_URL, apiKey = DemoHomelab.KEY))
+        // Séries : Seerr seul (demandes saison par saison) ; le Plex fictif n'a que des films.
+        if (!series) settings.saveService(ServiceConfig(HomelabService.PLEX, enabled = true, url = DemoHomelab.PLEX_URL, apiKey = DemoHomelab.KEY))
         settings.saveService(ServiceConfig(HomelabService.SEERR, enabled = true, url = DemoHomelab.SEERR_URL, apiKey = DemoHomelab.KEY))
         runCatching { container.homelab.sync() }
     }
@@ -131,6 +141,44 @@ class DemoSeeder(
         val WATCHLIST = listOf(
             1124L, // Le Prestige
             244786L, // Whiplash
+        )
+
+        /** Séries vues du profil de démo (celles absentes du catalogue sont ignorées). */
+        val WATCHED_SERIES = listOf(
+            1399L, // Game of Thrones
+            66732L, // Stranger Things
+            1396L, // Breaking Bad
+            71446L, // La casa de papel
+            93405L, // Squid Game
+            1668L, // Friends
+            456L, // Les Simpson
+            60625L, // Rick et Morty
+            84958L, // Loki
+            76479L, // The Boys
+            1418L, // The Big Bang Theory
+            60574L, // Peaky Blinders
+            87108L, // Chernobyl
+            1408L, // Dr. House
+            70523L, // Dark
+            119051L, // Mercredi
+            100088L, // The Last of Us
+            94997L, // House of the Dragon
+        )
+
+        /** Avancement de quelques séries vues (les autres sont finies). */
+        val SERIES_PROGRESS = mapOf(
+            76479L to (SeriesProgress.IN_PROGRESS to 3), // The Boys, saison 3
+            94997L to (SeriesProgress.IN_PROGRESS to null), // House of the Dragon, saison oubliée
+            456L to (SeriesProgress.EPISODES to null), // Les Simpson, au hasard à la télé
+            1418L to (SeriesProgress.EPISODES to null), // The Big Bang Theory
+            1408L to (SeriesProgress.EPISODES to null), // Dr. House
+            60574L to (SeriesProgress.ABANDONED to 2), // Peaky Blinders, décrochée en saison 2
+        )
+
+        /** Séries à voir du profil de démo. */
+        val WATCHLIST_SERIES = listOf(
+            1429L, // L'Attaque des Titans
+            60059L, // Better Call Saul
         )
     }
 }

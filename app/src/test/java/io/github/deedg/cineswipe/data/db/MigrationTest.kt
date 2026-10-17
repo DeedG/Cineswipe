@@ -219,6 +219,61 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun version6BecomesVersion7WithSeriesColumns() = runBlocking {
+        createVersion(6) { db ->
+            db.execSQL(
+                "INSERT INTO movie (tmdbId, title, posterPath, `cast`, genreIds, genres, detailsVersion, keywords, directors) VALUES (1, 'Matrix', '/1.jpg', '[]', '[878]', '[]', 2, '[]', '[]')",
+            )
+            userMovie(db, 1, rating = 1612.0, duels = 4)
+        }
+
+        val database = Room.databaseBuilder(context, CineSwipeDatabase::class.java, NAME)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            // Les films ne bougent pas : les colonnes des séries sont vides.
+            val movie = checkNotNull(database.movieDao().get(1))
+            assertEquals("Matrix", movie.title)
+            assertNull(movie.seasonCount)
+            assertTrue(movie.seasons.isEmpty())
+            val user = checkNotNull(database.userMovieDao().get(1))
+            assertEquals(WatchStatus.WATCHED, user.status)
+            assertEquals(1612.0, user.rating, 0.0)
+            assertNull(user.progress)
+            assertNull(user.currentSeason)
+            // Et la colonne s'écrit.
+            database.libraryDao().setProgress(1, SeriesProgress.IN_PROGRESS, 2, now = 5)
+            assertEquals(SeriesProgress.IN_PROGRESS, database.userMovieDao().get(1)?.progress)
+            assertEquals(2, database.userMovieDao().get(1)?.currentSeason)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun version7BecomesVersion8WithRequestedSeasons() = runBlocking {
+        createVersion(7) { db ->
+            db.execSQL(
+                "INSERT INTO outbox (type, service, tmdbId, title, state, attempts, createdAt, updatedAt) VALUES ('REQUEST', 'SEERR', 1396, 'Breaking Bad', 'PENDING', 0, 1, 1)",
+            )
+        }
+
+        val database = Room.databaseBuilder(context, CineSwipeDatabase::class.java, NAME)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            // Une demande d'avant : toute la série.
+            val entry = database.outboxDao().pending().single()
+            assertEquals("Breaking Bad", entry.title)
+            assertNull(entry.seasonList)
+            database.outboxDao().update(entry.copy(seasons = OutboxEntity.encodeSeasons(listOf(3, 1))))
+            assertEquals(listOf(1, 3), database.outboxDao().pending().single().seasonList)
+        } finally {
+            database.close()
+        }
+    }
+
     private fun userMovie(db: SQLiteDatabase, id: Long, rating: Double, duels: Int) {
         db.execSQL(
             "INSERT INTO user_movie (tmdbId, status, rating, duels, availability, shownCount, updatedAt) VALUES (?, 'WATCHED', ?, ?, 'NONE', 0, 0)",

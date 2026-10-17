@@ -59,8 +59,10 @@ import io.github.deedg.cineswipe.AppContainer
 import io.github.deedg.cineswipe.CineSwipeApp
 import io.github.deedg.cineswipe.R
 import io.github.deedg.cineswipe.data.homelab.WatchedNotifier
+import io.github.deedg.cineswipe.domain.taste.TasteCode
 import io.github.deedg.cineswipe.ui.arena.ArenaRoute
 import io.github.deedg.cineswipe.ui.census.CensusRoute
+import io.github.deedg.cineswipe.ui.common.SeriesContext
 import io.github.deedg.cineswipe.ui.components.CineToast
 import io.github.deedg.cineswipe.ui.components.LocalOpenPerson
 import io.github.deedg.cineswipe.ui.components.LocalToaster
@@ -69,8 +71,10 @@ import io.github.deedg.cineswipe.ui.components.Toaster
 import io.github.deedg.cineswipe.ui.demo.DemoRestartEffect
 import io.github.deedg.cineswipe.ui.demo.DemoViewModel
 import io.github.deedg.cineswipe.ui.demo.demoViewModel
+import io.github.deedg.cineswipe.ui.detail.MovieDetailPager
 import io.github.deedg.cineswipe.ui.detail.MovieDetailRoute
 import io.github.deedg.cineswipe.ui.discover.DiscoverRoute
+import io.github.deedg.cineswipe.ui.friends.FriendsRoute
 import io.github.deedg.cineswipe.ui.homelab.HomelabRoute
 import io.github.deedg.cineswipe.ui.homelab.ServiceSettingsRoute
 import io.github.deedg.cineswipe.ui.homelab.eventMessage
@@ -111,7 +115,21 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 @Composable
 fun CineSwipeRoot() {
-    val app = LocalContext.current.applicationContext as CineSwipeApp
+    val context = LocalContext.current
+    val app = context.applicationContext as CineSwipeApp
+    // Monde des séries : les textes parlent de séries (variantes « _series » des chaînes).
+    if (app.container.kind.isSeries) {
+        val seriesContext = remember(context) { SeriesContext(context) }
+        CompositionLocalProvider(LocalContext provides seriesContext, LocalResources provides seriesContext.resources) {
+            RootScreen(app)
+        }
+    } else {
+        RootScreen(app)
+    }
+}
+
+@Composable
+private fun RootScreen(app: CineSwipeApp) {
     val container = app.container
     val demo = demoViewModel()
     DemoRestartEffect(demo)
@@ -167,13 +185,15 @@ private fun RootContent(
 
 /**
  * Accueil au premier lancement seulement : pas pendant la démo, ni pour qui a déjà une clé TMDB
- * ou des films (mise à jour depuis une version sans accueil).
+ * ou des films (mise à jour depuis une version sans accueil). Le mode séries a le sien, à la
+ * première arrivée, même avec des séries déjà notées (il présente la démo des séries).
  */
 private suspend fun shouldWelcome(container: AppContainer): Boolean {
     if (container.isDemo) return false
     val settings = container.settings
     if (settings.onboardingDone.first()) return false
-    val existing = settings.tmdbApiKey.first() != null || container.database.userMovieDao().watchedCount() > 0
+    if (container.kind.isSeries) return true
+    val existing = settings.userTmdbApiKey.first() != null || container.database.userMovieDao().watchedCount() > 0
     if (existing) settings.setOnboardingDone(true)
     return !existing
 }
@@ -188,7 +208,13 @@ private fun MainContent(
     sharedInbox: MutableStateFlow<String?>,
     openInbox: MutableStateFlow<String?> = MutableStateFlow(null),
 ) {
-    val backStack = rememberNavBackStack(StartRoute)
+    // Après le switch Films | Séries, l'écran repart sur l'onglet d'où on l'a touché.
+    val application = app()
+    val startTab = remember {
+        val name = application.takePendingTab()
+        Tab.entries.firstOrNull { it.name == name }
+    }
+    val backStack = if (startTab == null || startTab.route == StartRoute) rememberNavBackStack(StartRoute) else rememberNavBackStack(StartRoute, startTab.route)
     val navigator = remember(backStack) { Navigator(backStack) }
     val current = navigator.current
 
@@ -221,7 +247,8 @@ private fun MainContent(
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             sharedInbox.filterNotNull().collect { text ->
                 sharedInbox.value = null
-                navigator.open(Route.Shared(text))
+                // Code de goûts d'un ami : la comparaison ; sinon, un film partagé.
+                navigator.open(if (text.contains(TasteCode.PREFIX)) Route.Friends(text) else Route.Shared(text))
             }
         }
     }
@@ -323,7 +350,14 @@ private fun MainContent(
                             ),
                             entryProvider = entryProvider<NavKey> {
                                 entry<Route.Recos> {
-                                    RecosRoute(onOpenMovie = openMovie, onOpenSettings = openKeyGuide, onLightning = openLightning, onOpenTonight = openTonight)
+                                    RecosRoute(
+                                        onOpenMovie = openMovie,
+                                        onOpenSettings = openKeyGuide,
+                                        onLightning = openLightning,
+                                        onOpenTonight = openTonight,
+                                        onOpenCensus = openCensus,
+                                        onOpenArena = { navigator.switchTab(Tab.ARENA) },
+                                    )
                                 }
                                 entry<Route.Shared> { key ->
                                     SharedRoute(
@@ -351,6 +385,9 @@ private fun MainContent(
                                 }
                                 entry<Route.UserList> { key ->
                                     UserListRoute(listId = key.id, onBack = { navigator.back() }, onOpenMovie = openMovie)
+                                }
+                                entry<Route.Friends> { key ->
+                                    FriendsRoute(incoming = key.code, onBack = { navigator.back() }, onOpenMovie = openMovie)
                                 }
                                 entry<Route.Stats> {
                                     StatsRoute(onBack = { navigator.back() }, onOpenMovie = openMovie)
@@ -392,6 +429,7 @@ private fun MainContent(
                                         onOpenStats = { navigator.open(Route.Stats) },
                                         onOpenList = { id -> navigator.open(Route.UserList(id)) },
                                         onOpenRetro = { navigator.open(Route.Retro) },
+                                        onOpenFriends = { navigator.open(Route.Friends()) },
                                     )
                                 }
                                 entry<Route.Library> { key ->
@@ -400,6 +438,7 @@ private fun MainContent(
                                         onBack = { navigator.back() },
                                         onOpenMovie = openMovie,
                                         onOpenCensus = openCensus,
+                                        onOpenMovieIn = { id, ids -> navigator.open(Route.MovieDetail(id, ids)) },
                                     )
                                 }
                                 entry<Route.DuelHistory> {
@@ -442,11 +481,20 @@ private fun MainContent(
                                     ServiceSettingsRoute(service = key.service, onBack = { navigator.back() })
                                 }
                                 entry<Route.MovieDetail> { key ->
-                                    MovieDetailRoute(
-                                        tmdbId = key.tmdbId,
-                                        onBack = { navigator.back() },
-                                        onLightning = openLightning,
-                                    )
+                                    if (key.siblings.size > 1 && key.tmdbId in key.siblings) {
+                                        MovieDetailPager(
+                                            ids = key.siblings,
+                                            startId = key.tmdbId,
+                                            onBack = { navigator.back() },
+                                            onLightning = openLightning,
+                                        )
+                                    } else {
+                                        MovieDetailRoute(
+                                            tmdbId = key.tmdbId,
+                                            onBack = { navigator.back() },
+                                            onLightning = openLightning,
+                                        )
+                                    }
                                 }
                             },
                         )
@@ -473,6 +521,9 @@ object DemoTestTags {
     const val EXIT = "demo_exit"
     const val TUTORIAL = "demo_tutorial"
 }
+
+@Composable
+private fun app(): CineSwipeApp = LocalContext.current.applicationContext as CineSwipeApp
 
 /** Pause avant que la main du tuto parte vers un autre écran. */
 private const val TUTORIAL_TRAVEL_PAUSE_MS = 300L

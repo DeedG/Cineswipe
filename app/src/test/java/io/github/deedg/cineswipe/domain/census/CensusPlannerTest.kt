@@ -44,8 +44,12 @@ class CensusPlannerTest {
         assertEquals(CensusChoice.NONE, CensusChoice.DISLIKED.next())
         assertEquals(CensusChoice.NONE, CensusChoice.WATCHLIST.next())
         assertEquals(CensusChoice.NONE, CensusChoice.DISMISSED.next())
+        // « Vu » : les trois réponses des films et les quatre avancements des séries.
         assertEquals(
-            setOf(CensusChoice.SEEN, CensusChoice.LOVED, CensusChoice.DISLIKED),
+            setOf(
+                CensusChoice.SEEN, CensusChoice.LOVED, CensusChoice.DISLIKED,
+                CensusChoice.FINISHED, CensusChoice.IN_PROGRESS, CensusChoice.EPISODES, CensusChoice.ABANDONED,
+            ),
             CensusChoice.entries.filter { it.seen }.toSet(),
         )
     }

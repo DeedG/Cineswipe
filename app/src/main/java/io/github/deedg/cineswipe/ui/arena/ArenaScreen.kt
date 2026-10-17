@@ -69,7 +69,10 @@ import io.github.deedg.cineswipe.ui.components.GrayscaleFilter
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
 import io.github.deedg.cineswipe.ui.components.StarRow
+import io.github.deedg.cineswipe.ui.components.WorldSwitch
+import io.github.deedg.cineswipe.ui.components.worldSwitchShown
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
 import io.github.deedg.cineswipe.ui.tutorial.TutorialEvent
@@ -319,13 +322,18 @@ private fun ArenaHeader(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource(R.string.arena_title),
-                color = CineColors.Red,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp,
-            )
+            // Le switch Films | Séries tient lieu de titre ; pendant la démo (pas de switch), le titre reste.
+            if (worldSwitchShown()) {
+                WorldSwitch(tabName = Tab.ARENA.name, modifier = Modifier.padding(bottom = 4.dp))
+            } else {
+                Text(
+                    text = stringResource(R.string.arena_title),
+                    color = CineColors.Red,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                )
+            }
             if (reliability != null && reliability.films >= 2) {
                 // Confiance moyenne dans les étoiles : elle monte à chaque duel.
                 Text(

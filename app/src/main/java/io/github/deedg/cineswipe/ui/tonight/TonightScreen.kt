@@ -44,19 +44,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import io.github.deedg.cineswipe.R
-import io.github.deedg.cineswipe.ui.components.openWatchLink
-import io.github.deedg.cineswipe.ui.components.ProvidersLine
-import io.github.deedg.cineswipe.ui.components.WatchPills
-import io.github.deedg.cineswipe.ui.components.WatchButtons
-import io.github.deedg.cineswipe.data.repository.TmdbRepository
-import io.github.deedg.cineswipe.data.repository.WatchProviders
-import io.github.deedg.cineswipe.data.homelab.HomelabService
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.homelab.HomelabRepository
+import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.homelab.WatchLink
 import io.github.deedg.cineswipe.data.repository.LibraryRepository
 import io.github.deedg.cineswipe.data.repository.RecoRepository
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
+import io.github.deedg.cineswipe.data.repository.TmdbRepository
 import io.github.deedg.cineswipe.data.repository.TonightPick
+import io.github.deedg.cineswipe.data.repository.WatchProviders
 import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.domain.reco.ReasonKind
 import io.github.deedg.cineswipe.domain.reco.RecoReason
@@ -67,7 +64,11 @@ import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
+import io.github.deedg.cineswipe.ui.components.ProvidersLine
 import io.github.deedg.cineswipe.ui.components.ScreenTitle
+import io.github.deedg.cineswipe.ui.components.WatchButtons
+import io.github.deedg.cineswipe.ui.components.WatchPills
+import io.github.deedg.cineswipe.ui.components.openWatchLink
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import kotlinx.coroutines.CancellationException
@@ -92,10 +93,11 @@ object TonightTestTags {
 }
 
 /** Durée maximale du film. */
-enum class TonightLength(val maxMinutes: Int?) { ANY(null), SHORT(100), MEDIUM(130) }
+/** Durée maximale : d'un film, ou d'un épisode ([seriesMaxMinutes]) dans le monde des séries. */
+enum class TonightLength(val maxMinutes: Int?, val seriesMaxMinutes: Int?) { ANY(null, null), SHORT(100, 30), MEDIUM(130, 50) }
 
-/** D'où viennent les films. */
-enum class TonightSource { ALL, SERVER, WATCHLIST }
+/** D'où viennent les films ; [RESUME] : séries en cours (monde des séries). */
+enum class TonightSource { ALL, SERVER, WATCHLIST, RESUME }
 
 data class TonightFilters(
     val length: TonightLength = TonightLength.ANY,
@@ -110,6 +112,8 @@ sealed interface TonightState {
         /** Total avant filtres (pour distinguer « rien du tout » de « rien avec ces filtres »). */
         val total: Int,
         val withServer: Boolean,
+        /** Des séries en cours à reprendre (filtre « En cours »). */
+        val hasResume: Boolean = false,
         /** Serveurs média où regarder chaque film (boutons Plex, Jellyfin). */
         val watchOn: Map<Long, List<HomelabService>>,
         /** Où le regarder ailleurs (streaming), pour les films qui ne sont pas sur le serveur. */
@@ -125,6 +129,9 @@ sealed interface TonightEvent {
     data class Open(val link: WatchLink) : TonightEvent
     data class NotOnServer(val service: HomelabService) : TonightEvent
     data class MarkedWatched(val title: String) : TonightEvent
+
+    /** Série en cours : saison suivante ([season]), ou finie (null). */
+    data class SeasonDone(val title: String, val season: Int?) : TonightEvent
 }
 
 class TonightViewModel(
@@ -133,6 +140,7 @@ class TonightViewModel(
     private val homelab: HomelabRepository,
     private val tmdb: TmdbRepository,
     settings: SettingsRepository,
+    private val series: Boolean = false,
 ) : ViewModel() {
     private val picks = MutableStateFlow<List<TonightPick>?>(null)
     private val filters = MutableStateFlow(TonightFilters())
@@ -156,21 +164,23 @@ class TonightViewModel(
         if (all == null) return@combine TonightState.Loading
         val visible = all.filter { pick ->
             val runtime = pick.movie.runtimeMinutes
-            val lengthOk = filters.length.maxMinutes?.let { max -> runtime != null && runtime <= max } ?: true
+            val maxMinutes = if (series) filters.length.seriesMaxMinutes else filters.length.maxMinutes
+            val lengthOk = maxMinutes?.let { max -> runtime != null && runtime <= max } ?: true
             val sourceOk = when (filters.source) {
                 TonightSource.ALL -> true
                 TonightSource.SERVER -> pick.available
                 TonightSource.WATCHLIST -> pick.inWatchlist
+                TonightSource.RESUME -> pick.resume
             }
             lengthOk && sourceOk
         }
-        TonightState.Ready(visible, all.size, server, watchOn, providers, filters)
+        TonightState.Ready(visible, all.size, server, all.any { it.resume }, watchOn, providers, filters)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TonightState.Loading)
 
     fun load() {
         viewModelScope.launch {
             val loaded = try {
-                recos.tonight()
+                recos.tonight(series)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -209,12 +219,35 @@ class TonightViewModel(
     }
 
     fun markWatched(pick: TonightPick) {
+        if (pick.resume) return seasonDone(pick)
         viewModelScope.launch {
             library.markWatched(pick.movie.tmdbId)
             picks.update { list -> list?.filter { it.movie.tmdbId != pick.movie.tmdbId } }
             eventChannel.send(TonightEvent.MarkedWatched(pick.movie.title))
         }
     }
+
+    /** Série en cours : saison finie, place à la suivante, ou série finie. */
+    private fun seasonDone(pick: TonightPick) {
+        viewModelScope.launch {
+            val next = nextSeason(pick)
+            if (next != null) {
+                library.setProgress(pick.movie.tmdbId, SeriesProgress.IN_PROGRESS, next)
+                picks.update { list -> list?.map { if (it.movie.tmdbId == pick.movie.tmdbId) it.copy(season = next) else it } }
+            } else {
+                library.setProgress(pick.movie.tmdbId, SeriesProgress.FINISHED, null)
+                picks.update { list -> list?.filter { it.movie.tmdbId != pick.movie.tmdbId } }
+            }
+            eventChannel.send(TonightEvent.SeasonDone(pick.movie.title, next))
+        }
+    }
+}
+
+/** Après la saison en cours, la suivante ; la dernière saison (ou une saison inconnue) finit la série. */
+fun nextSeason(pick: TonightPick): Int? {
+    val season = pick.season ?: return null
+    val count = pick.movie.seasonCount ?: return null
+    return (season + 1).takeIf { it <= count }
 }
 
 /**
@@ -223,7 +256,7 @@ class TonightViewModel(
  */
 @Composable
 fun TonightRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit) {
-    val viewModel = cineViewModel { TonightViewModel(it.recos, it.library, it.homelab, it.tmdb, it.settings) }
+    val viewModel = cineViewModel { TonightViewModel(it.recos, it.library, it.homelab, it.tmdb, it.settings, series = it.kind.isSeries) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -231,6 +264,8 @@ fun TonightRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit) {
     val notOnServer = stringResource(R.string.tonight_not_on_server)
     val markedFormat = stringResource(R.string.tonight_marked_watched)
     val demoWatch = stringResource(R.string.demo_watch)
+    val nextSeasonFormat = stringResource(R.string.tonight_next_season)
+    val finishedFormat = stringResource(R.string.tonight_series_finished)
     val cantOpen = stringResource(R.string.watch_cant_open)
     // Rechargé à chaque retour sur l'écran (un film a pu être vu depuis sa fiche).
     LaunchedEffect(viewModel) { viewModel.load() }
@@ -240,6 +275,9 @@ fun TonightRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit) {
                 is TonightEvent.Open -> if (!openWatchLink(context, uriHandler, event.link) { toaster.show(demoWatch.format(it.service.displayName)) }) toaster.show(cantOpen.format(event.link.service.displayName))
                 is TonightEvent.NotOnServer -> toaster.show(notOnServer.format(event.service.displayName))
                 is TonightEvent.MarkedWatched -> toaster.show(markedFormat.format(event.title))
+                is TonightEvent.SeasonDone -> toaster.show(
+                    event.season?.let { nextSeasonFormat.format(event.title, it) } ?: finishedFormat.format(event.title),
+                )
             }
         }
     }
@@ -315,6 +353,9 @@ private fun TonightList(
                     if (state.withServer) {
                         CineChip(stringResource(R.string.tonight_source_server), state.filters.source == TonightSource.SERVER, { onSource(TonightSource.SERVER) })
                         CineChip(stringResource(R.string.tonight_source_watchlist), state.filters.source == TonightSource.WATCHLIST, { onSource(TonightSource.WATCHLIST) })
+                    }
+                    if (state.hasResume) {
+                        CineChip(stringResource(R.string.tonight_source_resume), state.filters.source == TonightSource.RESUME, { onSource(TonightSource.RESUME) })
                     }
                 }
             }
@@ -393,7 +434,7 @@ private fun Hero(
                     .background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to CineColors.Surface)),
             )
             Text(
-                stringResource(R.string.tonight_top_pick),
+                stringResource(if (pick.resume) R.string.tonight_resume_pick else R.string.tonight_top_pick),
                 color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
@@ -412,7 +453,7 @@ private fun Hero(
             if (!pick.available) ProvidersLine(providers)
             WatchButtons(watchOn, onWatch = { service -> onWatch(pick, service) }, modifier = Modifier.padding(top = 4.dp))
             CineSecondaryButton(
-                text = stringResource(R.string.tonight_seen),
+                text = seenLabel(pick),
                 icon = CineIcons.Check,
                 onClick = { onSeen(pick) },
                 modifier = Modifier.fillMaxWidth().testTag(TonightTestTags.seen(movie.tmdbId)),
@@ -459,7 +500,7 @@ private fun PickRow(
             WatchPills(watchOn, onWatch = { service -> onWatch(pick, service) })
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            SmallAction(CineIcons.Check, stringResource(R.string.tonight_seen), CineColors.BorderStrong, Modifier.testTag(TonightTestTags.seen(movie.tmdbId))) {
+            SmallAction(CineIcons.Check, seenLabel(pick), CineColors.BorderStrong, Modifier.testTag(TonightTestTags.seen(movie.tmdbId))) {
                 onSeen(pick)
             }
         }
@@ -513,10 +554,24 @@ private fun ReasonText(reason: RecoReason) {
     }
 }
 
+/** « Déjà vu », ou pour une série en cours « Saison 3 finie » / « Série finie ». */
+@Composable
+private fun seenLabel(pick: TonightPick): String = when {
+    !pick.resume -> stringResource(R.string.tonight_seen)
+    nextSeason(pick) != null -> stringResource(R.string.tonight_season_done, pick.season ?: 0)
+    else -> stringResource(R.string.tonight_series_done)
+}
+
 @Composable
 private fun Badges(pick: TonightPick) {
-    if (!pick.inWatchlist && !pick.available) return
+    if (!pick.inWatchlist && !pick.available && !pick.resume) return
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (pick.resume) {
+            Badge(
+                CineIcons.Play,
+                pick.season?.let { stringResource(R.string.tonight_badge_resume_season, it) } ?: stringResource(R.string.tonight_badge_resume),
+            )
+        }
         if (pick.available) Badge(CineIcons.Server, stringResource(R.string.tonight_badge_server))
         if (pick.inWatchlist) Badge(CineIcons.Bookmark, stringResource(R.string.tonight_badge_watchlist))
     }

@@ -1,6 +1,7 @@
 package io.github.deedg.cineswipe.ui.library
 
 import io.github.deedg.cineswipe.data.db.Availability
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.model.LibraryItem
 import io.github.deedg.cineswipe.domain.StarScale
@@ -19,7 +20,8 @@ enum class LibrarySort {
     fun next(): LibrarySort = entries[(ordinal + 1) % entries.size]
 }
 
-enum class LibraryFilter { ALL, WATCHED, AVAILABLE, WATCHLIST }
+/** Filtres de la bibliothèque ; [IN_PROGRESS] (séries en cours) n'existe que dans le monde des séries. */
+enum class LibraryFilter { ALL, WATCHED, IN_PROGRESS, AVAILABLE, WATCHLIST }
 
 data class LibraryRowUi(
     val tmdbId: Long,
@@ -33,6 +35,9 @@ data class LibraryRowUi(
     val rating: Int?,
     val stars: Float?,
     val provisional: Boolean,
+    /** Série vue : avancement et saison (null pour un film ou une série non vue). */
+    val progress: SeriesProgress? = null,
+    val currentSeason: Int? = null,
 )
 
 /**
@@ -162,6 +167,7 @@ object LibrarySections {
         LibraryFilter.WATCHED -> status == WatchStatus.WATCHED
         LibraryFilter.AVAILABLE -> availability == Availability.AVAILABLE
         LibraryFilter.WATCHLIST -> status == WatchStatus.WATCHLIST
+        LibraryFilter.IN_PROGRESS -> status == WatchStatus.WATCHED && progress == SeriesProgress.IN_PROGRESS
     }
 
     private fun LibraryItem.toRow(starsValue: Float?, showAvailability: Boolean): LibraryRowUi {
@@ -178,6 +184,8 @@ object LibrarySections {
             rating = if (watched) rating.roundToInt() else null,
             stars = if (watched) starsValue else null,
             provisional = StarScale.isProvisional(confidence),
+            progress = progress.takeIf { watched },
+            currentSeason = currentSeason.takeIf { watched },
         )
     }
 }

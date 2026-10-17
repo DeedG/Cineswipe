@@ -37,7 +37,8 @@ sealed interface Route : NavKey {
     /** Import des films vus depuis CineSwipe, Letterboxd, Trakt, IMDb… */
     @Serializable data object Import : Route
     @Serializable data object Settings : Route
-    @Serializable data class MovieDetail(val tmdbId: Long) : Route
+    /** Fiche ; [siblings] : fiches voisines (bibliothèque), parcourues d'un swipe horizontal. */
+    @Serializable data class MovieDetail(val tmdbId: Long, val siblings: List<Long> = emptyList()) : Route
 
     /** Fiche d'un acteur ou d'un réalisateur, avec ses films. */
     @Serializable data class Person(val id: Long, val name: String) : Route
@@ -47,6 +48,9 @@ sealed interface Route : NavKey {
 
     /** Une liste perso et ses films. */
     @Serializable data class UserList(val id: Long) : Route
+
+    /** Comparer ses goûts avec un ami (QR code) ; [code] : code reçu par un partage. */
+    @Serializable data class Friends(val code: String? = null) : Route
 
     /** Stats de goûts (genres, réalisateurs, acteurs, décennies…). */
     @Serializable data object Stats : Route
@@ -87,7 +91,7 @@ val Route.tab: Tab
         Route.Discover, Route.Census -> Tab.DISCOVER
         Route.Profile, is Route.Library, Route.DuelHistory, Route.Settings, Route.Homelab, is Route.HomelabServiceSettings,
         is Route.MovieDetail, Route.Diagnostics, Route.TmdbKey, Route.Import, is Route.Person, Route.Stats,
-        is Route.UserList, Route.Retro,
+        is Route.UserList, Route.Retro, is Route.Friends,
         -> Tab.PROFILE
     }
 

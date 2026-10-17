@@ -7,6 +7,7 @@ import io.github.deedg.cineswipe.data.db.MovieEntity
 import io.github.deedg.cineswipe.data.db.RecoSourceEntity
 import io.github.deedg.cineswipe.data.db.UserMovieEntity
 import io.github.deedg.cineswipe.data.db.WatchStatus
+import io.github.deedg.cineswipe.data.model.MediaKind
 import io.github.deedg.cineswipe.data.tmdb.TmdbMapper
 import io.github.deedg.cineswipe.domain.StarScale
 import io.github.deedg.cineswipe.domain.census.CensusModel
@@ -101,6 +102,8 @@ class DiagnosticsRepository(
     private val settings: SettingsRepository,
     private val versionName: String,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Monde exporté (films ou séries). */
+    private val kind: MediaKind = MediaKind.FILMS,
 ) {
     private val json = Json {
         prettyPrint = false
@@ -200,7 +203,7 @@ class DiagnosticsRepository(
         val directory = File(context.cacheDir, EXPORT_DIRECTORY).apply { mkdirs() }
         directory.listFiles()?.forEach { it.delete() }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.FRANCE).format(Date(clock()))
-        File(directory, "cineswipe-$stamp.json").apply { writeText(json.encodeToString(ExportFile.serializer(), file)) }
+        File(directory, (if (kind.isSeries) "cineswipe-series-" else "cineswipe-") + "$stamp.json").apply { writeText(json.encodeToString(ExportFile.serializer(), file)) }
     }
 
     /** Toutes les données, prêtes à écrire (export partagé ou sauvegarde automatique). */
@@ -211,6 +214,7 @@ class DiagnosticsRepository(
         ExportFile(
             version = versionName,
             exportedAt = clock(),
+            kind = kind.name,
             films = users.map { it.toExport(movies[it.tmdbId]) },
             duels = dao.duels().map { it.toExport() },
             recoSources = database.recoDao().sources().map { ExportSource(it.source.name, it.shown, it.liked, it.disliked) },
@@ -306,7 +310,9 @@ data class ExportFile(
     val app: String = "CineSwipe",
     val version: String,
     val exportedAt: Long,
-    val schema: Int = 6,
+    val schema: Int = 7,
+    /** Monde exporté : FILMS ou SERIES (depuis le schéma 7). */
+    val kind: String = "FILMS",
     val films: List<ExportFilm>,
     val duels: List<ExportDuel>,
     val recoSources: List<ExportSource>,
@@ -351,6 +357,9 @@ data class ExportFilm(
     val censusAt: Long? = null,
     val updatedAt: Long,
     val importedRating: Double? = null,
+    /** Séries : avancement (IN_PROGRESS, FINISHED, EPISODES, ABANDONED) et saison. */
+    val progress: String? = null,
+    val currentSeason: Int? = null,
 )
 
 @Serializable
@@ -394,6 +403,9 @@ data class ExportMovie(
     val popularity: Double? = null,
     val trailerKey: String? = null,
     val collectionId: Long? = null,
+    val seasonCount: Int? = null,
+    val airStatus: String? = null,
+    val endYear: Int? = null,
 )
 
 private fun UserMovieEntity.toExport(movie: MovieEntity?) = ExportFilm(
@@ -416,6 +428,8 @@ private fun UserMovieEntity.toExport(movie: MovieEntity?) = ExportFilm(
     censusAt = censusAt,
     updatedAt = updatedAt,
     importedRating = importedRating,
+    progress = progress?.name,
+    currentSeason = currentSeason,
 )
 
 private fun DuelEntity.toExport() = ExportDuel(
@@ -449,4 +463,7 @@ private fun MovieEntity.toExport() = ExportMovie(
     popularity = popularity,
     trailerKey = trailerKey,
     collectionId = collectionId,
+    seasonCount = seasonCount,
+    airStatus = airStatus,
+    endYear = endYear,
 )

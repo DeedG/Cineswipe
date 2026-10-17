@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,8 +41,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.deedg.cineswipe.R
 import io.github.deedg.cineswipe.data.model.TmdbGenre
 import io.github.deedg.cineswipe.data.repository.DiscoverFilters
-import io.github.deedg.cineswipe.data.repository.FeedRepository
 import io.github.deedg.cineswipe.data.repository.DiscoverLength
+import io.github.deedg.cineswipe.data.repository.FeedRepository
 import io.github.deedg.cineswipe.data.repository.FeedRequest
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.TmdbException
@@ -52,12 +53,13 @@ import io.github.deedg.cineswipe.ui.components.CineChip
 import io.github.deedg.cineswipe.ui.components.CineSwitchRow
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
-import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.deedg.cineswipe.ui.components.SectionCard
+import io.github.deedg.cineswipe.ui.components.WorldSwitch
 import io.github.deedg.cineswipe.ui.feed.CardFeed
 import io.github.deedg.cineswipe.ui.feed.CardFeedScreen
 import io.github.deedg.cineswipe.ui.feed.FeedTexts
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
 import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
@@ -272,14 +274,16 @@ private fun DiscoverFiltersScreen(
             .padding(horizontal = 20.dp, vertical = 15.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            text = stringResource(R.string.discover_title),
-            color = Color.White,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Black,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        )
+        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.discover_title),
+                color = Color.White,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.weight(1f),
+            )
+            WorldSwitch(tabName = Tab.DISCOVER.name)
+        }
 
         ShortcutCard(
             icon = CineIcons.Moon,

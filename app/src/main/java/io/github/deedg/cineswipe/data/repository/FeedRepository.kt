@@ -2,9 +2,11 @@ package io.github.deedg.cineswipe.data.repository
 
 import io.github.deedg.cineswipe.data.db.CineSwipeDatabase
 import io.github.deedg.cineswipe.data.db.MovieEntity
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.UserMovieEntity
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.homelab.HomelabRepository
+import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.homelab.RequestTicket
 import io.github.deedg.cineswipe.data.model.CardStatusRow
 import io.github.deedg.cineswipe.data.tmdb.TmdbMapper
@@ -34,18 +36,30 @@ sealed interface FeedRequest {
 }
 
 /** Durée des films de la Découverte (les mêmes paliers que « Ce soir », plus les films longs). */
-enum class DiscoverLength(val minMinutes: Int?, val maxMinutes: Int?) {
-    ANY(null, null),
-    SHORT(null, 100),
-    MEDIUM(null, 130),
-    LONG(131, null),
+enum class DiscoverLength(
+    val minMinutes: Int?,
+    val maxMinutes: Int?,
+    /** Séries : durée d'un épisode. */
+    val seriesMinMinutes: Int?,
+    val seriesMaxMinutes: Int?,
+) {
+    ANY(null, null, null, null),
+    SHORT(null, 100, null, 30),
+    MEDIUM(null, 130, null, 50),
+    LONG(131, null, 51, null),
     ;
 
+    fun min(series: Boolean): Int? = if (series) seriesMinMinutes else minMinutes
+
+    fun max(series: Boolean): Int? = if (series) seriesMaxMinutes else maxMinutes
+
     /** Vrai si la durée convient (une durée inconnue ne convient qu'à « toutes durées »). */
-    fun accepts(runtime: Int?): Boolean {
+    fun accepts(runtime: Int?, series: Boolean = false): Boolean {
         if (this == ANY) return true
         val minutes = runtime?.takeIf { it > 0 } ?: return false
-        return (minMinutes == null || minutes >= minMinutes) && (maxMinutes == null || minutes <= maxMinutes)
+        val min = min(series)
+        val max = max(series)
+        return (min == null || minutes >= min) && (max == null || minutes <= max)
     }
 }
 
@@ -59,10 +73,10 @@ data class DiscoverFilters(
     val onlyAvailable: Boolean = false,
     val length: DiscoverLength = DiscoverLength.ANY,
 ) {
-    fun toQuery(): DiscoverQuery = DiscoverQuery(
+    fun toQuery(series: Boolean = false): DiscoverQuery = DiscoverQuery(
         genreId = genreId,
-        runtimeMin = length.minMinutes,
-        runtimeMax = length.maxMinutes,
+        runtimeMin = length.min(series),
+        runtimeMax = length.max(series),
         minRating = minRating.takeIf { it > 0f }?.toDouble(),
         minVotes = if (minRating > 0f) 100 else null,
         yearMin = yearMin,
@@ -101,6 +115,8 @@ data class ActionRecord(
     val previous: UserMovieEntity?,
     /** Demande au homelab, annulée avec l'action. */
     val request: RequestTicket? = null,
+    /** Série : rien n'est encore demandé, l'utilisateur choisit les saisons à demander à ce service. */
+    val askSeasons: HomelabService? = null,
 )
 
 /** Moteur des feeds de cartes : recos, Éclair, recherche et découverte. */
@@ -113,6 +129,8 @@ class FeedRepository(
     private val clock: () -> Long = System::currentTimeMillis,
     /** Un film entre dans les vus ou en sort : le classement est à recalculer. */
     private val onWatchedChanged: () -> Unit = {},
+    /** Monde des séries : les durées sont celles d'un épisode. */
+    val series: Boolean = false,
 ) {
 
     /** Statut à jour de chaque film qui en a un, pour les badges des cartes. */
@@ -169,6 +187,11 @@ class FeedRepository(
             CardAction.WATCHLIST -> WatchStatus.WATCHLIST
             CardAction.DISMISS -> WatchStatus.DISMISSED
             CardAction.REQUEST -> {
+                if (series) {
+                    // Série : elle passe dans la liste À voir, et l'utilisateur choisit les saisons à demander.
+                    val service = settings.homelabConfig.first().requestService ?: return apply(movie, CardAction.WATCHLIST)
+                    return apply(movie, CardAction.WATCHLIST).copy(action = CardAction.REQUEST, askSeasons = service)
+                }
                 val ticket = homelab.requestMovie(movie)
                     // Plus de service de demandes (réglages changés entre-temps) : simple ajout à la liste.
                     ?: return apply(movie, CardAction.WATCHLIST)
@@ -178,6 +201,15 @@ class FeedRepository(
         val previous = database.libraryDao().applyCardAction(movie, status, clock())
         if (status == WatchStatus.WATCHED || previous?.status == WatchStatus.WATCHED) onWatchedChanged()
         return ActionRecord(movie = movie, action = action, previous = previous)
+    }
+
+    /** Série : demande des saisons choisies (null = toute la série). */
+    suspend fun requestSeasons(movie: MovieEntity, seasons: List<Int>?): RequestTicket? = homelab.requestMovie(movie, seasons)
+
+    /** Série vue d'un swipe : où en est l'utilisateur (la saison ne vaut que pour en cours ou décrochée). */
+    suspend fun setProgress(tmdbId: Long, progress: SeriesProgress, season: Int?) {
+        val withSeason = progress == SeriesProgress.IN_PROGRESS || progress == SeriesProgress.ABANDONED
+        database.libraryDao().setProgress(tmdbId, progress, season.takeIf { withSeason }, clock())
     }
 
     suspend fun undo(record: ActionRecord) {
@@ -221,7 +253,7 @@ class FeedRepository(
             }
             if (filters.genreId != null && filters.genreId !in movie.genreIds) continue
             if (filters.minRating > 0f && (movie.tmdbRating ?: 0.0) < filters.minRating) continue
-            if (!filters.length.accepts(movie.runtimeMinutes)) continue
+            if (!filters.length.accepts(movie.runtimeMinutes, series)) continue
             movies += movie
         }
         val exhausted = index >= candidates.size
@@ -253,7 +285,7 @@ class FeedRepository(
             pageRound(page, result)
         }
         is FeedRequest.Search -> pageRound(page, tmdb.search(request.query, page))
-        is FeedRequest.Discover -> pageRound(page, tmdb.discover(request.filters.toQuery(), page))
+        is FeedRequest.Discover -> pageRound(page, tmdb.discover(request.filters.toQuery(series), page))
     }
 
     private fun pageRound(page: Int, result: TmdbPageDto): Round =

@@ -1,8 +1,5 @@
 package io.github.deedg.cineswipe
 
-import org.robolectric.Shadows.shadowOf
-import io.github.deedg.cineswipe.ui.recos.RecosTestTags
-import io.github.deedg.cineswipe.ui.components.WatchTestTags
 import android.content.Intent
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -19,17 +16,23 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.deedg.cineswipe.data.db.Availability
 import io.github.deedg.cineswipe.data.db.OutboxEntity
 import io.github.deedg.cineswipe.data.db.OutboxState
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchSource
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.homelab.RequestTarget
 import io.github.deedg.cineswipe.data.homelab.SeerrAuthMode
 import io.github.deedg.cineswipe.data.homelab.ServiceConfig
+import io.github.deedg.cineswipe.data.model.MediaKind
 import io.github.deedg.cineswipe.data.repository.CardAction
 import io.github.deedg.cineswipe.testing.FakeHomelabServer
 import io.github.deedg.cineswipe.testing.FakeTmdbServer
 import io.github.deedg.cineswipe.testing.TestCineSwipeApp
+import io.github.deedg.cineswipe.ui.components.WatchTestTags
 import io.github.deedg.cineswipe.ui.homelab.HomelabTestTags
+import io.github.deedg.cineswipe.ui.recos.RecosTestTags
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
@@ -44,6 +47,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.time.Instant
 
@@ -108,6 +112,55 @@ class HomelabFlowTest {
             settings.setRequestTarget(RequestTarget.AUTO)
             settings.setHomelabReport(null)
             settings.setTmdbApiKey(null)
+        }
+    }
+
+    @Test
+    fun seriesWorldSyncsShowsAndRequestsSeriesFromSonarr() {
+        runBlocking {
+            app.container.settings.saveService(
+                ServiceConfig(
+                    service = HomelabService.SONARR,
+                    enabled = true,
+                    url = FakeHomelabServer.url("sonarr"),
+                    apiKey = FakeHomelabServer.SONARR_KEY,
+                    qualityProfileId = 4,
+                    rootFolder = "/tv",
+                ),
+            )
+            // Le service « *arr » reçoit les demandes : Sonarr pour les séries.
+            app.container.settings.setRequestTarget(RequestTarget.RADARR)
+        }
+        try {
+            runBlocking(Dispatchers.IO) {
+                app.switchWorld(MediaKind.SERIES)
+                val series = app.container
+                assertEquals(HomelabService.SONARR, series.settings.homelabConfig.first().requestService)
+
+                val report = checkNotNull(series.homelab.sync())
+                assertTrue(report.failures.toString(), report.failures.isEmpty())
+                // Commencée sur Jellyfin : vue, en cours, saison 2 (la saison 1 est finie).
+                val show = checkNotNull(series.database.userMovieDao().get(FakeHomelabServer.SHOW_IN_PROGRESS_ID))
+                assertEquals(WatchStatus.WATCHED, show.status)
+                assertEquals(WatchSource.JELLYFIN, show.watchedSource)
+                assertEquals(SeriesProgress.IN_PROGRESS, show.progress)
+                assertEquals(2, show.currentSeason)
+                // Surveillée par Sonarr sans épisode : demandée.
+                assertEquals(Availability.REQUESTED, series.database.userMovieDao().get(FakeHomelabServer.SHOW_WANTED_ID)?.availability)
+                // Rien n'a fui chez les films (les films de Jellyfin restent aux films).
+                assertNull(app.mainContainer.database.userMovieDao().get(FakeHomelabServer.SHOW_IN_PROGRESS_ID))
+                assertNull(series.database.userMovieDao().get(FakeHomelabServer.WATCHED_ID))
+
+                // Demande d'une série : Sonarr la reçoit par son identifiant TVDB.
+                val guardians = series.tmdb.ensureDetails(FakeTmdbServer.GUARDIANS.id)
+                val ticket = checkNotNull(series.homelab.requestMovie(guardians))
+                assertEquals(HomelabService.SONARR, ticket.service)
+                series.homelab.flushOutbox()
+                val post = FakeHomelabServer.requests.last { it.method == "POST" && it.url.encodedPath == "/sonarr/api/v3/series" }
+                assertTrue(post.body?.utf8().orEmpty().contains("\"tvdbId\":${FakeHomelabServer.tvdbOf(FakeTmdbServer.GUARDIANS.id)}"))
+            }
+        } finally {
+            runBlocking { app.switchWorld(MediaKind.FILMS) }
         }
     }
 

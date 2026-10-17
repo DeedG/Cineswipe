@@ -2,6 +2,9 @@ package io.github.deedg.cineswipe.data.importer
 
 import io.github.deedg.cineswipe.data.db.CineSwipeDatabase
 import io.github.deedg.cineswipe.data.db.MovieEntity
+import io.github.deedg.cineswipe.data.db.SeriesProgress
+import io.github.deedg.cineswipe.data.db.WatchStatus
+import io.github.deedg.cineswipe.data.model.MediaKind
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.TmdbException
 import io.github.deedg.cineswipe.data.repository.TmdbRepository
@@ -26,7 +29,20 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicInteger
 
 /** Pourquoi un import a échoué. */
-enum class ImportFailure { UNREADABLE, EMPTY, MISSING_KEY, INVALID_KEY, NETWORK, ERROR }
+enum class ImportFailure {
+    UNREADABLE,
+    EMPTY,
+    MISSING_KEY,
+    INVALID_KEY,
+    NETWORK,
+    ERROR,
+
+    /** Sauvegarde de l'autre monde (une sauvegarde des séries en mode films, ou l'inverse). */
+    WRONG_WORLD,
+
+    /** En mode séries : Letterboxd ne contient que des films. */
+    SERIES_BACKUP_ONLY,
+}
 
 /** Bilan d'un import, affiché à la fin. */
 data class ImportReport(
@@ -77,6 +93,8 @@ class ImportRepository(
     private val clock: () -> Long = System::currentTimeMillis,
     /** Après un import : compléter les fiches des films ajoutés (profil de goût des recos). */
     private val afterImport: suspend () -> Unit = {},
+    /** Monde des séries : seule une sauvegarde des séries y est reprise. */
+    private val series: Boolean = false,
 ) {
     private val mutableState = MutableStateFlow<ImportState>(ImportState.Idle)
     val state: StateFlow<ImportState> = mutableState.asStateFlow()
@@ -92,8 +110,14 @@ class ImportRepository(
         mutableState.value = ImportState.Reading
         job = scope.launch {
             mutableState.value = try {
-                val batch = withContext(Dispatchers.Default) { ImportFormats.parse(files) }
-                if (batch.items.isEmpty() && batch.backup == null) {
+                val batch = withContext(Dispatchers.Default) { ImportFormats.parse(files, series) }
+                val backupKind = batch.backup?.let { MediaKind.fromName(it.kind) }
+                when {
+                    backupKind != null && backupKind.isSeries != series -> ImportState.Failed(ImportFailure.WRONG_WORLD)
+                    // Letterboxd ne parle que de films.
+                    series && ImportSource.LETTERBOXD in batch.sources && batch.items.isEmpty() -> ImportState.Failed(ImportFailure.SERIES_BACKUP_ONLY)
+                    else -> null
+                } ?: if (batch.items.isEmpty() && batch.backup == null) {
                     ImportState.Failed(if (files.isEmpty() || batch.ignored.isNotEmpty()) ImportFailure.UNREADABLE else ImportFailure.EMPTY)
                 } else {
                     val restore = batch.backup != null && !database.importDao().hasUserData()
@@ -202,6 +226,31 @@ class ImportRepository(
             found.map { (item, movie) -> ImportEntry(movie!!, item.watched, item.watchlist, item.rating10, item.watchedAt) },
         )
         val counts = dao.applyImport(entries, now)
+        // Séries de Trakt : l'avancement d'après la dernière saison commencée (finie si c'est la
+        // dernière saison et que tous ses épisodes sont vus), là où il n'est pas encore connu.
+        if (series) {
+            val library = database.libraryDao()
+            val users = database.userMovieDao()
+            found.forEach { (item, movie) ->
+                val season = item.season ?: return@forEach
+                val current = users.get(movie!!.tmdbId) ?: return@forEach
+                if (current.status != WatchStatus.WATCHED || current.progress != null) return@forEach
+                val details = if (movie.seasonCount == null) runCatching { tmdb.ensureDetails(movie.tmdbId) }.getOrNull() ?: movie else movie
+                val (progress, at) = ImportProgress.of(season, item.seasonEpisodes, details)
+                library.setProgress(movie.tmdbId, progress, at, now)
+            }
+        }
+        // Séries fusionnées dans une bibliothèque non vide : l'avancement de la sauvegarde est
+        // repris là où il n'est pas encore connu.
+        if (series && backup != null && !restored) {
+            val library = database.libraryDao()
+            val users = database.userMovieDao()
+            backup.films.forEach { film ->
+                val progress = film.progress?.let { name -> SeriesProgress.entries.firstOrNull { it.name == name } } ?: return@forEach
+                val current = users.get(film.tmdbId) ?: return@forEach
+                if (current.status == WatchStatus.WATCHED && current.progress == null) library.setProgress(film.tmdbId, progress, film.currentSeason, now)
+            }
+        }
         // Listes perso de la sauvegarde : réunies par nom avec celles qui existent déjà.
         val lists = backup?.let { file ->
             val (imported, movies) = BackupRows.lists(file)
@@ -295,5 +344,15 @@ class ImportRepository(
         const val RETRY_DELAY_MS = 1_500L
         const val NOT_FOUND = 404
         const val TOO_MANY_REQUESTS = 429
+    }
+}
+
+/** Avancement d'une série importée de Trakt, d'après la dernière saison commencée. */
+object ImportProgress {
+    fun of(season: Int, episodesSeen: Int?, movie: MovieEntity): Pair<SeriesProgress, Int?> {
+        val count = movie.seasonCount ?: return SeriesProgress.IN_PROGRESS to season
+        val episodes = movie.seasons.firstOrNull { it.number == season }?.episodeCount
+        val lastSeasonDone = season >= count && (episodes == null || (episodesSeen ?: 0) >= episodes)
+        return if (lastSeasonDone) SeriesProgress.FINISHED to null else SeriesProgress.IN_PROGRESS to season
     }
 }

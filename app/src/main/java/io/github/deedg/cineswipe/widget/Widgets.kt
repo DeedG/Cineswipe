@@ -1,16 +1,14 @@
 package io.github.deedg.cineswipe.widget
 
 import android.content.Context
-import io.github.deedg.cineswipe.data.repository.TonightPick
-import androidx.glance.currentState
-import androidx.datastore.preferences.core.Preferences
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.getValue
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -29,6 +27,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
+import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -48,13 +47,15 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.data.model.MediaKind
+import io.github.deedg.cineswipe.data.repository.TonightPick
 import io.github.deedg.cineswipe.domain.TmdbImageSize
+import io.github.deedg.cineswipe.ui.theme.Accent
 import io.github.deedg.cineswipe.ui.tonight.formatRuntime
 import java.text.NumberFormat
 import java.util.Locale
 
 private val Background = Color(0xFF111111)
-private val Red = Color(0xFFED1C24)
 private val Muted = Color(0xFF999999)
 private val Soft = Color(0xFFDDDDDD)
 
@@ -69,10 +70,13 @@ private fun WidgetFrame(modifier: GlanceModifier = GlanceModifier, content: @Com
     ) { content() }
 }
 
+/** Couleur du monde : rouge des films, violet des séries. */
+private fun accent(world: MediaKind): Color = Accent.of(world).main
+
 @Composable
-private fun Header(label: String) {
+private fun Header(label: String, world: MediaKind) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(GlanceModifier.size(8.dp).background(Red).cornerRadius(4.dp)) {}
+        Box(GlanceModifier.size(8.dp).background(accent(world)).cornerRadius(4.dp)) {}
         Spacer(GlanceModifier.width(6.dp))
         Text(label, style = text(Muted, 12, bold = true))
     }
@@ -81,12 +85,21 @@ private fun Header(label: String) {
 // --- Ce soir ---
 
 /** Ce que montre le widget « Ce soir ». */
-private class TonightModel(val pick: TonightPick?, val poster: Bitmap?) {
+private class TonightModel(val world: MediaKind, val pick: TonightPick?, val poster: Bitmap?, val title: String, val empty: String, val next: String) {
     companion object {
         suspend fun load(context: Context, prefs: Preferences): TonightModel {
-            val picks = WidgetData.tonight(context, prefs[WidgetKeys.SOURCE], prefs[WidgetKeys.MAX_MINUTES] ?: 0)
+            val world = prefs.world()
+            val picks = WidgetData.tonight(context, prefs[WidgetKeys.SOURCE], prefs[WidgetKeys.MAX_MINUTES] ?: 0, world)
             val pick = picks.takeIf { it.isNotEmpty() }?.let { it[(prefs[WidgetKeys.OFFSET] ?: 0).mod(it.size)] }
-            return TonightModel(pick, WidgetData.poster(context, pick?.movie?.posterPath, TmdbImageSize.Poster, width = 300))
+            val texts = world.texts(context)
+            return TonightModel(
+                world = world,
+                pick = pick,
+                poster = WidgetData.poster(context, pick?.movie?.posterPath, TmdbImageSize.Poster, width = 300),
+                title = texts.getString(R.string.widget_tonight_label),
+                empty = texts.getString(R.string.widget_tonight_empty),
+                next = texts.getString(R.string.widget_next),
+            )
         }
     }
 }
@@ -113,19 +126,20 @@ class TonightWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val initialPrefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
         val initial = TonightModel.load(context, initialPrefs)
-        val title = context.getString(R.string.widget_tonight_label)
-        val empty = context.getString(R.string.widget_tonight_empty)
-        val next = context.getString(R.string.widget_next)
         provideContent {
             val model = rememberWidgetModel(context, initialPrefs, initial) { c, p -> TonightModel.load(c, p) }
             val pick = model.pick
             val poster = model.poster
+            val world = model.world
+            val title = model.title
+            val empty = model.empty
+            val next = model.next
             val size = LocalSize.current
-            val open = actionStartActivity(WidgetLinks.intent(context, pick?.let { WidgetLinks.movie(it.movie.tmdbId) } ?: WidgetLinks.TONIGHT))
+            val open = actionStartActivity(WidgetLinks.intent(context, pick?.let { WidgetLinks.movie(it.movie.tmdbId) } ?: WidgetLinks.TONIGHT, world))
             WidgetFrame(GlanceModifier.clickable(open)) {
                 if (pick == null) {
                     Column(GlanceModifier.fillMaxSize().padding(14.dp)) {
-                        Header(title)
+                        Header(title, world)
                         Spacer(GlanceModifier.height(10.dp))
                         Text(empty, style = text(Soft, 13))
                     }
@@ -143,16 +157,20 @@ class TonightWidget : GlanceAppWidget() {
                         }
                         if (wide || poster == null) {
                             Column(GlanceModifier.fillMaxHeight().defaultWeight().padding(start = 12.dp)) {
-                                Header(title)
+                                Header(title, world)
                                 Spacer(GlanceModifier.height(6.dp))
                                 Text(pick.movie.title, style = text(Color.White, 17, bold = true), maxLines = 3)
-                                val meta = listOfNotNull(pick.movie.year?.toString(), pick.movie.runtimeMinutes?.takeIf { it > 0 }?.let(::formatRuntime))
+                                val meta = listOfNotNull(
+                                    pick.season?.takeIf { pick.resume }?.let { "S$it" },
+                                    pick.movie.year?.toString(),
+                                    pick.movie.runtimeMinutes?.takeIf { it > 0 }?.let(::formatRuntime),
+                                )
                                 if (meta.isNotEmpty()) Text(meta.joinToString(" · "), style = text(Muted, 12))
                                 pick.reason?.subject?.let { Text("♥ $it", style = text(Soft, 12), maxLines = 2) }
                                 Spacer(GlanceModifier.defaultWeight())
                                 Text(
                                     "$next ›",
-                                    style = text(Red, 13, bold = true),
+                                    style = text(accent(world), 13, bold = true),
                                     modifier = GlanceModifier.padding(vertical = 4.dp).clickable(actionRunCallback<NextTonightAction>()),
                                 )
                             }
@@ -182,8 +200,16 @@ class TonightWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun decadeLabel(context: Context, decade: String): String =
     context.getString(R.string.widget_decade, if (decade.startsWith("19")) decade.takeLast(2) else decade)
 
-private suspend fun statsCells(context: Context, prefs: Preferences): List<Pair<String, String>> {
-    val values = WidgetData.stats(context) ?: return emptyList()
+private class StatsModel(val world: MediaKind, val title: String, val cells: List<Pair<String, String>>)
+
+private suspend fun statsModel(context: Context, prefs: Preferences): StatsModel {
+    val world = prefs.world()
+    val texts = world.texts(context)
+    return StatsModel(world, texts.getString(R.string.widget_stats_label), statsCells(texts, prefs, world))
+}
+
+private suspend fun statsCells(context: Context, prefs: Preferences, world: MediaKind): List<Pair<String, String>> {
+    val values = WidgetData.stats(context, world) ?: return emptyList()
     val format = NumberFormat.getIntegerInstance(Locale.FRANCE)
     return prefs.stats().take(StatsWidget.MAX_STATS).map { stat ->
         when (stat) {
@@ -206,13 +232,13 @@ class StatsWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val initialPrefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
-        val initial = statsCells(context, initialPrefs)
-        val title = context.getString(R.string.widget_stats_label)
+        val initial = statsModel(context, initialPrefs)
         provideContent {
-            val cells = rememberWidgetModel(context, initialPrefs, initial) { c, p -> statsCells(c, p) }
-            WidgetFrame(GlanceModifier.clickable(actionStartActivity(WidgetLinks.intent(context, WidgetLinks.STATS)))) {
+            val model = rememberWidgetModel(context, initialPrefs, initial) { c, p -> statsModel(c, p) }
+            val cells = model.cells
+            WidgetFrame(GlanceModifier.clickable(actionStartActivity(WidgetLinks.intent(context, WidgetLinks.STATS, model.world)))) {
                 Column(GlanceModifier.fillMaxSize().padding(14.dp)) {
-                    Header(title)
+                    Header(model.title, model.world)
                     Spacer(GlanceModifier.height(8.dp))
                     cells.chunked(2).forEach { row ->
                         Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
@@ -240,13 +266,15 @@ class StatsWidgetReceiver : GlanceAppWidgetReceiver() {
 
 // --- Top ---
 
-private class TopModel(val title: String, val films: List<WidgetData.TopFilm>, val posters: List<Bitmap?>) {
+private class TopModel(val world: MediaKind, val title: String, val empty: String, val films: List<WidgetData.TopFilm>, val posters: List<Bitmap?>) {
     companion object {
         suspend fun load(context: Context, prefs: Preferences): TopModel {
+            val world = prefs.world()
+            val texts = world.texts(context)
             val genre = prefs[WidgetKeys.GENRE]?.takeIf { it.isNotBlank() }
-            val films = WidgetData.top(context, (prefs[WidgetKeys.COUNT] ?: TopWidget.DEFAULT_COUNT).coerceIn(1, TopWidget.COUNTS.max()), genre)
-            val title = genre?.let { context.getString(R.string.widget_top_genre, it) } ?: context.getString(R.string.widget_top_label)
-            return TopModel(title, films, films.map { WidgetData.poster(context, it.posterPath) })
+            val films = WidgetData.top(context, (prefs[WidgetKeys.COUNT] ?: TopWidget.DEFAULT_COUNT).coerceIn(1, TopWidget.COUNTS.max()), genre, world)
+            val title = genre?.let { texts.getString(R.string.widget_top_genre, it) } ?: texts.getString(R.string.widget_top_label)
+            return TopModel(world, title, texts.getString(R.string.widget_top_empty), films, films.map { WidgetData.poster(context, it.posterPath) })
         }
     }
 }
@@ -259,14 +287,15 @@ class TopWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val initialPrefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
         val initial = TopModel.load(context, initialPrefs)
-        val empty = context.getString(R.string.widget_top_empty)
         provideContent {
             val model = rememberWidgetModel(context, initialPrefs, initial) { c, p -> TopModel.load(c, p) }
             val films = model.films
+            val empty = model.empty
+            val world = model.world
             val size = LocalSize.current
-            WidgetFrame(GlanceModifier.clickable(actionStartActivity(WidgetLinks.intent(context, WidgetLinks.TOP)))) {
+            WidgetFrame(GlanceModifier.clickable(actionStartActivity(WidgetLinks.intent(context, WidgetLinks.TOP, world)))) {
                 Column(GlanceModifier.fillMaxSize().padding(12.dp)) {
-                    Header(model.title)
+                    Header(model.title, world)
                     Spacer(GlanceModifier.height(8.dp))
                     if (films.isEmpty()) {
                         Text(empty, style = text(Soft, 13))
@@ -279,7 +308,7 @@ class TopWidget : GlanceAppWidget() {
                             films.forEachIndexed { index, film ->
                                 Column(
                                     GlanceModifier.width(posterWidth).fillMaxHeight().padding(end = gap)
-                                        .clickable(actionStartActivity(WidgetLinks.intent(context, WidgetLinks.movie(film.tmdbId)))),
+                                        .clickable(actionStartActivity(WidgetLinks.intent(context, WidgetLinks.movie(film.tmdbId), world))),
                                 ) {
                                     val bitmap = model.posters.getOrNull(index)
                                     if (bitmap != null) {
@@ -294,7 +323,7 @@ class TopWidget : GlanceAppWidget() {
                                             Text(film.title, style = text(Soft, 10), maxLines = 4)
                                         }
                                     }
-                                    Text("${index + 1}", style = text(Red, 12, bold = true), maxLines = 1)
+                                    Text("${index + 1}", style = text(accent(world), 12, bold = true), maxLines = 1)
                                 }
                             }
                         }

@@ -45,6 +45,20 @@ data class JellyfinItemDto(
 data class JellyfinUserDataDto(
     @SerialName("Played") val played: Boolean = false,
     @SerialName("LastPlayedDate") val lastPlayedDate: String? = null,
+    /** Série : épisodes pas encore vus, et part vue (0 à 100). */
+    @SerialName("UnplayedItemCount") val unplayedItemCount: Int? = null,
+    @SerialName("PlayedPercentage") val playedPercentage: Double? = null,
+)
+
+@Serializable
+data class JellyfinEpisodeDto(
+    @SerialName("ParentIndexNumber") val season: Int? = null,
+    @SerialName("UserData") val userData: JellyfinUserDataDto? = null,
+)
+
+@Serializable
+data class JellyfinEpisodesDto(
+    @SerialName("Items") val items: List<JellyfinEpisodeDto> = emptyList(),
 )
 
 data class JellyfinLogin(val token: String, val userId: String, val userName: String?)
@@ -102,11 +116,44 @@ class JellyfinClient(
         http.decode(service, ListSerializer(JellyfinUserDto.serializer()), http.get(service, url, "Users", headers(extraHeaders, token)))
 
     /** Tous les films visibles par l'utilisateur choisi, avec l'état « vu ». */
-    suspend fun movies(config: ServiceConfig): List<ServerMovie> {
+    suspend fun movies(config: ServiceConfig): List<ServerMovie> = items(config, "Movie").map { it.toServerMovie() }
+
+    /**
+     * Séries visibles par l'utilisateur, avec leur avancement : finie si tout est vu, sinon la
+     * saison en cours (lue épisode par épisode, seulement pour les séries commencées).
+     */
+    suspend fun series(config: ServiceConfig): List<ServerMovie> {
         val url = HomelabUrls.parse(config.url) ?: throw HomelabException(service, HomelabException.Kind.BAD_URL, config.url)
         val token = config.apiKey ?: throw HomelabException(service, HomelabException.Kind.NOT_CONFIGURED, "Clé absente")
         val userId = config.userId ?: throw HomelabException(service, HomelabException.Kind.NOT_CONFIGURED, "Utilisateur absent")
-        val movies = ArrayList<ServerMovie>()
+        return items(config, "Series").map { item ->
+            val data = item.userData ?: JellyfinUserDataDto()
+            val percentage = data.playedPercentage ?: 0.0
+            val finished = data.played || (data.unplayedItemCount == 0 && percentage > 0.0)
+            val started = finished || percentage > 0.0 || data.lastPlayedDate != null
+            val season = if (started && !finished && item.id != null) {
+                runCatching { SeriesWatch.currentSeason(episodes(url, config.headerMap(), token, userId, item.id)) }.getOrNull()
+            } else {
+                null
+            }
+            item.toServerMovie().copy(watched = started, finished = finished, currentSeason = season)
+        }
+    }
+
+    private suspend fun episodes(url: HttpUrl, extra: Map<String, String>, token: String, userId: String, seriesId: String): List<SeasonWatch> =
+        http.decode(
+            service,
+            JellyfinEpisodesDto.serializer(),
+            http.get(service, url, "Shows/$seriesId/Episodes", headers(extra, token), mapOf("userId" to userId, "EnableUserData" to "true")),
+        ).items
+            .groupBy { it.season ?: 0 }
+            .map { (season, episodes) -> SeasonWatch(season, episodes.size, episodes.count { it.userData?.played == true }) }
+
+    private suspend fun items(config: ServiceConfig, type: String): List<JellyfinItemDto> {
+        val url = HomelabUrls.parse(config.url) ?: throw HomelabException(service, HomelabException.Kind.BAD_URL, config.url)
+        val token = config.apiKey ?: throw HomelabException(service, HomelabException.Kind.NOT_CONFIGURED, "Clé absente")
+        val userId = config.userId ?: throw HomelabException(service, HomelabException.Kind.NOT_CONFIGURED, "Utilisateur absent")
+        val movies = ArrayList<JellyfinItemDto>()
         var start = 0
         while (true) {
             val page = http.decode(
@@ -119,7 +166,7 @@ class JellyfinClient(
                     headers(config.headerMap(), token),
                     mapOf(
                         "userId" to userId,
-                        "IncludeItemTypes" to "Movie",
+                        "IncludeItemTypes" to type,
                         "Recursive" to "true",
                         "Fields" to "ProviderIds",
                         "EnableUserData" to "true",
@@ -128,7 +175,7 @@ class JellyfinClient(
                     ),
                 ),
             )
-            page.items.mapTo(movies) { it.toServerMovie() }
+            movies += page.items
             start += page.items.size
             val total = page.totalRecordCount
             if (page.items.isEmpty() || (total != null && start >= total) || (total == null && page.items.size < PAGE_SIZE)) break

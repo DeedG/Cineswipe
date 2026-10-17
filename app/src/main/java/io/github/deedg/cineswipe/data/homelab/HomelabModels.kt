@@ -14,6 +14,9 @@ enum class HomelabService(
     PLEX("Plex", 32400, Kind.MEDIA_SERVER),
     SEERR("Seerr", 5055, Kind.REQUESTS),
     RADARR("Radarr", 7878, Kind.REQUESTS),
+
+    /** Demandes de séries (monde des séries). */
+    SONARR("Sonarr", 8989, Kind.REQUESTS),
     ;
 
     enum class Kind { MEDIA_SERVER, REQUESTS }
@@ -28,7 +31,11 @@ enum class JellyfinAuthMode { API_KEY, LOGIN }
  */
 enum class SeerrAuthMode { API_KEY, LOCAL, JELLYFIN, PLEX }
 
-/** Service qui reçoit les demandes quand Seerr et Radarr sont configurés tous les deux. */
+/**
+ * Service qui reçoit les demandes quand Seerr et Radarr (ou Sonarr, pour les séries) sont
+ * configurés tous les deux. [RADARR] désigne le service « *arr » du monde : Radarr pour les
+ * films, Sonarr pour les séries.
+ */
 enum class RequestTarget { AUTO, SEERR, RADARR }
 
 /**
@@ -63,7 +70,7 @@ data class ServiceConfig(
     val isReady: Boolean
         get() = enabled && HomelabUrls.parse(url) != null && !apiKey.isNullOrBlank() && when (service) {
             HomelabService.JELLYFIN -> !userId.isNullOrBlank()
-            HomelabService.RADARR -> qualityProfileId != null && !rootFolder.isNullOrBlank()
+            HomelabService.RADARR, HomelabService.SONARR -> qualityProfileId != null && !rootFolder.isNullOrBlank()
             HomelabService.PLEX, HomelabService.SEERR -> true
         }
 
@@ -79,18 +86,29 @@ data class HomelabConfig(
     val seerr: ServiceConfig = ServiceConfig(HomelabService.SEERR),
     val radarr: ServiceConfig = ServiceConfig(HomelabService.RADARR),
     val requestTarget: RequestTarget = RequestTarget.AUTO,
+    val sonarr: ServiceConfig = ServiceConfig(HomelabService.SONARR),
+    /** Monde des séries : Sonarr remplace Radarr. */
+    val series: Boolean = false,
 ) {
-    val all: List<ServiceConfig> get() = listOf(jellyfin, plex, seerr, radarr)
+    /** Tous les services (écrans de réglage). */
+    val all: List<ServiceConfig> get() = listOf(jellyfin, plex, seerr, radarr, sonarr)
+
+    /** Services du monde en service : Radarr pour les films, Sonarr pour les séries. */
+    val active: List<ServiceConfig> get() = listOf(jellyfin, plex, seerr, if (series) sonarr else radarr)
+
+    /** Le service « *arr » du monde (Radarr ou Sonarr). */
+    val arr: ServiceConfig get() = if (series) sonarr else radarr
 
     fun of(service: HomelabService): ServiceConfig = when (service) {
         HomelabService.JELLYFIN -> jellyfin
         HomelabService.PLEX -> plex
         HomelabService.SEERR -> seerr
         HomelabService.RADARR -> radarr
+        HomelabService.SONARR -> sonarr
     }
 
-    /** Au moins un service prêt : la disponibilité des films a un sens. */
-    val anyReady: Boolean get() = all.any { it.isReady }
+    /** Au moins un service du monde prêt : la disponibilité a un sens. */
+    val anyReady: Boolean get() = active.any { it.isReady }
 
     /**
      * Service qui reçoit les demandes du swipe droit, ou null (swipe droit = À voir). Avec les
@@ -99,25 +117,45 @@ data class HomelabConfig(
     val requestService: HomelabService?
         get() {
             val seerrReady = HomelabService.SEERR.takeIf { seerr.isReady }
-            val radarrReady = HomelabService.RADARR.takeIf { radarr.isReady }
+            val arrReady = arr.service.takeIf { arr.isReady }
             return when (requestTarget) {
-                RequestTarget.AUTO, RequestTarget.SEERR -> seerrReady ?: radarrReady
-                RequestTarget.RADARR -> radarrReady ?: seerrReady
+                RequestTarget.AUTO, RequestTarget.SEERR -> seerrReady ?: arrReady
+                RequestTarget.RADARR -> arrReady ?: seerrReady
             }
         }
 }
 
-/** Film vu dans la bibliothèque d'un serveur média. */
+/** Film (ou série) de la bibliothèque d'un serveur média. */
 data class ServerMovie(
     val tmdbId: Long?,
     val title: String,
     val year: Int?,
+    /** Vu ; pour une série, au moins un épisode vu. */
     val watched: Boolean,
     /** Date du dernier visionnage (ms), si le serveur la donne. */
     val lastWatchedAt: Long?,
     /** Identifiant du film sur le serveur (ratingKey Plex, Id Jellyfin), pour l'y ouvrir. */
     val itemId: String? = null,
+    /** Série : tous les épisodes du serveur vus (finie), ou saison en cours. */
+    val finished: Boolean = false,
+    val currentSeason: Int? = null,
 )
+
+/**
+ * Avancement d'une série d'après ses saisons (numéro, épisodes, épisodes vus) : finie si tout est
+ * vu, sinon en cours à la première saison pas finie (sans compter la saison 0, les épisodes spéciaux).
+ */
+data class SeasonWatch(val number: Int, val episodes: Int, val watched: Int)
+
+object SeriesWatch {
+    fun currentSeason(seasons: List<SeasonWatch>): Int? =
+        seasons.filter { it.number > 0 && it.episodes > 0 }.sortedBy { it.number }.firstOrNull { it.watched < it.episodes }?.number
+
+    fun finished(seasons: List<SeasonWatch>): Boolean {
+        val regular = seasons.filter { it.number > 0 && it.episodes > 0 }
+        return regular.isNotEmpty() && regular.all { it.watched >= it.episodes }
+    }
+}
 
 /**
  * Où regarder un film du serveur. On essaie d'abord l'appli [appPackage] avec [appUri] (ou

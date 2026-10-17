@@ -20,16 +20,47 @@ enum class CensusChoice {
 
     /** Pas pour moi. */
     DISMISSED,
+
+    // Séries : l'avancement se donne directement.
+
+    /** Série vue jusqu'au bout (ou à jour). */
+    FINISHED,
+
+    /** Série en cours (saison inconnue). */
+    IN_PROGRESS,
+
+    /** Série vue par épisodes, au hasard (souvent à la télé). */
+    EPISODES,
+
+    /** Série décrochée en route. */
+    ABANDONED,
     ;
 
-    val seen: Boolean get() = this == SEEN || this == LOVED || this == DISLIKED
+    val seen: Boolean get() = this in SEEN_CHOICES
 
-    /** Un toucher : vu → adoré → bof → rien. */
-    fun next(): CensusChoice = when (this) {
-        NONE -> SEEN
-        SEEN -> LOVED
-        LOVED -> DISLIKED
-        DISLIKED, WATCHLIST, DISMISSED -> NONE
+    /**
+     * Un toucher : vu → adoré → bof → rien pour un film ; pour une série ([series]),
+     * finie → en cours → par épisodes → décrochée → rien.
+     */
+    fun next(series: Boolean = false): CensusChoice = if (series) {
+        when (this) {
+            NONE -> FINISHED
+            FINISHED -> IN_PROGRESS
+            IN_PROGRESS -> EPISODES
+            EPISODES -> ABANDONED
+            else -> NONE
+        }
+    } else {
+        when (this) {
+            NONE -> SEEN
+            SEEN -> LOVED
+            LOVED -> DISLIKED
+            else -> NONE
+        }
+    }
+
+    private companion object {
+        val SEEN_CHOICES = setOf(SEEN, LOVED, DISLIKED, FINISHED, IN_PROGRESS, EPISODES, ABANDONED)
     }
 }
 

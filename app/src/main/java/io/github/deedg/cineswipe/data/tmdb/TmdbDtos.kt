@@ -108,6 +108,13 @@ data class TmdbProviderDto(
     @SerialName("display_priority") val priority: Int = 999,
 )
 
+/** `/movie/{id}/external_ids` (ou `/tv/{id}/external_ids`). */
+@Serializable
+data class TmdbExternalIdsDto(
+    @SerialName("imdb_id") val imdbId: String? = null,
+    @SerialName("tvdb_id") val tvdbId: Long? = null,
+)
+
 /** Réponse de `/find/{id}` : seuls les films nous intéressent. */
 @Serializable
 data class TmdbFindDto(
@@ -152,6 +159,33 @@ data class TmdbMovieDetailsDto(
     @SerialName("original_language") val originalLanguage: String? = null,
     val popularity: Double? = null,
     @SerialName("belongs_to_collection") val collection: TmdbCollectionRefDto? = null,
+    // Séries seulement (voir TmdbSeriesAdapter).
+    @SerialName("number_of_seasons") val numberOfSeasons: Int? = null,
+    /** « Returning Series », « Ended », « Canceled », « In Production »… */
+    val status: String? = null,
+    @SerialName("last_air_date") val lastAirDate: String? = null,
+    val seasons: List<TmdbSeasonDto> = emptyList(),
+    /** Dernier épisode diffusé et prochain épisode annoncé (alertes de nouvelles saisons). */
+    @SerialName("last_episode_to_air") val lastEpisode: TmdbEpisodeDto? = null,
+    @SerialName("next_episode_to_air") val nextEpisode: TmdbEpisodeDto? = null,
+)
+
+/** Un épisode d'une série : sa saison, son numéro et sa date de diffusion. */
+@Serializable
+data class TmdbEpisodeDto(
+    @SerialName("season_number") val season: Int = 0,
+    @SerialName("episode_number") val episode: Int = 0,
+    @SerialName("air_date") val airDate: String? = null,
+)
+
+/** Une saison d'une série (la saison 0 regroupe les épisodes spéciaux). */
+@Serializable
+data class TmdbSeasonDto(
+    @SerialName("season_number") val number: Int = 0,
+    val name: String? = null,
+    @SerialName("episode_count") val episodeCount: Int? = null,
+    @SerialName("air_date") val airDate: String? = null,
+    @SerialName("poster_path") val posterPath: String? = null,
 )
 
 @Serializable

@@ -2,14 +2,19 @@ package io.github.deedg.cineswipe.ui.census
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.deedg.cineswipe.data.db.MovieEntity
+import io.github.deedg.cineswipe.data.homelab.HomelabRepository
+import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.repository.CensusCommit
 import io.github.deedg.cineswipe.data.repository.CensusItem
 import io.github.deedg.cineswipe.data.repository.CensusProgress
 import io.github.deedg.cineswipe.data.repository.CensusRepository
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.TmdbException
+import io.github.deedg.cineswipe.data.repository.TmdbRepository
 import io.github.deedg.cineswipe.domain.census.CensusChoice
 import io.github.deedg.cineswipe.domain.census.CensusFilter
+import io.github.deedg.cineswipe.ui.components.SeasonRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -39,11 +44,18 @@ data class CensusUiState(
     /** Depuis l'ouverture de l'écran : films passés en revue, dont vus. */
     val sessionAnswered: Int = 0,
     val sessionSeen: Int = 0,
+    /** Séries mises à voir, en attente du choix des saisons à demander (une à la fois). */
+    val seasonQueue: List<CensusSeasonAsk> = emptyList(),
+    /** Nombre de séries passées dans cette file depuis qu'elle s'est remplie (« 2 / 5 »). */
+    val seasonQueueTotal: Int = 0,
 ) {
     val unanswered: Int get() = items.count { choiceOf(it) == CensusChoice.NONE }
 
     fun choiceOf(item: CensusItem): CensusChoice = choices[item.movie.tmdbId] ?: CensusChoice.NONE
 }
+
+/** Série mise à voir au recensement : quelles saisons demander à [service] ? */
+data class CensusSeasonAsk(val movie: MovieEntity, val request: SeasonRequest, val service: HomelabService)
 
 sealed interface CensusEvent {
     data class PageDone(val answered: Int, val seen: Int) : CensusEvent
@@ -59,6 +71,11 @@ sealed interface CensusEvent {
 class CensusViewModel(
     private val census: CensusRepository,
     private val settings: SettingsRepository,
+    /** Monde des séries : l'avancement se donne au toucher (finie, en cours, par épisodes, décrochée). */
+    val series: Boolean = false,
+    /** Séries mises à voir : demandes au homelab (Seerr ou Sonarr), saisons au choix. */
+    private val homelab: HomelabRepository? = null,
+    private val tmdb: TmdbRepository? = null,
 ) : ViewModel() {
 
     private val content = MutableStateFlow(CensusUiState())
@@ -84,10 +101,10 @@ class CensusViewModel(
         viewModelScope.launch { census.exploreWatchedSagas() }
     }
 
-    /** Grille : vu → adoré → bof → rien. */
+    /** Grille : vu → adoré → bof → rien (séries : finie → en cours → par épisodes → décrochée → rien). */
     fun tap(tmdbId: Long) {
         content.update { state ->
-            val next = (state.choices[tmdbId] ?: CensusChoice.NONE).next()
+            val next = (state.choices[tmdbId] ?: CensusChoice.NONE).next(series)
             state.copy(choices = state.choices + (tmdbId to next))
         }
     }
@@ -201,6 +218,7 @@ class CensusViewModel(
     }
 
     private fun remember(commit: CensusCommit) {
+        askSeasons(commit)
         undoStack.addLast(commit)
         while (undoStack.size > MAX_UNDO) undoStack.removeFirst()
         content.update { state ->
@@ -210,6 +228,32 @@ class CensusViewModel(
                 sessionSeen = state.sessionSeen + commit.answers.count { it.value.seen },
             )
         }
+    }
+
+    /** Séries tout juste mises à voir : la feuille des saisons à demander s'ouvre pour chacune. */
+    private fun askSeasons(commit: CensusCommit) {
+        val homelab = homelab ?: return
+        if (!series) return
+        val wanted = commit.items.filter { commit.answers[it.movie.tmdbId] == CensusChoice.WATCHLIST }.map { it.movie }
+        if (wanted.isEmpty()) return
+        viewModelScope.launch {
+            val service = settings.homelabConfig.first().requestService ?: return@launch
+            val asks = wanted.map { movie ->
+                val seasons = movie.seasonCount ?: runCatching { tmdb?.ensureDetails(movie.tmdbId)?.seasonCount }.getOrNull()
+                CensusSeasonAsk(movie, SeasonRequest(movie.tmdbId, movie.title, seasons), service)
+            }
+            content.update { state ->
+                val total = if (state.seasonQueue.isEmpty()) asks.size else state.seasonQueueTotal + asks.size
+                state.copy(seasonQueue = state.seasonQueue + asks, seasonQueueTotal = total)
+            }
+        }
+    }
+
+    /** Réponse de la feuille des saisons : demande (null = toute la série), ou juste à voir ([seasons] ignoré). */
+    fun answerSeasons(request: Boolean, seasons: List<Int>?) {
+        val ask = content.value.seasonQueue.firstOrNull() ?: return
+        content.update { it.copy(seasonQueue = it.seasonQueue.drop(1)) }
+        if (request) viewModelScope.launch { homelab?.requestMovie(ask.movie, seasons) }
     }
 
     private suspend fun load() {

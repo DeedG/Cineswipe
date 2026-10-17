@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mode séries : variantes des textes qui parlent de films. Une chaîne « nom_series » remplace
+  « nom » dans le monde des séries (SeriesResources) ; les autres textes restent les mêmes.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources">
+    <!-- Arène -->
+    <string name="arena_not_enough_title_series">Pas assez de séries pour combattre</string>
+    <string name="arena_not_enough_message_series">Il faut au moins deux séries vues. Le recensement te les fait retrouver en quelques touchers.</string>
+    <string name="elo_info_body_series">Chaque duel compte. Après chaque vote, CineSwipe recalcule tout ton classement à partir de l’ensemble de tes duels (modèle de Bradley-Terry, cousin de l’Elo des échecs) : l’ordre des matchs n’a plus d’importance et une victoire contre une série bien classée pèse davantage.</string>
+    <string name="elo_info_matches_series">Les matchs sont choisis pour apprendre le plus vite : une nouvelle série affronte des séries bien placées de niveau proche, comme une recherche par dichotomie.</string>
+    <string name="elo_info_buttons_series">« Égalité » si tu n’arrives pas à départager les deux séries, « Passer » si tu ne te souviens plus de l’une d’elles.</string>
+    <string name="elo_info_provisional_series">Des étoiles pâles sont provisoires : la série n’a pas encore assez combattu (trois ou quatre duels suffisent en général).</string>
+    <string name="elo_info_reliability_series">Fiabilité : la probabilité moyenne que les étoiles de tes séries soient justes à une demi-étoile près. Elle monte à chaque duel ; vers 90 %, ton classement est solide.</string>
+    <string name="duels_unknown_film_series">Série inconnue</string>
+
+    <!-- Recos, cartes et gestes -->
+    <string name="feed_loading_more_series">Analyse de nouvelles séries…</string>
+    <string name="toast_dismissed_series">Cette série ne te sera plus proposée</string>
+    <string name="toast_already_watched_series">Tu as déjà vu cette série</string>
+    <string name="card_lightning_series">Recos à partir de cette série</string>
+    <string name="recos_loading_series">Recherche de séries pour toi…</string>
+    <string name="recos_empty_message_series">Toutes les séries trouvées sont déjà vues, écartées ou montrées récemment. Classe d’autres séries dans l’Arène, ou reviens plus tard.</string>
+    <string name="reason_director_series">Une série de %1$s</string>
+    <string name="lightning_loading_series">Recherche de séries dans la même veine…</string>
+    <string name="lightning_empty_message_series">TMDB n’a pas d’autre série à proposer à partir de celle-ci.</string>
+    <string name="badge_watched_series">Vue</string>
+    <string name="badge_requested_series">Demandée</string>
+    <string name="directed_by_series">Créée par %1$s</string>
+    <string name="swipe_watched_series">Vue</string>
+    <string name="swipe_already_watched_series">Déjà vue</string>
+    <string name="toast_marked_watched_series">Marquée comme vue</string>
+    <string name="toast_unwatched_series">Retirée des vues</string>
+
+    <!-- Recherche, découverte -->
+    <string name="search_hint_series">Série, acteur, créateur…</string>
+    <string name="search_intro_series">Cherche n’importe quelle série sur TMDB, puis swipe : à gauche si tu l’as vue, à droite pour ta liste À voir. Tape un nom pour retrouver les séries d’un acteur ou d’un créateur.</string>
+    <string name="search_empty_message_series">Aucune série ne correspond à « %1$s ».</string>
+    <string name="discover_loading_series">Recherche des séries…</string>
+    <string name="discover_empty_title_series">Aucune série trouvée</string>
+    <string name="discover_empty_message_series">Aucune série non vue ne correspond à ces filtres.</string>
+    <string name="discover_census_message_series">Retrouve toutes les séries que tu as vues, en quelques touchers.</string>
+    <string name="discover_tonight_message_series">Que regarder parmi tes séries à voir</string>
+    <string name="discover_length_series">Durée d’un épisode</string>
+    <string name="tonight_length_short_series">≤ 30 min</string>
+    <string name="tonight_length_medium_series">≤ 50 min</string>
+    <string name="discover_length_long_series">Plus de 50 min</string>
+
+    <!-- Bibliothèque, profil -->
+    <string name="library_empty_message_series">Retrouve les séries que tu as vues avec le recensement : elles arrivent ici, prêtes à combattre dans l’Arène.</string>
+    <string name="library_no_result_series">Aucune série ne correspond.</string>
+    <string name="library_filter_watched_series">Vues</string>
+    <string name="library_section_unranked_series">Non classées</string>
+    <string name="profile_stat_watched_series">Séries vues</string>
+    <string name="profile_hall_of_fame_empty_series">Combats dans l’Arène pour classer tes séries !</string>
+    <plurals name="library_count_series">
+        <item quantity="one">%1$d série</item>
+        <item quantity="many">%1$d séries</item>
+        <item quantity="other">%1$d séries</item>
+    </plurals>
+
+    <!-- Fiche -->
+    <string name="detail_undismissed_series">Cette série pourra de nouveau t’être proposée</string>
+    <string name="detail_lightning_series">Recos à partir de cette série</string>
+    <string name="detail_unwatch_title_series">Retirer cette série des vues ?</string>
+    <string name="detail_not_found_series">Série introuvable.</string>
+    <string name="detail_mark_watched_series">Marquer comme vue</string>
+    <string name="detail_unmark_watched_series">Retirer des vues</string>
+    <string name="detail_marked_watched_series">Marquée comme vue</string>
+    <string name="detail_unmarked_watched_series">Retirée des vues</string>
+
+    <!-- Recensement -->
+    <string name="census_cta_series">Retrouver mes séries vues</string>
+    <string name="census_refresh_series">Chercher d’autres séries</string>
+    <string name="census_empty_message_series">Change de filtre, ou reviens plus tard : le catalogue s’agrandit au fil de tes séries vues.</string>
+    <string name="census_filter_french_series">Séries françaises</string>
+    <string name="census_help_grid_series">Touche les affiches des séries que tu as vues. 1er toucher : finie. 2e : en cours. 3e : par épisodes (vues au hasard, à la télé par exemple). 4e : décrochée. 5e : on efface.</string>
+    <string name="census_help_menu_series">Appui long : choisir directement l’avancement, à voir, pas pour moi, ou la fiche de la série.</string>
+    <string name="census_help_next_series">« Suivant » : les séries sans réponse passent en « pas vue ». Elles sortent du recensement, et ça ne compte jamais contre elles dans les recos.</string>
+    <string name="census_help_order_series">Les séries que tu as le plus de chances d’avoir vues passent en premier, et l’ordre apprend de tes réponses.</string>
+    <string name="census_help_impression_series">L’avancement est noté tout de suite, sans repasser par la fiche. La saison en cours est facultative : tu peux la préciser plus tard sur la fiche, ou la laisser à « Je ne sais plus ».</string>
+    <string name="census_help_cards_series">En cartes, comme dans les recos : glisse à gauche si tu l’as vue, à droite pour l’ajouter à ta liste À voir, vers le haut si tu ne l’as pas vue.</string>
+    <string name="census_progress_of_series">%1$s / %2$s parcourues · %3$s vues</string>
+    <string name="census_progress_series">%1$s parcourues · %2$s vues</string>
+    <string name="census_cell_tap_series">Finie, en cours, par épisodes, décrochée</string>
+    <string name="census_choice_none_series">Pas vue</string>
+    <string name="census_choice_seen_series">Vue</string>
+    <plurals name="census_page_done_series">
+        <item quantity="one">%1$d série passée en revue · vues : %2$d</item>
+        <item quantity="many">%1$d séries passées en revue · vues : %2$d</item>
+        <item quantity="other">%1$d séries passées en revue · vues : %2$d</item>
+    </plurals>
+
+    <!-- Réglages : données -->
+    <string name="settings_data_body_series">Pour repartir sur de bonnes bases : recommencer seulement le classement des séries, ou tout effacer et reconstruire ta liste de séries vues avec les recos.</string>
+    <string name="settings_data_ranking_message_series">Tes séries vues restent, mais leurs duels et leur Elo sont effacés : l’Arène des séries repart de zéro.</string>
+    <string name="settings_data_everything_message_series">Séries vues, liste À voir, séries écartées et classement des séries sont effacés. Tes films, ta clé TMDB et tes réglages restent.</string>
+
+    <!-- Homelab -->
+    <string name="homelab_media_body_series">Séries commencées ou finies (l’avancement est repris tout seul) et séries disponibles, depuis Jellyfin, Plex ou les deux.</string>
+    <string name="homelab_requests_body_series">Swipe à droite sur une carte = demander la série, à Seerr ou à Sonarr (toutes les saisons).</string>
+    <string name="homelab_intro_series">Relie CineSwipe à ton serveur : les séries regardées sur Jellyfin ou Plex arrivent dans ta bibliothèque avec la saison où tu en es, et un swipe à droite demande la série à Seerr ou Sonarr. Chaque service a sa propre adresse, port compris.</string>
+    <string name="settings_homelab_body_series">Jellyfin, Plex, Seerr et Sonarr : séries vues et où tu en es, séries disponibles et demandes depuis les cartes.</string>
+    <string name="homelab_notify_title_series">Après une série vue sur le serveur</string>
+    <string name="homelab_notify_body_series">Une notification te propose de placer la série dans ton classement (3 duels dans l’Arène) quand tu la commences ou la finis. La synchro passe toutes les 6 h.</string>
+    <string name="homelab_sync_watched_series">Vues sur tes serveurs : %1$d (dont %2$d nouvelles)</string>
+
+    <!-- Ce soir -->
+    <string name="tonight_none_with_filters_series">Aucune série avec ces filtres.</string>
+    <string name="tonight_empty_message_series">Ajoute des séries à ta liste À voir depuis les recos (swipe à droite), ou marque-en une « en cours » sur sa fiche : elles apparaîtront ici, triées selon tes goûts.</string>
+    <string name="tonight_seen_series">Déjà vue</string>
+    <string name="tonight_marked_watched_series">« %1$s » ajoutée aux vues</string>
+
+    <!-- Personnes -->
+    <string name="person_needs_key_series">Ajoute ta clé TMDB pour voir ses séries.</string>
+    <string name="person_failed_series">Impossible de charger ses séries. Vérifie ta connexion.</string>
+    <string name="person_seen_series">Tu as vu %1$d de ses %2$d séries</string>
+    <string name="person_no_films_series">Aucune série.</string>
+
+    <!-- Stats -->
+    <string name="stats_empty_title_series">Pas encore assez de séries</string>
+    <string name="stats_empty_message_series">Marque au moins %1$d séries vues et joue quelques duels pour voir tes goûts.</string>
+    <string name="stats_tile_watched_series">séries vues</string>
+    <string name="stats_tile_directors_series">créateurs différents</string>
+    <string name="stats_directors_series">Créateurs</string>
+    <string name="stats_headline_decade_series">Ta décennie : les années %1$s (%2$d séries vues)</string>
+    <string name="stats_headline_director_series">Ton créateur le plus vu : %1$s (%2$d séries)</string>
+    <string name="stats_genres_hint_series">Étoiles moyennes de tes séries vues, par genre.</string>
+    <string name="stats_people_hint_series">Ceux dont tu as vu au moins 2 ou 3 séries, les mieux classés d’abord. Touche un nom pour voir ses séries.</string>
+    <string name="stats_decades_hint_series">Séries vues par décennie (première diffusion) ; en couleur vive, celle que tu préfères.</string>
+    <string name="stats_themes_hint_series">Mots-clés TMDB des séries que tu classes le mieux.</string>
+    <string name="stats_footer_series">Les étoiles viennent de ton classement de l’Arène (rang parmi tes séries vues) ; elles s’affinent à chaque duel.</string>
+    <string name="stats_intro_series">Ce que ton classement de l’Arène dit de toi. Les moyennes sont prudentes : un genre ou un créateur vu peu de fois reste proche de ta moyenne.</string>
+    <plurals name="stats_films_series">
+        <item quantity="one">%d série</item>
+        <item quantity="many">%d séries</item>
+        <item quantity="other">%d séries</item>
+    </plurals>
+    <plurals name="stats_films_seen_series">
+        <item quantity="one">%d série vue</item>
+        <item quantity="many">%d séries vues</item>
+        <item quantity="other">%d séries vues</item>
+    </plurals>
+
+    <!-- Listes -->
+    <string name="lists_name_hint_series">Ex. : Séries à binge-watcher</string>
+    <string name="lists_delete_confirm_series">Supprimer « %1$s » ? Les séries restent dans ta bibliothèque.</string>
+    <string name="lists_shelf_empty_series">Range tes séries dans tes propres listes (« À binge-watcher », « À montrer à quelqu’un »…), depuis la fiche d’une série.</string>
+    <string name="lists_empty_series">Liste vide. Ajoute des séries depuis leur fiche, avec « Ajouter à une liste ».</string>
+    <plurals name="lists_count_series">
+        <item quantity="one">%d série</item>
+        <item quantity="many">%d séries</item>
+        <item quantity="other">%d séries</item>
+    </plurals>
+
+    <!-- Rétro -->
+    <string name="retro_card_title_series">Mon année en séries</string>
+    <string name="retro_films_label_series">séries</string>
+    <string name="retro_film_label_series">série</string>
+    <string name="retro_months_series">Séries par mois</string>
+    <string name="retro_first_series">Première série de l’année</string>
+    <string name="retro_empty_series">Pas encore de série vue en %1$d. Les séries que tu marques vues au fil de l’année apparaîtront ici.</string>
+    <string name="retro_no_data_series">Rien à revoir pour l’instant : marque des séries vues, ta rétro se construira au fil de l’année.</string>
+    <plurals name="retro_backfill_series">
+        <item quantity="one">+ %d série retrouvée cette année (recensement, import) : pas comptée ici, faute de date de visionnage.</item>
+        <item quantity="many">+ %d séries retrouvées cette année (recensement, imports) : pas comptées ici, faute de date de visionnage.</item>
+        <item quantity="other">+ %d séries retrouvées cette année (recensement, imports) : pas comptées ici, faute de date de visionnage.</item>
+    </plurals>
+    <plurals name="retro_director_films_series">
+        <item quantity="one">%1$s · %2$d série</item>
+        <item quantity="many">%1$s · %2$d séries</item>
+        <item quantity="other">%1$s · %2$d séries</item>
+    </plurals>
+    <plurals name="retro_month_films_series">
+        <item quantity="one">%1$s · %2$d série</item>
+        <item quantity="many">%1$s · %2$d séries</item>
+        <item quantity="other">%1$s · %2$d séries</item>
+    </plurals>
+
+    <!-- Accueil du mode séries (première arrivée) et démo des séries. -->
+    <string name="welcome_tagline_series">Le mode séries : tes séries vues, où tu en es, des recos qui te ressemblent et un classement en duels. Un monde à part, tes films n’y changent rien.</string>
+    <string name="welcome_recos_body_series">Glisse à gauche si tu as vu la série, à droite pour la garder pour plus tard (ou la demander à Seerr ou Sonarr, toute la série ou quelques saisons).</string>
+    <string name="welcome_arena_body_series">Deux séries, tu choisis ta préférée : ton classement des séries se calcule tout seul, à part de celui des films.</string>
+    <string name="welcome_census_body_series">Retrouve tes séries vues en quelques touchers, et dis où tu en es : finie, en cours, par épisodes ou décrochée.</string>
+    <string name="welcome_demo_note_series">Un tuto pas à pas, dans une démo avec les 100 séries les plus vues et un profil fictif qui en a déjà vu une vingtaine. Rien n’y est enregistré, et tu le retrouves dans les réglages.</string>
+    <string name="settings_demo_body_series">Tu explores le mode séries avec les 100 séries les plus vues et un profil fictif. Rien n’est enregistré : en quittant, tu retrouves tes vraies données.</string>
+    <string name="tuto_intro_title_series">Bienvenue dans la démo des séries</string>
+    <string name="tuto_intro_body_series">En deux minutes, on fait le tour du mode séries avec un profil fictif qui a déjà vu une vingtaine de séries (certaines finies, d’autres en cours ou décrochées) et un Seerr fictif. Essaie tout ce que tu veux : rien n’est enregistré.</string>
+    <string name="tuto_reco_body_series">Une carte = une série choisie pour toi. La ligne violette sous l’affiche dit pourquoi : une série que tu as aimée, un créateur, un grand classique… Le nombre de saisons et la durée d’un épisode sont sous le titre.</string>
+    <string name="tuto_watched_body_series">La série rejoint tes séries vues (sa fiche permet ensuite de dire où tu en es : finie, en cours avec la saison, par épisodes ou décrochée). Fais glisser la carte vers la gauche.</string>
+    <string name="tuto_watchlist_body_series">Elle rejoint ta liste À voir. Avec Seerr ou Sonarr, tu choisis ensuite de demander toute la série ou seulement quelques saisons, ou de la garder juste à voir.</string>
+    <string name="tuto_skip_body_series">La série passe sans rien changer. Elle pourra revenir plus tard, si tes goûts évoluent.</string>
+    <string name="tuto_actions_body_series">« Pas pour moi » écarte la série pour de bon, « Trailer » ouvre la bande-annonce sur YouTube, et ⚡ enchaîne des recos à partir de cette série. Touche l’affiche pour ouvrir la fiche : saisons, avancement, saison en cours.</string>
+    <string name="tuto_arena_body_series">Deux séries que tu as vues s’affrontent. Touche celle que tu préfères.</string>
+    <string name="tuto_census_open_body_series">Le recensement fait défiler les séries que tu as le plus de chances d’avoir vues. Ouvre-le.</string>
+    <string name="tuto_census_tap_body_series">Un toucher : finie. Deux : en cours. Trois : par épisodes (vue au hasard, à la télé). Quatre : décrochée. Un appui long propose aussi « à voir » ou la fiche de la série.</string>
+    <string name="tuto_census_next_body_series">« Suivant » enregistre la page. Les séries sans réponse passent en « pas vue », sans effet sur tes recos. Celles mises à voir te proposent leur demande, saison par saison.</string>
+    <string name="tuto_census_mode_body_series">Ce bouton passe en cartes, avec les mêmes gestes que les recos. Les filtres en haut ciblent une période ou les séries françaises.</string>
+    <string name="tuto_search_body_series">Tape un titre : les résultats arrivent en cartes, avec les mêmes gestes que les recos. Tape un nom : les acteurs et créateurs s’affichent, avec toutes leurs séries. Dans la démo, elle porte sur les 100 séries du bac à sable.</string>
+    <string name="tuto_profile_body_series">Tes compteurs ouvrent ta bibliothèque des séries (filtre « En cours », et glisse d’une fiche à l’autre) ou l’historique des duels. Plus bas : tes goûts en chiffres, ta rétro, tes listes perso et ton Hall of Fame.</string>
+    <string name="tuto_settings_body_series">Le switch Films | Séries, ta clé TMDB (la même pour les deux), ton homelab (Plex, Jellyfin pour savoir où tu en es ; Seerr ou Sonarr pour les demandes) et la sauvegarde de tes données.</string>
+    <string name="tuto_end_body_series">Continue d’explorer la démo librement, ou quitte-la pour revenir à tes séries. « Tuto », dans le bandeau, relance la visite. Hors démo, le switch Films | Séries, en haut des écrans, te ramène aux films.</string>
+
+    <!-- Textes restés au masculin ou aux films (relevés sur la démo des séries). -->
+    <string name="tuto_watched_title_series">Déjà vue ? Glisse à gauche</string>
+    <string name="tuto_census_open_title_series">Retrouve tes séries vues</string>
+    <string name="tuto_census_tap_title_series">Touche celles que tu as vues</string>
+    <plurals name="census_next_unseen_series">
+        <item quantity="one">Suivant · %d pas vue</item>
+        <item quantity="many">Suivant · %d pas vues</item>
+        <item quantity="other">Suivant · %d pas vues</item>
+    </plurals>
+    <plurals name="lists_seen_series">
+        <item quantity="one">%d vue</item>
+        <item quantity="many">%d vues</item>
+        <item quantity="other">%d vues</item>
+    </plurals>
+    <string name="discover_only_available_series">Uniquement les séries dispo sur mon serveur</string>
+    <string name="discover_empty_available_series">Aucune série disponible sur ton serveur ne correspond à ces filtres.</string>
+    <string name="service_key_hint_plex_series">Plex Web : sur une série, ⋯ → Infos multimédia → Afficher le XML. Le jeton est à la fin de l’adresse, après X-Plex-Token=</string>
+    <string name="service_jellyfin_user_series">Utilisateur dont on lit les séries vues</string>
+    <string name="service_plex_sections_series">Bibliothèques de séries</string>
+    <string name="service_plex_sections_hint_series">Aucune sélection = toutes les bibliothèques de séries.</string>
+    <string name="service_clear_message_series">L’adresse et la clé sont supprimées du téléphone. Tes séries et ton classement ne bougent pas.</string>
+    <string name="settings_data_export_body_series">Toutes tes séries, tes duels et tes réponses dans un fichier JSON : pour les sauvegarder, ou pour les faire analyser.</string>
+    <string name="diagnostics_intro_series">Outils temporaires pour vérifier l’Arène, les recos et le recensement des séries. L’export JSON contient toutes tes séries, tes duels et tes réponses.</string>
+    <string name="diagnostics_films_series">Séries classées</string>
+    <string name="diagnostics_universe_series">Séries notables</string>
+    <string name="diagnostics_directors_series">Créateurs</string>
+    <string name="diagnostics_source_people_series">Créateurs, acteurs</string>
+    <string name="tonight_empty_message_server_series">Ni série à voir, ni série non vue sur ton serveur. Swipe à droite dans les recos pour remplir ta liste.</string>
+    <string name="tonight_not_on_server_series">Série introuvable sur %1$s</string>
+    <string name="watch_cant_open_series">Impossible d’ouvrir la série dans %1$s : vérifie son adresse dans les réglages Homelab.</string>
+    <string name="person_role_directed_series">Créées</string>
+    <string name="person_role_directed_short_series">Crée</string>
+    <string name="person_known_directing_series">Création</string>
+    <string name="stats_tile_hours_series">heures de séries, soit %1$d jours</string>
+    <string name="retro_hours_label_series">h de séries</string>
+    <string name="retro_best_month_series">Mois le plus séries</string>
+    <string name="demo_watch_series">Dans la démo, la série s’ouvrirait ici dans %1$s.</string>
+
+    <!-- Recos faibles : inviter au recensement ou aux duels. -->
+    <plurals name="reco_nudge_census_body_series">
+        <item quantity="one">%d série vue seulement : retrouve en quelques touchers celles que tu as déjà vues, les recos seront bien plus justes.</item>
+        <item quantity="many">%d séries vues seulement : retrouve en quelques touchers celles que tu as déjà vues, les recos seront bien plus justes.</item>
+        <item quantity="other">%d séries vues seulement : retrouve en quelques touchers celles que tu as déjà vues, les recos seront bien plus justes.</item>
+    </plurals>
+
+    <!-- Import en mode séries : la sauvegarde CineSwipe des séries. -->
+    <string name="settings_data_import_series">Importer ou restaurer des séries</string>
+    <string name="settings_data_import_body_series">Tes séries vues, leur avancement, tes notes et ta liste à voir depuis une sauvegarde CineSwipe des séries, Trakt, IMDb ou un fichier CSV.</string>
+    <string name="import_intro_series">Reprends tes séries vues, ta liste à voir et tes notes depuis une sauvegarde CineSwipe, Trakt ou IMDb. Une sauvegarde CineSwipe sur une bibliothèque vide est restaurée en entier (avancement, duels, classement) ; le reste est fusionné sans rien effacer. Avec Trakt, l’avancement est repris : finie, ou en cours avec la saison.</string>
+    <string name="import_how_cineswipe_body_series">En mode séries : Réglages › Mes données › Exporter mes données (fichier cineswipe-series-….json). Sur un téléphone neuf, la sauvegarde est restaurée en entier, duels et classement compris.</string>
+    <string name="import_failed_unreadable_series">Ces fichiers n’ont pas été reconnus. Choisis l’export d’une des applis ci-dessous (ZIP, CSV ou JSON).</string>
+    <string name="import_failed_wrong_world_series">C’est une sauvegarde des films : repasse en mode films (le switch Films | Séries) pour la restaurer.</string>
+    <string name="import_done_restored_series">Sauvegarde restaurée : %1$d séries vues, %2$d duels.</string>
+    <string name="import_count_watched_series">Séries vues</string>
+    <string name="import_merge_note_series">Ta bibliothèque n’est pas vide : la sauvegarde sera fusionnée (séries vues, avancement et à voir), sans ses duels.</string>
+    <string name="import_see_library_series">Voir mes séries</string>
+    <string name="import_done_added_watched_series">Ajoutées aux vues</string>
+    <plurals name="import_start_series">
+        <item quantity="one">Importer %d série</item>
+        <item quantity="many">Importer %d séries</item>
+        <item quantity="other">Importer %d séries</item>
+    </plurals>
+    <string name="import_running_body_series">Recherche des séries sur TMDB : %1$d sur %2$d. Tu peux quitter cet écran, l’import continue.</string>
+
+    <!-- Ce soir des séries : reprendre les séries en cours. -->
+    <string name="tonight_intro_series">Tes séries en cours d’abord, à reprendre où tu en es, puis ce que tu as sous la main, du plus au moins susceptible de te plaire.</string>
+
+    <!-- Widgets en mode séries. -->
+    <string name="widget_tonight_empty_series">Rien sous la main : ajoute des séries à ta liste À voir.</string>
+    <string name="widget_top_empty_series">Classe tes séries dans l’Arène pour voir ton top ici.</string>
+    <string name="widget_stat_watched_series">séries vues</string>
+    <string name="widget_stat_hours_series">heures de séries</string>
+    <string name="widget_stat_director_series">créateur préféré</string>
+    <string name="widget_config_source_series">Quelles séries</string>
+    <string name="widget_config_count_series">Nombre de séries</string>
+    <string name="widget_tonight_hint_series">Le widget montre d’abord tes séries en cours, puis la série la plus susceptible de te plaire ; « Suivant » passe à la suivante. Il se met à jour plusieurs fois par jour.</string>
+    <string name="import_how_trakt_body_series">Sur trakt.tv : Settings › Data › Export. Choisis l’archive ZIP (ou les fichiers watched-shows, ratings-shows et watchlist). L’avancement vient des épisodes vus.</string>
+    <string name="import_how_imdb_body_series">Sur imdb.com : page « Your ratings » (ou ta Watchlist) › menu ⋮ › Export. Les séries et mini-séries notées passent en vues, celles de la watchlist en à voir.</string>
+    <string name="import_failed_empty_series">Aucune série dans ces fichiers (en mode séries, seules les séries sont lues : importe les films en mode films).</string>
+
+    <!-- Entre amis, en mode séries. -->
+    <string name="friends_code_hint_series">Ton code contient tes séries préférées, tes moins aimées, les plus vues et ta liste À voir, avec tes étoiles. Pas de compte, pas de serveur.</string>
+    <string name="friends_error_world_series">C’est un code des films : repasse en mode films pour comparer.</string>
+    <string name="friends_score_unknown_series">Trop peu de séries en commun pour vous comparer : notez-en quelques-unes de plus dans l’Arène.</string>
+    <string name="friends_common_series">%1$d séries vues tous les deux</string>
+    <string name="friends_verdict_twins_series">des jumeaux de séries</string>
+    <string name="friends_share_text_series">Compare tes goûts en séries avec les miens dans CineSwipe : mode séries › Profil › Comparer avec un ami › Scanner, puis colle ce code (ou partage-le directement vers CineSwipe).</string>
+</resources>

@@ -56,7 +56,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -d app/build/captures ]; then echo "::error::Aucune capture"; exit 1; fi
+          mkdir -p app/build/captures/journaux
+          # En cas de plantage de la JVM des tests : son rapport, la fin du journal et les sorties des tests.
+          find . -name 'hs_err_pid*.log' -exec cp {} app/build/captures/journaux/ \; 2>/dev/null || true
+          tail -n 400 build.log > app/build/captures/journaux/build-fin.log 2>/dev/null || true
+          find app/build/test-results -name '*.xml' -exec cp {} app/build/captures/journaux/ \; 2>/dev/null || true
+          find app/build/reports/tests -name '*.html' -path '*classes*' -exec cp {} app/build/captures/journaux/ \; 2>/dev/null || true
           (cd app/build/captures && zip -qr "$GITHUB_WORKSPACE/captures.zip" .)
           echo "::notice title=Captures::$(find app/build/captures -name '*.png' | wc -l) images"
           gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true

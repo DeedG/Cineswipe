@@ -64,10 +64,12 @@ import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.LocalOpenPerson
 import io.github.deedg.cineswipe.ui.components.PersonRef
 import io.github.deedg.cineswipe.ui.components.PosterImage
+import io.github.deedg.cineswipe.ui.components.WorldSwitch
 import io.github.deedg.cineswipe.ui.feed.CardFeed
 import io.github.deedg.cineswipe.ui.feed.CardFeedScreen
 import io.github.deedg.cineswipe.ui.feed.FeedTexts
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.person.knownForLabel
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
@@ -263,12 +265,16 @@ private fun SearchInput(
                 }
             }
         }
-        Text(
-            text = stringResource(R.string.search_title),
-            color = Color.White,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Black,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.search_title),
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.weight(1f),
+            )
+            WorldSwitch(tabName = Tab.SEARCH.name)
+        }
         Spacer(Modifier.height(15.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(

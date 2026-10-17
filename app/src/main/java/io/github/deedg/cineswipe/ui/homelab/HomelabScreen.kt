@@ -115,7 +115,10 @@ fun HomelabScreen(
                 CardBody(stringResource(R.string.homelab_requests_body))
                 ServiceRow(config.seerr) { onOpenService(HomelabService.SEERR) }
                 ServiceRow(config.radarr) { onOpenService(HomelabService.RADARR) }
-                if (config.seerr.isReady && config.radarr.isReady) {
+                // Sonarr : les demandes de séries (Seerr sert les deux mondes).
+                ServiceRow(config.sonarr) { onOpenService(HomelabService.SONARR) }
+                // Avec Seerr et le service « *arr » du monde (Radarr ou Sonarr) : qui reçoit les demandes.
+                if (config.seerr.isReady && config.arr.isReady) {
                     GroupLabel(stringResource(R.string.homelab_target_label))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         CineChip(
@@ -124,8 +127,8 @@ fun HomelabScreen(
                             onClick = { onRequestTarget(RequestTarget.SEERR) },
                         )
                         CineChip(
-                            label = HomelabService.RADARR.displayName,
-                            selected = config.requestService == HomelabService.RADARR,
+                            label = config.arr.service.displayName,
+                            selected = config.requestService == config.arr.service,
                             onClick = { onRequestTarget(RequestTarget.RADARR) },
                         )
                     }

@@ -26,9 +26,11 @@ import io.github.deedg.cineswipe.data.homelab.JellyfinClient
 import io.github.deedg.cineswipe.data.homelab.PlexClient
 import io.github.deedg.cineswipe.data.homelab.RadarrClient
 import io.github.deedg.cineswipe.data.homelab.SeerrClient
+import io.github.deedg.cineswipe.data.homelab.SonarrClient
 import io.github.deedg.cineswipe.data.homelab.WatchedNotifier
 import io.github.deedg.cineswipe.data.homelab.WorkManagerScheduler
 import io.github.deedg.cineswipe.data.importer.ImportRepository
+import io.github.deedg.cineswipe.data.model.MediaKind
 import io.github.deedg.cineswipe.data.repository.ArenaRepository
 import io.github.deedg.cineswipe.data.repository.CensusRepository
 import io.github.deedg.cineswipe.data.repository.DiagnosticsRepository
@@ -40,9 +42,15 @@ import io.github.deedg.cineswipe.data.repository.RecoRepository
 import io.github.deedg.cineswipe.data.repository.RetroRepository
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.data.repository.StatsRepository
+import io.github.deedg.cineswipe.data.repository.TasteShareRepository
 import io.github.deedg.cineswipe.data.repository.TmdbRepository
+import io.github.deedg.cineswipe.data.series.AndroidSeasonNotifier
+import io.github.deedg.cineswipe.data.series.SeasonNotifier
+import io.github.deedg.cineswipe.data.series.SeasonWatchRepository
 import io.github.deedg.cineswipe.data.share.SharedRepository
 import io.github.deedg.cineswipe.data.tmdb.TmdbApi
+import io.github.deedg.cineswipe.data.tmdb.TmdbSeriesAdapter
+import io.github.deedg.cineswipe.data.update.UpdateRepository
 import io.github.deedg.cineswipe.ui.tutorial.Tutorial
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -71,6 +79,12 @@ class AppConfig(
     val backupScheduler: (Context) -> BackupScheduler = { WorkManagerBackupScheduler(it) },
     /** Notification après un film vu sur Plex ou Jellyfin. */
     val watchedNotifier: (Context) -> WatchedNotifier = { AndroidWatchedNotifier(it) },
+    /** Notification d'une nouvelle saison d'une série suivie. */
+    val seasonNotifier: (Context) -> SeasonNotifier = { AndroidSeasonNotifier(it) },
+    /** Dernière version publiée (dépôt public GitHub) ; null : pas de vérification. */
+    val updateUrl: String? = UpdateRepository.LATEST_URL,
+    /** Clé TMDB intégrée au build (secret de la CI), vide pour un build sans clé. */
+    val builtinTmdbKey: String? = BuildConfig.TMDB_BUILTIN_KEY.takeIf { it.isNotBlank() },
 ) {
     companion object {
         fun demo(catalog: DemoCatalog) = AppConfig(
@@ -79,12 +93,22 @@ class AppConfig(
             demo = catalog,
             watchedNotifier = { WatchedNotifier.None },
             backupScheduler = { BackupScheduler.None },
+            seasonNotifier = { SeasonNotifier.None },
+            updateUrl = null,
         )
     }
 }
 
-/** Injection de dépendances manuelle : une seule instance de chaque service pour l'appli. */
-class AppContainer(context: Context, private val config: AppConfig = AppConfig()) {
+/**
+ * Injection de dépendances manuelle : une seule instance de chaque service par monde. Le monde des
+ * séries ([MediaKind.SERIES]) a son propre conteneur, avec sa base ; TMDB y répond en séries
+ * ([TmdbSeriesAdapter]).
+ */
+class AppContainer(
+    context: Context,
+    private val config: AppConfig = AppConfig(),
+    val kind: MediaKind = MediaKind.FILMS,
+) {
     private val appContext = context.applicationContext
 
     /** Travaux qui survivent à l'écran qui les lance (synchro, envoi des demandes). Une erreur y est journalisée, sans planter l'appli. */
@@ -100,26 +124,29 @@ class AppContainer(context: Context, private val config: AppConfig = AppConfig()
 
     val crashLog: CrashLog by lazy { CrashLog(appContext) }
     private val databaseLazy = lazy {
-        if (config.demo != null) CineSwipeDatabase.createInMemory(appContext) else CineSwipeDatabase.create(appContext)
+        if (config.demo != null) CineSwipeDatabase.createInMemory(appContext) else CineSwipeDatabase.create(appContext, kind)
     }
     val database: CineSwipeDatabase by databaseLazy
     val settings: SettingsRepository by lazy {
         if (config.demo != null) {
-            SettingsRepository(MemoryPreferencesStore(), MemoryPreferencesStore(), config.cipher())
+            SettingsRepository(MemoryPreferencesStore(), MemoryPreferencesStore(), config.cipher(), kind)
         } else {
-            SettingsRepository(appContext, config.cipher())
+            SettingsRepository(appContext, config.cipher(), kind, config.builtinTmdbKey)
         }
     }
 
     private val httpClient: OkHttpClient by lazy {
-        val client = TmdbApi.httpClient()
-        config.demo?.let { catalog -> client.newBuilder().addInterceptor(DemoTmdbInterceptor(catalog)).build() } ?: client
+        val builder = TmdbApi.httpClient().newBuilder()
+        // Séries : TMDB répond en séries (la démo sert déjà ses séries sous la forme des films).
+        if (kind.isSeries && config.demo == null) builder.addInterceptor(TmdbSeriesAdapter())
+        config.demo?.let { catalog -> builder.addInterceptor(DemoTmdbInterceptor(catalog)) }
+        builder.build()
     }
     private val tmdbApi: TmdbApi by lazy { TmdbApi.create(config.tmdbBaseUrl, httpClient) }
     /** Pendant la démo, un Plex et un Seerr fictifs répondent depuis l'appli. */
     private val homelabHttp: HomelabHttp by lazy {
         config.demo?.let { catalog ->
-            HomelabHttp(HomelabHttp.defaultClient().newBuilder().addInterceptor(DemoHomelabInterceptor(catalog)).build())
+            HomelabHttp(HomelabHttp.defaultClient().newBuilder().addInterceptor(DemoHomelabInterceptor(catalog, kind.isSeries)).build())
         } ?: HomelabHttp()
     }
 
@@ -136,34 +163,60 @@ class AppContainer(context: Context, private val config: AppConfig = AppConfig()
             plex = PlexClient(homelabHttp, deviceId),
             seerr = SeerrClient(homelabHttp),
             radarr = RadarrClient(homelabHttp),
+            sonarr = SonarrClient(homelabHttp),
             scheduler = config.homelabScheduler(appContext),
             scope = appScope,
             graceMs = config.requestGraceMs,
             notifier = config.watchedNotifier(appContext),
             demo = config.demo != null,
+            series = kind.isSeries,
         )
     }
     val recos: RecoRepository by lazy { RecoRepository(database, tmdb, settings) }
     val census: CensusRepository by lazy { CensusRepository(database, tmdb, settings, recos, appScope) }
     val diagnostics: DiagnosticsRepository by lazy {
-        DiagnosticsRepository(appContext, database, tmdb, settings, BuildConfig.VERSION_NAME)
+        DiagnosticsRepository(appContext, database, tmdb, settings, BuildConfig.VERSION_NAME, kind = kind)
     }
     val shared: SharedRepository by lazy { SharedRepository(tmdb) }
     val people: PeopleRepository by lazy { PeopleRepository(database, tmdb, settings) }
     val stats: StatsRepository by lazy { StatsRepository(database) }
     val lists: ListsRepository by lazy { ListsRepository(database) }
     val retro: RetroRepository by lazy { RetroRepository(database) }
+    /**
+     * Sauvegarde hebdomadaire : une seule, tenue par le monde des films, avec les séries dans la
+     * même archive. Le monde des séries passe par elle (mêmes réglages, même dossier).
+     */
     val backup: BackupRepository by lazy {
-        BackupRepository(diagnostics, settings, config.backupStorage(appContext), config.backupScheduler(appContext))
+        val app = appContext as? CineSwipeApp
+        if (kind.isSeries && config.demo == null && app != null) {
+            app.mainContainer.backup
+        } else {
+            BackupRepository(
+                diagnostics,
+                settings,
+                config.backupStorage(appContext),
+                config.backupScheduler(appContext),
+                otherWorlds = { if (config.demo == null && app != null) listOf(app.seriesWorld().diagnostics) else emptyList() },
+            )
+        }
     }
     val importer: ImportRepository by lazy {
-        ImportRepository(database, tmdb, settings, appScope, afterImport = { recos.enrichTaste(RecoRepository.TASTE_ENRICH_AT_START) })
+        ImportRepository(database, tmdb, settings, appScope, afterImport = { recos.enrichTaste(RecoRepository.TASTE_ENRICH_AT_START) }, series = kind.isSeries)
     }
+
+    /** Mises à jour publiées sur GitHub. */
+    val updates: UpdateRepository by lazy { UpdateRepository(settings, BuildConfig.VERSION_CODE, config.updateUrl) }
+
+    /** Comparer ses goûts entre amis (QR code). */
+    val tasteShare: TasteShareRepository by lazy { TasteShareRepository(database, tmdb, kind.isSeries) }
+
+    /** Nouvelles saisons des séries suivies (monde des séries). */
+    val seasonWatch: SeasonWatchRepository by lazy { SeasonWatchRepository(database, tmdb, settings, config.seasonNotifier(appContext)) }
 
     /** Tuto pas à pas (utilisé pendant la démo). */
     val tutorial: Tutorial by lazy { Tutorial() }
     val feed: FeedRepository by lazy {
-        FeedRepository(database, tmdb, settings, homelab, recos, onWatchedChanged = { arena.requestRerank() })
+        FeedRepository(database, tmdb, settings, homelab, recos, onWatchedChanged = { arena.requestRerank() }, series = kind.isSeries)
     }
 
     /** Fin de la démo : les tâches de fond s'arrêtent et la base en mémoire disparaît. */

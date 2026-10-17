@@ -1,6 +1,7 @@
 package io.github.deedg.cineswipe.data.repository
 
 import io.github.deedg.cineswipe.data.db.CineSwipeDatabase
+import io.github.deedg.cineswipe.data.db.SeriesProgress
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.model.DuelHistoryRow
 import io.github.deedg.cineswipe.data.model.LibraryItem
@@ -56,6 +57,19 @@ class LibraryRepository(
     suspend fun unmarkWatched(tmdbId: Long) {
         database.libraryDao().setWatched(tmdbId, watched = false, now = clock())
         onWatchedChanged()
+    }
+
+    /**
+     * Série : où en est l'utilisateur. Une série pas encore vue passe dans les vues (elle peut
+     * ensuite combattre dans l'Arène). [season] n'a de sens qu'en cours ou abandonnée.
+     */
+    suspend fun setProgress(tmdbId: Long, progress: SeriesProgress, season: Int?) {
+        val dao = database.libraryDao()
+        val wasWatched = dao.userMovie(tmdbId)?.status == WatchStatus.WATCHED
+        if (!wasWatched) dao.setWatched(tmdbId, watched = true, now = clock())
+        val withSeason = progress == SeriesProgress.IN_PROGRESS || progress == SeriesProgress.ABANDONED
+        dao.setProgress(tmdbId, progress, season.takeIf { withSeason }, clock())
+        if (!wasWatched) onWatchedChanged()
     }
 
     /** À voir, pas pour moi, ou retour à neutre. Le classement et les duels sont conservés. */

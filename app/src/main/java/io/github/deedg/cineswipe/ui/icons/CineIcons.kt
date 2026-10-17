@@ -108,6 +108,31 @@ object CineIcons {
     val Share: ImageVector by lazy {
         stroke("share", "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8", "M16 6l-4-4-4 4", "M12 2v13")
     }
+    /** QR code (comparer ses goûts entre amis). */
+    val QrCode: ImageVector by lazy {
+        stroke(
+            "qr",
+            "M3 3h7v7H3z",
+            "M14 3h7v7h-7z",
+            "M3 14h7v7H3z",
+            "M14 14h3v3h-3z",
+            "M20 14v.01",
+            "M14 20h.01",
+            "M17 17h4v4h-4",
+        )
+    }
+
+    /** Deux personnes (amis). */
+    val Users: ImageVector by lazy {
+        stroke(
+            "users",
+            "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2",
+            "M13 7a4 4 0 1 1-8 0a4 4 0 1 1 8 0z",
+            "M23 21v-2a4 4 0 0 0-3-3.87",
+            "M16 3.13a4 4 0 0 1 0 7.75",
+        )
+    }
+
     val Heart: ImageVector by lazy {
         stroke(
             "heart",

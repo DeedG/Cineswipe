@@ -57,7 +57,7 @@ fun missingSettings(resources: Resources, config: ServiceConfig): String? {
         if (HomelabUrls.parse(config.url) == null) add(resources.getString(R.string.homelab_missing_url))
         if (config.apiKey.isNullOrBlank()) add(resources.getString(R.string.homelab_missing_key))
         if (config.service == HomelabService.JELLYFIN && config.userId.isNullOrBlank()) add(resources.getString(R.string.homelab_missing_user))
-        if (config.service == HomelabService.RADARR && (config.qualityProfileId == null || config.rootFolder.isNullOrBlank())) {
+        if ((config.service == HomelabService.RADARR || config.service == HomelabService.SONARR) && (config.qualityProfileId == null || config.rootFolder.isNullOrBlank())) {
             add(resources.getString(R.string.homelab_missing_radarr))
         }
     }
