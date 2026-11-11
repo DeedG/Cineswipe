@@ -40,6 +40,40 @@ class TmdbAuthInterceptor : Interceptor {
     }
 }
 
+/**
+ * TMDB répond 429 quand on va trop vite (imports, recos qui chargent beaucoup de fiches d'un coup) :
+ * on attend le délai demandé (Retry-After, sinon 1 s, 2 s, 4 s, 8 s) et on réessaie, pour toutes
+ * les requêtes de l'appli. Après 4 essais, le 429 remonte comme une erreur ordinaire.
+ */
+class TmdbRateLimitInterceptor(private val sleep: (Long) -> Unit = { Thread.sleep(it) }) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        var response = chain.proceed(chain.request())
+        var attempt = 0
+        while (response.code == TOO_MANY_REQUESTS && attempt < MAX_RETRIES && !chain.call().isCanceled()) {
+            val wait = response.header("Retry-After")?.trim()?.toLongOrNull()?.times(1_000)?.coerceIn(MIN_WAIT_MS, MAX_WAIT_MS)
+                ?: (BASE_DELAY_MS shl attempt)
+            response.close()
+            try {
+                sleep(wait)
+            } catch (error: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw java.io.InterruptedIOException("Requête TMDB annulée")
+            }
+            attempt++
+            response = chain.proceed(chain.request())
+        }
+        return response
+    }
+
+    companion object {
+        const val TOO_MANY_REQUESTS = 429
+        const val MAX_RETRIES = 4
+        const val BASE_DELAY_MS = 1_000L
+        const val MIN_WAIT_MS = 500L
+        const val MAX_WAIT_MS = 10_000L
+    }
+}
+
 /** API TMDB v3 (https://developer.themoviedb.org/reference). */
 interface TmdbApi {
 
@@ -161,6 +195,7 @@ interface TmdbApi {
         fun httpClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
+            .addInterceptor(TmdbRateLimitInterceptor())
             .addInterceptor(TmdbAuthInterceptor())
             .build()
 

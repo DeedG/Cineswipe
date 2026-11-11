@@ -341,6 +341,11 @@
     <string name="service_plex_reopen">Reopen the sign-in page</string>
     <string name="service_plex_servers">Server</string>
     <string name="service_plex_shared">%1$s (shared)</string>
+    <string name="service_plex_home_users">Plex Home profile</string>
+    <string name="service_plex_home_pin">%1$s (PIN)</string>
+    <string name="service_plex_home_hint">Seen titles, show progress and the sync come from this profile, for movies and shows alike. Profiles protected by a PIN aren’t supported yet.</string>
+    <string name="service_plex_home_current">Plex Home profile: %1$s</string>
+    <string name="service_plex_home_change_hint">To switch profiles, sign in with Plex again.</string>
     <string name="service_seerr_mode_local">Seerr account</string>
     <string name="service_seerr_mode_jellyfin">Jellyfin account</string>
     <string name="service_seerr_mode_plex">Plex account</string>
@@ -873,8 +878,8 @@
     <string name="discover_length_long">Over 2 h 10</string>
     <string name="import_failed_error">The import stopped on an unexpected error. Try again; movies already processed won’t be duplicated.</string>
     <plurals name="import_skipped">
-        <item quantity="one">%d movie not processed (connection lost): run the import again to pick it up, nothing will be duplicated.</item>
-        <item quantity="other">%d movies not processed (connection lost): run the import again to pick them up, nothing will be duplicated.</item>
+        <item quantity="one">%d movie not processed (connection lost or TMDB busy): run the import again to pick it up, nothing will be duplicated.</item>
+        <item quantity="other">%d movies not processed (connection lost or TMDB busy): run the import again to pick them up, nothing will be duplicated.</item>
     </plurals>
     <string name="backup_skipped_empty">Empty library: no backup, the previous ones are kept.</string>
     <string name="lists_title">My lists</string>

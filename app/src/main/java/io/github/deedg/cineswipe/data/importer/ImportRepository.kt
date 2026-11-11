@@ -212,6 +212,12 @@ class ImportRepository(
                         } catch (error: TmdbException.Network) {
                             offline += item
                             null
+                        } catch (error: TmdbException.Http) {
+                            // TMDB encore saturé après les nouvelles tentatives : pas « introuvable »,
+                            // juste à reprendre en relançant l'import.
+                            if (error.code != TOO_MANY_REQUESTS) throw error
+                            offline += item
+                            null
                         }
                         mutableState.value = ImportState.Running(done.incrementAndGet(), total)
                         item to movie
@@ -292,6 +298,7 @@ class ImportRepository(
             val found = try {
                 retrying { tmdb.findByImdb(imdb) }.firstOrNull { !it.adult }
             } catch (error: TmdbException.Http) {
+                if (error.code == TOO_MANY_REQUESTS) throw error
                 null
             }
             if (found != null) return dao.movie(found.id) ?: genres.entity(found)
@@ -302,25 +309,30 @@ class ImportRepository(
     }
 
     private suspend fun search(title: String, year: Int?): TmdbMovieSummaryDto? {
-        suspend fun page(withYear: Int?) = try {
-            retrying { tmdb.search(title, 1, withYear) }.results
+        suspend fun page(withYear: Int?, language: String? = null) = try {
+            retrying { tmdb.search(title, 1, withYear, language) }.results
         } catch (error: TmdbException.Http) {
+            if (error.code == TOO_MANY_REQUESTS) throw error
             emptyList()
         }
         ImportMatcher.best(title, year, page(year))?.let { return it }
         // Année décalée (sortie en festival, date d'un autre pays) : recherche sans l'année.
-        return if (year != null) ImportMatcher.best(title, year, page(null)) else null
+        if (year != null) ImportMatcher.best(title, year, page(null))?.let { return it }
+        // Titre dans l'autre langue (anglais de Letterboxd, IMDb ou Trakt avec des fiches en
+        // français, ou l'inverse) : les résultats en anglais portent le titre à comparer.
+        val other = if (settings.language.first().startsWith("en")) "fr-FR" else "en-US"
+        ImportMatcher.best(title, year, page(year, other))?.let { return it }
+        return if (year != null) ImportMatcher.best(title, year, page(null, other)) else null
     }
 
-    /** Réessaie après une coupure réseau ou un « trop de requêtes » de TMDB. */
+    /** Réessaie après une coupure réseau (les « trop de requêtes » sont déjà réessayés par le client TMDB). */
     private suspend fun <T> retrying(block: suspend () -> T): T {
         var attempt = 0
         while (true) {
             try {
                 return block()
             } catch (error: TmdbException) {
-                val retryable = error is TmdbException.Network || (error is TmdbException.Http && error.code == TOO_MANY_REQUESTS)
-                if (!retryable || attempt >= RETRIES) throw error
+                if (error !is TmdbException.Network || attempt >= RETRIES) throw error
             }
             attempt++
             delay(RETRY_DELAY_MS * attempt)

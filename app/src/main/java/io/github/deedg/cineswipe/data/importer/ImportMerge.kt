@@ -110,6 +110,8 @@ object ImportMatcher {
                 year == null || candidateYear == null -> 0
                 candidateYear == year -> 2
                 abs(candidateYear - year) == 1 -> 1
+                // Titre identique à deux ans près (date d'un autre pays, ou année de tournage sur IMDb).
+                abs(candidateYear - year) == 2 && titleScore == 3 -> 0
                 else -> -3
             }
             val score = titleScore + yearScore

@@ -158,7 +158,9 @@ private fun ServiceRow(config: ServiceConfig, onClick: () -> Unit) {
     val (status, color) = when {
         config.isReady -> {
             // Compte utilisé : l'utilisateur Jellyfin, ou celui connecté à Seerr.
-            val account = config.userName?.takeIf { config.service == HomelabService.JELLYFIN || config.usesSeerrSession }
+            val account = config.userName?.takeIf {
+                config.service == HomelabService.JELLYFIN || config.service == HomelabService.PLEX || config.usesSeerrSession
+            }
             val where = hostLabel(config.url) + (account?.let { " · $it" } ?: "")
             stringResource(R.string.homelab_status_ready, where) to CineColors.Success
         }

@@ -166,8 +166,8 @@ class TmdbRepository(
     suspend fun collection(id: Long): TmdbCollectionDto =
         call { auth, language -> api.collection(id, language, auth) }
 
-    suspend fun search(query: String, page: Int, year: Int? = null): TmdbPageDto =
-        call { auth, language -> api.search(query, language, page, false, auth, year) }
+    suspend fun search(query: String, page: Int, year: Int? = null, language: String? = null): TmdbPageDto =
+        call { auth, settingsLanguage -> api.search(query, language ?: settingsLanguage, page, false, auth, year) }
 
     /**
      * Où regarder un film dans le pays du téléphone (sinon celui de la langue des fiches) :

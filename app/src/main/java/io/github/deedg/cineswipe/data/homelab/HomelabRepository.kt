@@ -447,6 +447,17 @@ class HomelabRepository(
 
     suspend fun plexServers(accountToken: String): List<PlexServer> = plex.servers(accountToken)
 
+    /** Profils Plex Home du compte ; vide sans Plex Home (ou si plex.tv ne répond pas). */
+    suspend fun plexHomeUsers(accountToken: String): List<PlexHomeUser> = try {
+        plex.homeUsers(accountToken)
+    } catch (error: HomelabException) {
+        emptyList()
+    }
+
+    /** Serveurs vus par un profil Plex Home, avec le jeton d'accès propre à ce profil. */
+    suspend fun plexServersAs(accountToken: String, user: PlexHomeUser): List<PlexServer> =
+        plex.servers(if (user.admin) accountToken else plex.switchHomeUser(accountToken, user.id))
+
     /** Connexion d'un utilisateur à Seerr : ses demandes seront à son nom. */
     suspend fun seerrLogin(rawUrl: String, headers: String, mode: SeerrAuthMode, identifier: String, secret: String): SeerrSession {
         val url = HomelabUrls.parse(rawUrl) ?: throw HomelabException(HomelabService.SEERR, HomelabException.Kind.BAD_URL, rawUrl)

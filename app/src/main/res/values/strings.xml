@@ -343,6 +343,11 @@
     <string name="service_plex_reopen">Rouvrir la page de connexion</string>
     <string name="service_plex_servers">Serveur</string>
     <string name="service_plex_shared">%1$s (partagé)</string>
+    <string name="service_plex_home_users">Profil Plex Home</string>
+    <string name="service_plex_home_pin">%1$s (code PIN)</string>
+    <string name="service_plex_home_hint">Les films vus, l’avancement des séries et la synchro sont ceux de ce profil, pour les films comme pour les séries. Les profils protégés par un code PIN ne sont pas encore pris en charge.</string>
+    <string name="service_plex_home_current">Profil Plex Home : %1$s</string>
+    <string name="service_plex_home_change_hint">Pour changer de profil, reconnecte-toi avec Plex.</string>
     <string name="service_seerr_mode_local">Compte Seerr</string>
     <string name="service_seerr_mode_jellyfin">Compte Jellyfin</string>
     <string name="service_seerr_mode_plex">Compte Plex</string>
@@ -883,9 +888,9 @@
     <string name="discover_length_long">Plus de 2 h 10</string>
     <string name="import_failed_error">L’import s’est interrompu sur une erreur inattendue. Réessaie ; les films déjà traités ne seront pas dupliqués.</string>
     <plurals name="import_skipped">
-        <item quantity="one">%d film pas traité (connexion coupée) : relance l’import pour le reprendre, rien ne sera dupliqué.</item>
-        <item quantity="many">%d films pas traités (connexion coupée) : relance l’import pour les reprendre, rien ne sera dupliqué.</item>
-        <item quantity="other">%d films pas traités (connexion coupée) : relance l’import pour les reprendre, rien ne sera dupliqué.</item>
+        <item quantity="one">%d film pas traité (connexion coupée ou TMDB saturé) : relance l’import pour le reprendre, rien ne sera dupliqué.</item>
+        <item quantity="many">%d films pas traités (connexion coupée ou TMDB saturé) : relance l’import pour les reprendre, rien ne sera dupliqué.</item>
+        <item quantity="other">%d films pas traités (connexion coupée ou TMDB saturé) : relance l’import pour les reprendre, rien ne sera dupliqué.</item>
     </plurals>
     <string name="backup_skipped_empty">Bibliothèque vide : pas de sauvegarde, les précédentes sont gardées.</string>
     <string name="lists_title">Mes listes</string>

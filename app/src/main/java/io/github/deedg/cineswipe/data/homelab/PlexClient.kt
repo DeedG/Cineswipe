@@ -3,6 +3,10 @@ package io.github.deedg.cineswipe.data.homelab
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.net.URLEncoder
@@ -79,9 +83,24 @@ data class PlexPinDto(
     val authToken: String? = null,
 )
 
+/** Profil Plex Home (plex.tv, api/v2/home/users). */
+@Serializable
+data class PlexHomeUserDto(
+    val id: Long,
+    val title: String? = null,
+    val username: String? = null,
+    val admin: Boolean = false,
+    @SerialName("protected") val pinProtected: Boolean = false,
+)
+
+/** Réponse au changement de profil : le jeton du profil (les deux noms existent chez Plex). */
+@Serializable
+data class PlexSwitchDto(val authToken: String? = null, val authenticationToken: String? = null)
+
 @Serializable
 data class PlexResourceDto(
     val name: String = "",
+    val clientIdentifier: String? = null,
     val provides: String? = null,
     val owned: Boolean = false,
     val accessToken: String? = null,
@@ -161,11 +180,52 @@ class PlexClient(
             .map { resource ->
                 PlexServer(
                     name = resource.name,
+                    id = resource.clientIdentifier,
                     accessToken = resource.accessToken,
                     owned = resource.owned,
                     connections = resource.connections.filter { it.uri.isNotBlank() }.map { PlexConnection(it.uri, it.local, it.relay) },
                 )
             }
+
+    /**
+     * Profils Plex Home du compte (vide si le compte n'a pas de Plex Home). Chaque profil a ses
+     * propres films vus et son avancement sur le serveur.
+     */
+    suspend fun homeUsers(accountToken: String): List<PlexHomeUser> {
+        val reply = http.get(service, plexTv, "api/v2/home/users", accountHeaders(accountToken))
+        val root = try {
+            LENIENT.parseToJsonElement(reply)
+        } catch (error: IllegalArgumentException) {
+            throw HomelabException(service, HomelabException.Kind.INVALID_RESPONSE, "Profils Plex Home illisibles")
+        }
+        val list: JsonElement = when (root) {
+            is JsonArray -> root
+            is JsonObject -> root["users"] ?: JsonArray(emptyList())
+            else -> JsonArray(emptyList())
+        }
+        return LENIENT.decodeFromJsonElement(ListSerializer(PlexHomeUserDto.serializer()), list).map { user ->
+            PlexHomeUser(
+                id = user.id,
+                name = user.title?.takeIf { it.isNotBlank() } ?: user.username?.takeIf { it.isNotBlank() } ?: user.id.toString(),
+                admin = user.admin,
+                pinProtected = user.pinProtected,
+            )
+        }
+    }
+
+    /** Jeton du compte d'un profil Plex Home (profil sans code PIN). */
+    suspend fun switchHomeUser(accountToken: String, userId: Long): String {
+        val reply = http.post(service, plexTv, "api/home/users/$userId/switch", accountHeaders(accountToken), body = "{}")
+        val fromJson = try {
+            LENIENT.decodeFromString(PlexSwitchDto.serializer(), reply).let { it.authToken ?: it.authenticationToken }
+        } catch (error: IllegalArgumentException) {
+            null
+        }
+        // Ancienne réponse XML : <user … authenticationToken="…">.
+        val token = fromJson ?: XML_TOKEN.find(reply)?.groupValues?.get(1)
+        return token?.takeIf { it.isNotBlank() }
+            ?: throw HomelabException(service, HomelabException.Kind.INVALID_RESPONSE, "Jeton du profil absent")
+    }
 
     private fun accountHeaders(token: String?): Map<String, String> = buildMap {
         put("X-Plex-Client-Identifier", clientId)
@@ -323,6 +383,8 @@ class PlexClient(
 
     companion object {
         val PLEX_TV = "https://plex.tv/".toHttpUrl()
+        private val LENIENT = Json { ignoreUnknownKeys = true; coerceInputValues = true }
+        private val XML_TOKEN = Regex("""authenticationToken="([^"]+)"""")
 
         const val ANDROID_PACKAGE = "com.plexapp.android"
         val METADATA_PROVIDER = "https://metadata.provider.plex.tv/".toHttpUrl()

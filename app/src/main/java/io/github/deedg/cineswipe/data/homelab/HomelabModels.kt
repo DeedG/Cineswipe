@@ -236,7 +236,12 @@ data class PlexServer(
     val accessToken: String?,
     val owned: Boolean,
     val connections: List<PlexConnection>,
+    /** Identifiant du serveur chez plex.tv, pour le retrouver avec le jeton d'un autre profil. */
+    val id: String? = null,
 )
+
+/** Profil Plex Home : ses films vus et son avancement sont à lui. */
+data class PlexHomeUser(val id: Long, val name: String, val admin: Boolean, val pinProtected: Boolean = false)
 
 data class PlexConnection(val uri: String, val local: Boolean, val relay: Boolean)
 

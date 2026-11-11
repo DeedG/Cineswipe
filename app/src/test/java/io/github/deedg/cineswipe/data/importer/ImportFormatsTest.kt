@@ -112,6 +112,14 @@ class ImportFormatsTest {
     }
 
     @Test
+    fun csvSavedInWindows1252KeepsItsAccents() {
+        val bytes = "Titre;Année\nLe Fabuleux Destin d'Amélie Poulain;2001\n".toByteArray(Charsets.ISO_8859_1)
+        val batch = ImportFormats.parse(listOf(ImportFile("export.csv", bytes)))
+        assertEquals("Le Fabuleux Destin d'Amélie Poulain", batch.items.single().title)
+        assertEquals(2001, batch.items.single().year)
+    }
+
+    @Test
     fun genericCsvDetectsSeparatorScaleAndStatus() {
         val csv = file(
             "senscritique.csv",

@@ -6,6 +6,7 @@ import io.github.deedg.cineswipe.data.homelab.ConnectionInfo
 import io.github.deedg.cineswipe.data.homelab.HomelabException
 import io.github.deedg.cineswipe.data.homelab.HomelabRepository
 import io.github.deedg.cineswipe.data.homelab.HomelabService
+import io.github.deedg.cineswipe.data.homelab.PlexHomeUser
 import io.github.deedg.cineswipe.data.homelab.PlexServer
 import io.github.deedg.cineswipe.data.homelab.SeerrAuthMode
 import io.github.deedg.cineswipe.data.homelab.SeerrSession
@@ -44,6 +45,12 @@ data class ServiceSettingsUiState(
     val plexLoginUrl: String? = null,
     /** Serveurs du compte Plex connecté, pour choisir le bon. */
     val plexServers: List<PlexServer> = emptyList(),
+    /** Serveur Plex choisi parmi [plexServers]. */
+    val plexServer: PlexServer? = null,
+    /** Jeton du compte plex.tv connecté (gardé en mémoire le temps de choisir un profil). */
+    val plexAccountToken: String? = null,
+    /** Profils Plex Home du compte (vide sans Plex Home). */
+    val plexHomeUsers: List<PlexHomeUser> = emptyList(),
     /** Plex exige le https : l'adresse plex.direct a remplacé l'adresse saisie. */
     val secureUrlApplied: Boolean = false,
 )
@@ -90,7 +97,9 @@ class ServiceSettingsViewModel(
                 draft.seerrAuthMode != current.draft.seerrAuthMode
             if (connectionChanged) {
                 job?.cancel()
-                current.copy(draft = draft, test = TestState.Idle, info = null, plexLoginUrl = null, secureUrlApplied = false)
+                // Jeton Plex saisi à la main : ce n'est plus forcément celui du profil affiché.
+                val typed = if (service == HomelabService.PLEX && draft.apiKey != current.draft.apiKey) draft.copy(userName = null) else draft
+                current.copy(draft = typed, test = TestState.Idle, info = null, plexLoginUrl = null, secureUrlApplied = false)
             } else {
                 current.copy(draft = draft)
             }
@@ -140,7 +149,19 @@ class ServiceSettingsViewModel(
                 when (service) {
                     HomelabService.PLEX -> {
                         val servers = homelab.plexServers(token)
-                        _state.update { it.copy(plexServers = servers, test = TestState.Idle, draft = it.draft.copy(apiKey = token)) }
+                        val users = homelab.plexHomeUsers(token)
+                        // Plex Home : on part du compte principal, l'utilisateur choisit ensuite son profil.
+                        val owner = users.firstOrNull { it.admin }?.takeIf { users.size > 1 }
+                        _state.update {
+                            it.copy(
+                                plexServers = servers,
+                                plexServer = null,
+                                plexAccountToken = token,
+                                plexHomeUsers = if (users.size > 1) users else emptyList(),
+                                test = TestState.Idle,
+                                draft = it.draft.copy(apiKey = token, userName = owner?.name),
+                            )
+                        }
                         servers.singleOrNull()?.let { chooseServer(it) }
                     }
                     HomelabService.SEERR -> {
@@ -168,6 +189,37 @@ class ServiceSettingsViewModel(
      * et une adresse connue de plex.tv si aucune n'est saisie. Le test part ensuite.
      */
     fun chooseServer(server: PlexServer) {
+        _state.update { it.copy(plexServer = server) }
+        val state = _state.value
+        val profile = state.plexHomeUsers.firstOrNull { !it.admin && it.name == state.draft.userName }
+        if (profile != null) chooseHomeUser(profile) else applyServer(server)
+    }
+
+    /**
+     * Profil Plex Home choisi : on récupère son jeton auprès de plex.tv, puis le jeton d'accès de
+     * ce profil au serveur choisi. Les films vus, l'avancement et la synchro seront les siens.
+     */
+    fun chooseHomeUser(user: PlexHomeUser) {
+        val state = _state.value
+        val accountToken = state.plexAccountToken ?: return
+        val wanted = state.plexServer ?: state.plexServers.singleOrNull()
+        if (user.admin) {
+            _state.update { it.copy(draft = it.draft.copy(userName = user.name)) }
+            wanted?.let { applyServer(it) }
+            return
+        }
+        launchTest {
+            val servers = homelab.plexServersAs(accountToken, user)
+            val server = servers.firstOrNull { wanted != null && ((wanted.id != null && it.id == wanted.id) || it.name == wanted.name) }
+                ?: servers.singleOrNull()
+                ?: throw HomelabException(HomelabService.PLEX, HomelabException.Kind.NOT_FOUND, "Serveur introuvable pour le profil ${user.name}")
+            _state.update { it.copy(draft = it.draft.copy(userName = user.name)) }
+            // Les adresses restent celles du serveur choisi avec le compte principal.
+            applyServer(server.copy(connections = wanted?.connections ?: server.connections))
+        }
+    }
+
+    private fun applyServer(server: PlexServer) {
         val current = _state.value.draft
         val address = current.url.ifBlank {
             val usable = server.connections.filterNot { it.relay }

@@ -146,7 +146,9 @@ class PeopleStatsWidgetTest {
         assertEquals(3, top.size)
         assertTrue(top.zipWithNext().all { (a, b) -> a.stars >= b.stars })
         val drama = runBlocking { WidgetData.top(app, 5, "Drame") }
-        assertTrue(drama.isNotEmpty() && drama.all { it.title.startsWith("Film Stats") })
+        // Tous du genre demandé (une fiche du jeu de test complétée en arrière-plan peut aussi être un drame).
+        val dramaMovies = runBlocking { app.container.database.recoDao().movies(drama.map { it.tmdbId }) }
+        assertTrue(drama.isNotEmpty() && dramaMovies.size == drama.size && dramaMovies.all { "Drame" in it.genres })
         val values = runBlocking { WidgetData.stats(app) }
         assertNotNull(values)
         assertEquals(15, values!!.watched)

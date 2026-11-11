@@ -161,7 +161,7 @@ object ImportFormats {
         val name = file.name.substringAfterLast('/').lowercase(Locale.ROOT)
         val path = file.name.lowercase(Locale.ROOT)
         if (path.contains("deleted/") || path.contains("orphaned/")) return Parsed(null, silent = true)
-        val text = file.bytes.decodeToString().removePrefix("﻿")
+        val text = decodeText(file.bytes).removePrefix("﻿")
         val trimmed = text.trimStart()
         return if (trimmed.startsWith("{") || trimmed.startsWith("[")) parseJson(name, json.parseToJsonElement(trimmed), series) else parseCsv(name, path, text, series)
     }
@@ -329,6 +329,20 @@ object ImportFormats {
     private fun parseInstant(text: String?): Long? = text?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
 
     /** Titre comparable : sans accents, ponctuation ni casse. */
+    /**
+     * Texte d'un fichier : UTF-8, sinon Windows-1252 (CSV enregistré par Excel ou exporté par
+     * certains sites), pour ne pas transformer « Amélie » en « Am�lie » introuvable sur TMDB.
+     */
+    fun decodeText(bytes: ByteArray): String = try {
+        Charsets.UTF_8.newDecoder()
+            .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+            .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+            .decode(java.nio.ByteBuffer.wrap(bytes))
+            .toString()
+    } catch (error: java.nio.charset.CharacterCodingException) {
+        String(bytes, java.nio.charset.Charset.forName("windows-1252"))
+    }
+
     fun normalize(text: String): String =
         Normalizer.normalize(text, Normalizer.Form.NFD)
             .replace(Regex("\\p{Mn}+"), "")

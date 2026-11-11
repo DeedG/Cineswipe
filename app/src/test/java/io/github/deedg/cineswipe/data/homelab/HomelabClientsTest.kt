@@ -349,6 +349,40 @@ class HomelabClientsTest {
     }
 
     @Test
+    fun plexHomeProfilesGetTheirOwnServerToken() = runBlocking {
+        val client = PlexClient(http, clientId = "appareil", plexTv = server.url("/"))
+        enqueue(
+            """{"id":1,"name":"Maison","users":[
+                {"id":11,"uuid":"a","title":"Alex","admin":true,"protected":false},
+                {"id":12,"uuid":"b","title":"","username":"Lou","admin":false,"protected":false},
+                {"id":13,"uuid":"c","title":"Enfant","admin":false,"protected":true}
+            ]}""",
+        )
+        enqueue("""{"id":12,"authToken":"jeton-lou","authenticationToken":"jeton-lou"}""", code = 201)
+        enqueue("""<?xml version="1.0"?><user id="13" authenticationToken="jeton-xml" title="Enfant"/>""")
+        enqueue("""[{"name":"mon-serveur","clientIdentifier":"machine-1","provides":"server","owned":false,"accessToken":"serveur-lou","connections":[]}]""")
+
+        val users = client.homeUsers("jeton-compte")
+        assertEquals(listOf("Alex", "Lou", "Enfant"), users.map { it.name })
+        assertTrue(users[0].admin)
+        assertTrue(users[2].pinProtected)
+        assertEquals("jeton-lou", client.switchHomeUser("jeton-compte", 12))
+        assertEquals("jeton-xml", client.switchHomeUser("jeton-compte", 13))
+        val servers = client.servers("jeton-lou")
+        assertEquals("machine-1", servers.single().id)
+        assertEquals("serveur-lou", servers.single().accessToken)
+
+        val list = next()
+        assertEquals("/api/v2/home/users", list.url.encodedPath)
+        assertEquals("jeton-compte", list.headers["X-Plex-Token"])
+        val switch = next()
+        assertEquals("POST", switch.method)
+        assertEquals("/api/home/users/12/switch", switch.url.encodedPath)
+        next()
+        assertEquals("jeton-lou", next().headers["X-Plex-Token"])
+    }
+
+    @Test
     fun plexDirectNamesAreResolvedWithoutDns() {
         val addresses = PlexDirectDns.lookup("100-64-1-2.0123456789abcdef0123456789abcdef.plex.direct")
         assertEquals(listOf("100.64.1.2"), addresses.map { it.hostAddress })

@@ -46,6 +46,7 @@ import io.github.deedg.cineswipe.data.homelab.ConnectionInfo
 import io.github.deedg.cineswipe.data.homelab.HomelabService
 import io.github.deedg.cineswipe.data.homelab.HomelabUrls
 import io.github.deedg.cineswipe.data.homelab.JellyfinAuthMode
+import io.github.deedg.cineswipe.data.homelab.PlexHomeUser
 import io.github.deedg.cineswipe.data.homelab.PlexServer
 import io.github.deedg.cineswipe.data.homelab.SeerrAuthMode
 import io.github.deedg.cineswipe.data.homelab.ServiceConfig
@@ -75,6 +76,7 @@ class ServiceActions(
     val onPlexSignIn: () -> Unit,
     val onReopenPlexLogin: () -> Unit,
     val onChooseServer: (PlexServer) -> Unit,
+    val onChooseHomeUser: (PlexHomeUser) -> Unit,
     val onSave: () -> Unit,
     val onClear: () -> Unit,
 )
@@ -114,6 +116,7 @@ fun ServiceSettingsRoute(service: HomelabService, onBack: () -> Unit) {
             onPlexSignIn = viewModel::plexSignIn,
             onReopenPlexLogin = viewModel::reopenPlexLogin,
             onChooseServer = viewModel::chooseServer,
+            onChooseHomeUser = viewModel::chooseHomeUser,
             onSave = viewModel::save,
             onClear = viewModel::clear,
         ),
@@ -355,6 +358,22 @@ private fun PlexAuth(state: ServiceSettingsUiState, actions: ServiceActions, bus
                 )
             }
         }
+    }
+    if (state.plexHomeUsers.isNotEmpty()) {
+        GroupLabel(stringResource(R.string.service_plex_home_users))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            state.plexHomeUsers.forEach { user ->
+                CineChip(
+                    label = if (user.pinProtected) stringResource(R.string.service_plex_home_pin, user.name) else user.name,
+                    selected = user.name == draft.userName,
+                    onClick = { if (!busy) actions.onChooseHomeUser(user) },
+                )
+            }
+        }
+        HintText(stringResource(R.string.service_plex_home_hint))
+    } else if (!draft.userName.isNullOrBlank()) {
+        Text(stringResource(R.string.service_plex_home_current, draft.userName), color = CineColors.Success, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        HintText(stringResource(R.string.service_plex_home_change_hint))
     }
     KeyField(draft, actions.onEdit, R.string.service_key_label_plex, R.string.service_key_hint_plex)
 }

@@ -76,6 +76,14 @@ class ImportMergeTest {
         assertNull(ImportMatcher.best("It", 2017, listOf(dto(2, "Split", 2016))))
         // Titre différent : seul le premier résultat de la bonne année est retenu.
         assertNull(ImportMatcher.best("Spirited Away", 2001, listOf(dto(3, "Autre film", 2000), dto(9, "Le Voyage de Chihiro", 2001))))
+        // Titre identique mais trois ans d'écart : sans doute un autre film.
+        assertNull(ImportMatcher.best("Solaris", 1975, listOf(dto(4, "Autre", 1971), dto(5, "Solaris", 1972))))
+    }
+
+    @Test
+    fun matcherAcceptsTheSameTitleTwoYearsOff() {
+        // Année de tournage sur IMDb, sortie plus tard ailleurs : même titre, deux ans d'écart.
+        assertEquals(7L, ImportMatcher.best("Solaris", 1974, listOf(dto(6, "Autre", 1974), dto(7, "Solaris", 1972)))?.id)
     }
 
     @Test
