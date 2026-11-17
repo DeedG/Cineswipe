@@ -39,7 +39,6 @@
     <string name="discover_loading_series">Finding shows…</string>
     <string name="discover_empty_title_series">No show found</string>
     <string name="discover_empty_message_series">No unseen show matches these filters.</string>
-    <string name="discover_census_message_series">Find every show you’ve seen, in a few taps.</string>
     <string name="discover_tonight_message_series">What to watch from your shows to watch</string>
     <string name="discover_length_series">Episode length</string>
     <string name="tonight_length_short_series">≤ 30 min</string>
@@ -170,33 +169,9 @@
     </plurals>
 
     <!-- TV mode welcome (first arrival) and TV demo -->
-    <string name="welcome_tagline_series">TV mode: the shows you’ve seen, where you’re at, picks that feel like you and a ranking built from duels. A world of its own, your movies don’t change a thing.</string>
-    <string name="welcome_recos_body_series">Swipe left if you’ve seen the show, right to keep it for later (or request it from Seerr or Sonarr, the whole show or a few seasons).</string>
-    <string name="welcome_arena_body_series">Two shows, you pick your favorite: your TV ranking computes itself, apart from your movies.</string>
-    <string name="welcome_census_body_series">Find the shows you’ve seen in a few taps, and say where you’re at: finished, in progress, random episodes or dropped.</string>
-    <string name="welcome_demo_note_series">A step-by-step tour, in a demo with the 100 most-watched shows and a fake profile that has already seen about twenty. Nothing is saved, and you’ll find it again in the settings.</string>
     <string name="settings_demo_body_series">You’re exploring TV mode with the 100 most-watched shows and a fake profile. Nothing is saved: when you leave, your real data is back.</string>
-    <string name="tuto_intro_title_series">Welcome to the TV demo</string>
-    <string name="tuto_intro_body_series">In two minutes, we’ll tour TV mode with a fake profile that has already seen about twenty shows (some finished, others in progress or dropped) and a fake Seerr. Try anything you like: nothing is saved.</string>
-    <string name="tuto_reco_body_series">One card = one show chosen for you. The purple line under the poster says why: a show you liked, a creator, a great classic… The number of seasons and the episode length are under the title.</string>
-    <string name="tuto_watched_body_series">The show joins your seen shows (its details page then lets you say where you’re at: finished, in progress with the season, random episodes or dropped). Drag the card to the left.</string>
-    <string name="tuto_watchlist_body_series">It joins your watchlist. With Seerr or Sonarr, you then choose to request the whole show or only a few seasons, or just keep it on your watchlist.</string>
-    <string name="tuto_skip_body_series">The show goes by without changing anything. It may come back later, if your tastes change.</string>
-    <string name="tuto_actions_body_series">“Not for me” dismisses the show for good, “Trailer” opens the trailer on YouTube, and ⚡ chains picks from this show. Tap the poster to open the details: seasons, progress, current season.</string>
-    <string name="tuto_arena_body_series">Two shows you’ve seen face off. Tap the one you prefer.</string>
-    <string name="tuto_census_open_body_series">The catch-up scrolls through the shows you’re most likely to have seen. Open it.</string>
-    <string name="tuto_census_tap_body_series">One tap: finished. Two: in progress. Three: random episodes (watched here and there, on TV). Four: dropped. A long press also offers “watchlist” or the show’s details.</string>
-    <string name="tuto_census_next_body_series">“Next” saves the page. Shows without an answer become “not seen”, with no effect on your picks. Those put on your watchlist offer their request, season by season.</string>
-    <string name="tuto_census_mode_body_series">This button switches to cards, with the same gestures as the picks. The filters at the top target a period or French shows.</string>
-    <string name="tuto_search_body_series">Type a title: results come as cards, with the same gestures as the picks. Type a name: actors and creators show up, with all their shows. In the demo, it covers the sandbox’s 100 shows.</string>
-    <string name="tuto_profile_body_series">Your counters open your TV library (“In progress” filter, and swipe from one details page to the next) or the duel history. Further down: your tastes in numbers, your year in review, your own lists and your Hall of Fame.</string>
-    <string name="tuto_settings_body_series">The Movies | TV switch, your TMDB key (the same for both), your homelab (Plex, Jellyfin to know where you’re at; Seerr or Sonarr for requests) and the backup of your data.</string>
-    <string name="tuto_end_body_series">Keep exploring the demo freely, or leave it to get back to your shows. “Tour”, in the banner, restarts the tour. Outside the demo, the Movies | TV switch at the top of the screens takes you back to movies.</string>
 
     <!-- Texts that talked about movies (found in the TV demo) -->
-    <string name="tuto_watched_title_series">Seen it? Swipe left</string>
-    <string name="tuto_census_open_title_series">Find the shows you’ve seen</string>
-    <string name="tuto_census_tap_title_series">Tap the ones you’ve seen</string>
     <plurals name="census_next_unseen_series">
         <item quantity="one">Next · %d not seen</item>
         <item quantity="other">Next · %d not seen</item>
@@ -276,4 +251,20 @@
     <string name="friends_common_series">%1$d shows seen by both of you</string>
     <string name="friends_verdict_twins_series">TV twins</string>
     <string name="friends_share_text_series">Compare your TV tastes with mine in CineSwipe: TV mode › Profile › Compare with a friend › Scan, then paste this code (or share it straight to CineSwipe).</string>
+
+    <!-- New users' path, in TV mode -->
+    <string name="welcome_tagline_series">TV mode: find the shows you’ve seen, rank them in duels, and get picks that feel like you. A world of its own, your movies don’t change a thing.</string>
+    <string name="welcome_note_series">Allow a few minutes for the first two steps. Your shows stay on your phone.</string>
+    <string name="welcome_import_series">I already have a list (backup, IMDb, Trakt)</string>
+    <string name="journey_intro_series">CineSwipe picks from what you’ve seen and liked. Two quick steps to go, and your TV picks will really be yours.</string>
+    <string name="journey_census_title_series">Find the shows you’ve seen</string>
+    <string name="journey_census_body_series">Tap the posters of the shows you’ve already seen, finished or not.</string>
+    <string name="journey_census_count_series">%1$d of %2$d shows seen</string>
+    <string name="journey_arena_body_series">Two shows, you pick your favorite: your stars compute themselves.</string>
+    <string name="journey_recos_body_series">Shows chosen for you, based on your tastes.</string>
+    <string name="journey_cta_census_series">Find my shows</string>
+    <string name="journey_hint_census_grid_series">Tap the shows you’ve seen (one tap: finished, two: in progress), then “Next” at the bottom.</string>
+    <string name="journey_hint_census_cards_series">Swipe left if you’ve seen it, right to keep it for later, up otherwise.</string>
+    <string name="journey_hint_arena_series">Tap the show you prefer.</string>
+    <string name="recos_hint_body_series">Swipe left if you’ve already seen the show, right to keep it for later, up to move to the next one.</string>
 </resources>

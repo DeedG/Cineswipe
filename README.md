@@ -67,8 +67,10 @@ Android 8.0 ou plus récent.
 3. **Découvrir** : les recos apprennent de ton classement et de tes swipes ; « Ce soir »
    propose quoi regarder parmi ta liste, ce qui est sur ton serveur et tes séries en cours.
 
-Tant que l'appli te connaît peu (peu de titres vus, peu de duels), les recos te le disent et te
-proposent de recenser ou de jouer quelques duels — une fois, sans insister.
+L'appli suit cet ordre : au premier lancement, elle t'accompagne du recensement (30 films vus)
+à l'Arène (20 duels), et les recos s'ouvrent ensuite. Chaque écran affiche l'étape en cours et son
+avancement ; un lien permet de voir les recos sans attendre. Les onglets sont rangés pareil :
+Recenser · Arène · **Recos** · Recherche · Profil.
 
 ## Fonctionnalités
 
@@ -110,7 +112,7 @@ proposent de recenser ou de jouer quelques duels — une fois, sans insister.
 
 - **Recherche** en cartes swipables, et des **acteurs, réalisateurs et créateurs** dès qu'on tape
   un nom.
-- **Découverte** : genre, période, note minimale, durée (d'un film ou d'un épisode), « dispo sur
+- **Découverte** (bouton en haut des recos) : genre, période, note minimale, durée (d'un film ou d'un épisode), « dispo sur
   mon serveur ».
 - **Ce soir** : tes séries en cours d'abord (« À reprendre », saison suivante d'un toucher), puis ta
   liste et ton serveur, triés selon tes goûts. Boutons **Plex** et **Jellyfin**, ou **où le
@@ -146,8 +148,8 @@ proposent de recenser ou de jouer quelques duels — une fois, sans insister.
 
 ### Démo
 
-- **Tuto et démo** dans un bac à sable (les 100 films, ou les 100 séries, les plus vus, un profil
-  fictif, un homelab fictif) : rien n'est enregistré. « Montre-moi » fait le geste à ta place.
+- **Démo** dans un bac à sable, depuis les réglages (les 100 films, ou les 100 séries, les plus
+  vus, un profil fictif, un homelab fictif) : rien n'est enregistré.
 
 ## Mode séries
 
@@ -194,10 +196,10 @@ Tout est optionnel et chaque service est indépendant. Réglages › Homelab :
 
 ## Premiers pas
 
-1. **Essaie la démo** depuis l'accueil (ou passe directement à la suite).
-2. **Retrouve ce que tu as vu** : importe (Letterboxd, Trakt, IMDb, CSV) et/ou fais un tour de
-   recensement.
-3. **Joue quelques duels** dans l'Arène : vers 8 duels par titre, le classement est fiable.
+1. **Retrouve ce que tu as vu** : l'accueil mène au recensement (ou à l'import si tu as déjà une
+   liste : sauvegarde, Letterboxd, Trakt, IMDb, CSV).
+2. **Joue quelques duels** dans l'Arène : vers 8 duels par titre, le classement est fiable.
+3. **Les recos s'ouvrent** dès que l'appli te connaît assez.
 4. Si tu as un homelab, connecte tes services dans Réglages › Homelab.
 
 Tu peux mettre **ta propre clé TMDB** (Réglages › Clé API TMDB) : elle remplace celle de l'appli.
@@ -243,7 +245,7 @@ app/src/main/java/io/github/deedg/cineswipe/
 │   ├── demo/      Catalogues de la démo, TMDB et homelab simulés
 │   └── repository/
 ├── widget/        Widgets Glance
-└── ui/            Écrans Compose, tuto de la démo
+└── ui/            Écrans Compose, parcours des nouveaux utilisateurs
 ```
 
 ### Construire et tester

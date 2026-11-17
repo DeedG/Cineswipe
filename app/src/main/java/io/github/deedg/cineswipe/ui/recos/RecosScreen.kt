@@ -7,8 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,6 +37,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.deedg.cineswipe.AppContainer
 import io.github.deedg.cineswipe.R
 import io.github.deedg.cineswipe.data.repository.FeedRequest
+import io.github.deedg.cineswipe.domain.journey.JourneyState
+import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.domain.reco.RecoNudge
 import io.github.deedg.cineswipe.domain.reco.RecoNudges
 import io.github.deedg.cineswipe.domain.reco.RecoStrength
@@ -47,12 +51,15 @@ import io.github.deedg.cineswipe.ui.feed.CardFeed
 import io.github.deedg.cineswipe.ui.feed.CardFeedScreen
 import io.github.deedg.cineswipe.ui.feed.FeedTexts
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.journey.JourneyScreen
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -83,8 +90,31 @@ class RecosViewModel(private val container: AppContainer) : ViewModel() {
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     }
 
+    /** Parcours Recenser → Arène → Recos ; null le temps de le lire. Tant qu'il n'est pas fait, les recos attendent. */
+    val journey: StateFlow<JourneyState?> =
+        container.journey.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Rappel des gestes, à la première ouverture des recos. */
+    val showHint: StateFlow<Boolean> = if (container.isDemo) {
+        flowOf(false).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    } else {
+        container.settings.recosHintSeen.map { !it }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    }
+
     init {
-        feed.start(FeedRequest.Recos)
+        // Les recos ne se chargent qu'une fois ouvertes (parcours fait, ou passé).
+        viewModelScope.launch {
+            container.journey.state.first { it.recosOpen }
+            feed.start(FeedRequest.Recos)
+        }
+    }
+
+    fun skipJourney() {
+        viewModelScope.launch { container.journey.skip() }
+    }
+
+    fun hintSeen() {
+        viewModelScope.launch { container.settings.setRecosHintSeen() }
     }
 
     fun reload() {
@@ -110,10 +140,32 @@ fun RecosRoute(
     onOpenTonight: () -> Unit = {},
     onOpenCensus: () -> Unit = {},
     onOpenArena: () -> Unit = {},
+    onOpenDiscover: () -> Unit = {},
 ) {
     val viewModel = cineViewModel { RecosViewModel(it) }
+    val journey by viewModel.journey.collectAsStateWithLifecycle()
+    val current = journey
+    if (current == null) {
+        Box(Modifier.fillMaxSize().background(CineColors.Black))
+        return
+    }
+    if (!current.recosOpen) {
+        JourneyScreen(
+            state = current,
+            onCensus = onOpenCensus,
+            onArena = onOpenArena,
+            onSkip = viewModel::skipJourney,
+            topEnd = { WorldSwitch(tabName = Tab.RECOS.name) },
+        )
+        return
+    }
     val state by viewModel.feed.state.collectAsStateWithLifecycle()
-    val nudge by viewModel.nudge.collectAsStateWithLifecycle()
+    val shownNudge by viewModel.nudge.collectAsStateWithLifecycle()
+    val showHint by viewModel.showHint.collectAsStateWithLifecycle()
+    // Parcours tout juste terminé : pas d'invitation à recenser ou à noter par-dessus (elle reste
+    // pour qui a passé le parcours, ou n'en a pas eu).
+    val journeyDone = current.step == JourneyStep.RECOS && current.watchedGoal > 0
+    val nudge = shownNudge.takeUnless { journeyDone }
     val toaster = LocalToaster.current
     val dismissedMessage = stringResource(R.string.reco_nudge_dismissed)
     DisposableEffect(viewModel) { onDispose { viewModel.feed.clearUndo() } }
@@ -127,7 +179,11 @@ fun RecosRoute(
             endTitle = stringResource(R.string.recos_end),
             endActionLabel = stringResource(R.string.recos_reload),
         ),
-        onAction = viewModel.feed::act,
+        onAction = { card, action ->
+            // Premier geste fait : le rappel des gestes a servi.
+            if (showHint) viewModel.hintSeen()
+            viewModel.feed.act(card, action)
+        },
         onShown = viewModel.feed::onCardShown,
         onLoadMore = viewModel.feed::loadMore,
         onRetry = viewModel.feed::retry,
@@ -137,34 +193,78 @@ fun RecosRoute(
         onOpenSettings = onOpenSettings,
         onEndAction = viewModel::reload,
         topStart = {
-            GlassPillButton(
-                text = stringResource(R.string.tonight_open),
-                icon = CineIcons.Moon,
-                onClick = onOpenTonight,
-                modifier = Modifier.testTag(RecosTestTags.TONIGHT),
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                GlassPillButton(
+                    text = stringResource(R.string.tonight_open),
+                    icon = CineIcons.Moon,
+                    onClick = onOpenTonight,
+                    modifier = Modifier.testTag(RecosTestTags.TONIGHT),
+                )
+                // La Découverte (recos par genre, années, note) n'a plus d'onglet : elle s'ouvre d'ici.
+                GlassIconButton(
+                    icon = CineIcons.Discover,
+                    contentDescription = stringResource(R.string.recos_discover),
+                    onClick = onOpenDiscover,
+                    modifier = Modifier.testTag(RecosTestTags.DISCOVER),
+                )
+            }
         },
         topEnd = { WorldSwitch(tabName = Tab.RECOS.name) },
         banner = {
+            // Le rappel des gestes passe après une invitation à recenser ou à noter.
+            AnimatedVisibility(visible = showHint && nudge == null, enter = fadeIn(), exit = fadeOut()) {
+                RecosHint(onClose = viewModel::hintSeen)
+            }
             AnimatedVisibility(visible = nudge != null, enter = fadeIn(), exit = fadeOut()) {
-                val current = nudge ?: return@AnimatedVisibility
+                val shown = nudge ?: return@AnimatedVisibility
                 RecoNudgeBanner(
-                    ui = current,
+                    ui = shown,
                     onFollow = {
-                        viewModel.followNudge(current.nudge)
-                        when (current.nudge) {
+                        viewModel.followNudge(shown.nudge)
+                        when (shown.nudge) {
                             RecoNudge.CENSUS -> onOpenCensus()
                             RecoNudge.DUELS -> onOpenArena()
                         }
                     },
                     onDismiss = {
-                        viewModel.dismissNudge(current.nudge)
+                        viewModel.dismissNudge(shown.nudge)
                         toaster.show(dismissedMessage)
                     },
                 )
             }
         },
     )
+}
+
+/** Rappel des gestes sur la première reco : il part au premier geste, ou sur « Compris ». */
+@Composable
+private fun RecosHint(onClose: () -> Unit) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Color(0xE6101010))
+            .border(1.dp, CineColors.Red.copy(alpha = 0.6f), shape)
+            .padding(start = 14.dp, top = 10.dp, end = 14.dp, bottom = 12.dp)
+            .testTag(RecosTestTags.HINT),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(stringResource(R.string.recos_hint_title), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.recos_hint_body), color = CineColors.TextSoft, fontSize = 13.sp, lineHeight = 18.sp)
+        Text(
+            stringResource(R.string.recos_hint_ok),
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(CineColors.Red)
+                .clickable(role = Role.Button, onClick = onClose)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .testTag(RecosTestTags.HINT_OK),
+        )
+    }
 }
 
 /** Bandeau des recos faibles : pourquoi, et un bouton pour y remédier. */
@@ -233,6 +333,9 @@ private fun RecoNudgeBanner(ui: RecoNudgeUi, onFollow: () -> Unit, onDismiss: ()
 
 object RecosTestTags {
     const val TONIGHT = "recos_tonight"
+    const val DISCOVER = "recos_discover"
+    const val HINT = "recos_hint"
+    const val HINT_OK = "recos_hint_ok"
     const val NUDGE_ACTION = "recos_nudge_action"
     const val NUDGE_DISMISS = "recos_nudge_dismiss"
     fun nudge(nudge: RecoNudge) = "recos_nudge_${nudge.name.lowercase()}"

@@ -74,24 +74,27 @@ sealed interface Route : NavKey {
     @Serializable data class HomelabServiceSettings(val service: HomelabService) : Route
 }
 
-/** Onglets de la barre du bas, dans l'ordre de la V4. */
+/**
+ * Onglets de la barre du bas, dans l'ordre du parcours : on recense, on note en duels, puis les
+ * recos (au centre, mises en avant). La Découverte s'ouvre depuis les recos.
+ */
 enum class Tab(val route: Route, @param:StringRes val label: Int, val icon: () -> ImageVector) {
-    RECOS(Route.Recos, R.string.tab_recos, { CineIcons.Recos }),
+    CENSUS(Route.Census, R.string.tab_census, { CineIcons.Grid }),
     ARENA(Route.Arena, R.string.tab_arena, { CineIcons.Arena }),
+    RECOS(Route.Recos, R.string.tab_recos, { CineIcons.Recos }),
     SEARCH(Route.Search, R.string.tab_search, { CineIcons.Search }),
-    DISCOVER(Route.Discover, R.string.tab_discover, { CineIcons.Discover }),
     PROFILE(Route.Profile, R.string.tab_profile, { CineIcons.Profile }),
 }
 
-/** Onglet de départ : les Recos, comme en V4. */
+/** Écran de départ : les Recos (ou le parcours qui y mène, tant qu'il n'est pas fait). */
 val StartRoute: Route = Route.Recos
 
 val Route.tab: Tab
     get() = when (this) {
-        Route.Recos, is Route.Lightning, Route.Tonight -> Tab.RECOS
+        Route.Recos, is Route.Lightning, Route.Tonight, Route.Discover -> Tab.RECOS
+        Route.Census -> Tab.CENSUS
         Route.Arena, Route.SeasonArena -> Tab.ARENA
         Route.Search, is Route.Shared -> Tab.SEARCH
-        Route.Discover, Route.Census -> Tab.DISCOVER
         Route.Profile, is Route.Library, Route.DuelHistory, Route.Settings, Route.Homelab, is Route.HomelabServiceSettings,
         is Route.MovieDetail, Route.Diagnostics, Route.TmdbKey, Route.Import, is Route.Person, Route.Stats,
         is Route.UserList, Route.Retro, is Route.Friends,
@@ -99,7 +102,7 @@ val Route.tab: Tab
     }
 
 val Route.showsBottomBar: Boolean
-    get() = this !is Route.MovieDetail && this != Route.Census && this != Route.TmdbKey
+    get() = this !is Route.MovieDetail && this != Route.TmdbKey
 
 /** Manipulations de la pile de navigation. Elle n'est jamais vidée complètement. */
 class Navigator(private val backStack: NavBackStack<NavKey>) {

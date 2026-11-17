@@ -91,11 +91,6 @@ import io.github.deedg.cineswipe.ui.components.RatingPill
 import io.github.deedg.cineswipe.ui.components.StatusBadge
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.DEMO_SWIPE_DISTANCE
-import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
-import io.github.deedg.cineswipe.ui.tutorial.TutorialEvent
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.abs
@@ -250,19 +245,6 @@ fun SwipeableMovieCard(
                 dismissProgress.animateTo(1f, tween(200))
                 currentOnAction(CardAction.DISMISS)
             }
-        }
-    }
-
-    // « Montre-moi » du tuto : la carte glisse sous le doigt de la main, puis part comme un vrai swipe.
-    val tutorial = LocalTutorial.current
-    val demoDistancePx = with(density) { DEMO_SWIPE_DISTANCE.toPx() }
-    LaunchedEffect(tutorial, highlight, card.tmdbId) {
-        if (tutorial == null || !highlight) return@LaunchedEffect
-        tutorial.handle(TutorialEvent.RECO_WATCHED, TutorialEvent.RECO_WATCHLIST) { request ->
-            if (committed) return@handle
-            val direction = if (request.event == TutorialEvent.RECO_WATCHED) -1 else 1
-            offset.animateTo(direction * demoDistancePx, tween(request.moveMs.coerceAtLeast(1), easing = FastOutSlowInEasing))
-            settle(0f)
         }
     }
 
@@ -424,8 +406,7 @@ private fun CardContent(
                             modifier = Modifier
                                 .aspectRatio(2f / 3f, matchHeightConstraintsFirst = true)
                                 .shadow(30.dp, RoundedCornerShape(12.dp))
-                                .clip(RoundedCornerShape(12.dp))
-                                .tutorialTarget(TutorialTarget.RECO_POSTER, highlight),
+                                .clip(RoundedCornerShape(12.dp)),
                         )
                     }
                 }
@@ -547,8 +528,7 @@ private fun CardInfo(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 10.dp)
-                .tutorialTarget(TutorialTarget.RECO_ACTIONS, highlight),
+                .padding(top = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {

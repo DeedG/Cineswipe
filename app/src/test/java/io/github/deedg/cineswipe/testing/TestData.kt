@@ -71,4 +71,24 @@ object TestData {
             )
         }
     }
+
+    /** [count] films vus, chacun avec [duels] duels hérités (deux côtés par duel) : pour atteindre les objectifs du parcours. */
+    suspend fun seedWatched(database: CineSwipeDatabase, count: Int, duels: Int, now: Long = System.currentTimeMillis()) {
+        val dao = database.libraryDao()
+        repeat(count) { index ->
+            val id = 900_000L + index
+            dao.upsertMovie(MovieEntity(tmdbId = id, title = "Film vu $index", year = 2000, posterPath = null, overview = "", director = "Réalisatrice", fetchedAt = now))
+            dao.upsertUserMovie(
+                UserMovieEntity(
+                    tmdbId = id,
+                    status = WatchStatus.WATCHED,
+                    watchedAt = now,
+                    watchedSource = WatchSource.MANUAL,
+                    duels = duels,
+                    priorDuels = duels,
+                    updatedAt = now,
+                ),
+            )
+        }
+    }
 }

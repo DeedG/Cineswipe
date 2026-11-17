@@ -16,6 +16,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.deedg.cineswipe.testing.TestData
 import io.github.deedg.cineswipe.ui.arena.ArenaTestTags
+import io.github.deedg.cineswipe.ui.journey.JourneyTestTags
+import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.profile.ProfileTestTags
 import io.github.deedg.cineswipe.ui.settings.TmdbKeyTestTags
 import io.github.deedg.cineswipe.ui.welcome.WelcomeTestTags
@@ -63,6 +66,7 @@ class AppSmokeTest {
         runBlocking {
             app.container.settings.setTmdbApiKey(null)
             app.container.settings.setOnboardingDone(false)
+            app.container.settings.setJourneySkipped(false)
         }
     }
 
@@ -72,19 +76,28 @@ class AppSmokeTest {
             // Premier lancement : l'accueil, puis « Commencer ».
             compose.waitUntil(TIMEOUT_MS) { compose.onAllNodesWithTag(WelcomeTestTags.START).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag(WelcomeTestTags.START).performClick()
-            // Sans clé, le guide de la clé TMDB s'ouvre d'emblée ; « Plus tard » ramène aux Recos.
+            // Sans clé, le guide de la clé TMDB s'ouvre d'emblée ; « Plus tard » ramène au recensement,
+            // première étape du parcours.
             compose.waitForTag(TmdbKeyTestTags.LATER)
             compose.waitForText("Ta clé TMDB")
             compose.onNodeWithTag(TmdbKeyTestTags.LATER).performScrollTo().performClick()
-            // Les Recos ouvrent l'appli et réclament la clé TMDB.
+            compose.waitForText("Étape 1 sur 3")
+            compose.waitForText("0 sur 30 films vus")
             compose.waitForText("Ajoute ta clé TMDB")
+
+            // Les recos attendent la fin du parcours : ses trois étapes, puis « voir quand même ».
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.RECOS)).performClick()
+            compose.waitForTag(JourneyTestTags.SCREEN)
+            compose.waitForText("Tes recos se préparent")
+            compose.waitForText("Recenser mes films")
+            compose.onNodeWithTag(JourneyTestTags.SKIP).performScrollTo().performClick()
+            compose.waitForText("Ajoute ta clé TMDB")
+            assertTrue(compose.onAllNodesWithTag(JourneyTestTags.SCREEN).fetchSemanticsNodes().isEmpty())
 
             compose.onNodeWithText("Arène").performClick()
             compose.waitForText("Pas assez de films pour combattre")
             compose.onNodeWithText("Recherche").performClick()
             compose.waitForText("Rechercher")
-            compose.onNodeWithText("Découverte").performClick()
-            compose.waitForText("Ajoute ta clé TMDB")
 
             compose.onNodeWithText("Profil").performClick()
             compose.waitForText("Hall of Fame")
@@ -106,8 +119,11 @@ class AppSmokeTest {
         runBlocking { TestData.seed(app.container.database) }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.waitForText("Ajoute ta clé TMDB")
+            // Trop peu de films vus : l'appli ouvre sur le parcours, et l'Arène rappelle l'étape en cours.
+            compose.waitForTag(JourneyTestTags.SCREEN)
+            compose.waitForText("Continuer le recensement")
             compose.onNodeWithText("Arène").performClick()
+            compose.waitForTag(JourneyTestTags.BANNER)
 
             // Un vote puis son annulation : aucun duel ne doit rester enregistré.
             compose.waitForTag(ArenaTestTags.FIGHTER_A)

@@ -50,8 +50,6 @@ import io.github.deedg.cineswipe.ui.library.LibraryFilter
 import io.github.deedg.cineswipe.ui.lists.ListsShelfRoute
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import io.github.deedg.cineswipe.ui.update.UpdateBanner
 
 @Composable
@@ -124,7 +122,7 @@ fun ProfileScreen(
                     icon = CineIcons.Settings,
                     contentDescription = stringResource(R.string.profile_settings),
                     onClick = onOpenSettings,
-                    modifier = Modifier.tutorialTarget(TutorialTarget.PROFILE_SETTINGS),
+                    modifier = Modifier,
                 )
             },
         )
@@ -136,8 +134,7 @@ fun ProfileScreen(
             loading = state.loading,
             onClick = { onOpenLibrary(LibraryFilter.WATCHED) },
             modifier = Modifier
-                .testTag(ProfileTestTags.WATCHED)
-                .tutorialTarget(TutorialTarget.PROFILE_STATS),
+                .testTag(ProfileTestTags.WATCHED),
         )
         StatCard(
             icon = CineIcons.Arena,

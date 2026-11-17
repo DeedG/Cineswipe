@@ -73,6 +73,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.domain.journey.JourneyState
+import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.data.repository.CensusItem
 import io.github.deedg.cineswipe.data.repository.CensusProgress
 import io.github.deedg.cineswipe.domain.TmdbImageSize
@@ -88,12 +90,12 @@ import io.github.deedg.cineswipe.ui.components.GlassPillButton
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
 import io.github.deedg.cineswipe.ui.components.SeasonRequestSheet
+import io.github.deedg.cineswipe.ui.components.WorldSwitch
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.journey.JourneyBanner
+import io.github.deedg.cineswipe.ui.journey.journeyState
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
-import io.github.deedg.cineswipe.ui.tutorial.TutorialEvent
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -110,7 +112,7 @@ object CensusTestTags {
 }
 
 @Composable
-fun CensusRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit, onOpenSettings: () -> Unit) {
+fun CensusRoute(onOpenMovie: (Long) -> Unit, onOpenSettings: () -> Unit, onOpenArena: () -> Unit = {}) {
     val viewModel = cineViewModel { CensusViewModel(it.census, it.settings, series = it.kind.isSeries, homelab = it.homelab, tmdb = it.tmdb) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showHelp by rememberSaveable { mutableStateOf(false) }
@@ -140,37 +142,13 @@ fun CensusRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit, onOpenSettings:
             position = if (state.seasonQueueTotal > 1) resources.getString(R.string.season_request_queue, done + 1, state.seasonQueueTotal) else null,
         )
     }
-    val tutorial = LocalTutorial.current
-    // « Montre-moi » du tuto : la main touche l'affiche du milieu, puis « Suivant ».
-    LaunchedEffect(tutorial) {
-        tutorial?.handle(TutorialEvent.CENSUS_TAPPED, TutorialEvent.CENSUS_NEXT) { request ->
-            val current = viewModel.state.value
-            if (current.phase != CensusPhase.READY) return@handle
-            when (request.event) {
-                TutorialEvent.CENSUS_TAPPED -> current.items.getOrNull(minOf(GRID_CENTER, current.items.lastIndex))?.let { item ->
-                    tutorial.event(TutorialEvent.CENSUS_TAPPED)
-                    viewModel.tap(item.movie.tmdbId)
-                }
-                TutorialEvent.CENSUS_NEXT -> if (!current.busy) {
-                    tutorial.event(TutorialEvent.CENSUS_NEXT)
-                    viewModel.nextPage()
-                }
-                else -> Unit
-            }
-        }
-    }
     CensusScreen(
         state = state,
-        onBack = onBack,
-        onTap = { id ->
-            tutorial?.event(TutorialEvent.CENSUS_TAPPED)
-            viewModel.tap(id)
-        },
+        journey = journeyState(),
+        onJourneyGo = { onOpenArena() },
+        onTap = viewModel::tap,
         onChoose = viewModel::choose,
-        onNextPage = {
-            tutorial?.event(TutorialEvent.CENSUS_NEXT)
-            viewModel.nextPage()
-        },
+        onNextPage = viewModel::nextPage,
         onAnswer = viewModel::answer,
         onUndo = viewModel::undo,
         onFilter = viewModel::setFilter,
@@ -186,7 +164,8 @@ fun CensusRoute(onBack: () -> Unit, onOpenMovie: (Long) -> Unit, onOpenSettings:
 @Composable
 fun CensusScreen(
     state: CensusUiState,
-    onBack: () -> Unit,
+    journey: JourneyState? = null,
+    onJourneyGo: (JourneyStep) -> Unit = {},
     onTap: (Long) -> Unit,
     onChoose: (Long, CensusChoice) -> Unit,
     onNextPage: () -> Unit,
@@ -203,11 +182,20 @@ fun CensusScreen(
         Modifier
             .fillMaxSize()
             .background(CineColors.Black)
-            .statusBarsPadding()
-            .navigationBarsPadding(),
+            .statusBarsPadding(),
     ) {
-        CensusHeader(state = state, onBack = onBack, onToggleMode = onToggleMode, onHelp = onHelp)
-        FilterRow(selected = state.filter, onFilter = onFilter)
+        CensusHeader(state = state, onHelp = onHelp)
+        // Parcours des nouveaux utilisateurs : l'étape, l'avancement et la consigne de l'écran.
+        if (journey != null) {
+            JourneyBanner(
+                state = journey,
+                screen = JourneyStep.CENSUS,
+                hint = stringResource(if (state.cardsMode) R.string.journey_hint_census_cards else R.string.journey_hint_census_grid),
+                onGo = onJourneyGo,
+                modifier = Modifier.padding(start = 15.dp, end = 15.dp, top = 4.dp, bottom = 6.dp),
+            )
+        }
+        FilterRow(selected = state.filter, cardsMode = state.cardsMode, onToggleMode = onToggleMode, onFilter = onFilter)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (state.phase) {
                 CensusPhase.LOADING -> Column(
@@ -258,28 +246,15 @@ fun CensusScreen(
 
 
 @Composable
-private fun CensusHeader(state: CensusUiState, onBack: () -> Unit, onToggleMode: () -> Unit, onHelp: () -> Unit) {
+private fun CensusHeader(state: CensusUiState, onHelp: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            GlassIconButton(
-                icon = CineIcons.Back,
-                contentDescription = stringResource(R.string.action_back),
-                onClick = onBack,
-                modifier = Modifier.tutorialTarget(TutorialTarget.BACK),
-            )
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.census_title), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                 state.progress?.let { ProgressText(it, state) }
             }
-            GlassIconButton(
-                icon = if (state.cardsMode) CineIcons.Grid else CineIcons.Layers,
-                contentDescription = stringResource(if (state.cardsMode) R.string.census_mode_grid else R.string.census_mode_cards),
-                onClick = onToggleMode,
-                modifier = Modifier
-                    .testTag(CensusTestTags.MODE)
-                    .tutorialTarget(TutorialTarget.CENSUS_MODE),
-            )
             GlassIconButton(icon = CineIcons.Help, contentDescription = stringResource(R.string.census_help), onClick = onHelp)
+            WorldSwitch(tabName = Tab.CENSUS.name)
         }
         val progress = state.progress
         val universe = progress?.universe
@@ -308,14 +283,29 @@ private fun ProgressText(progress: CensusProgress, state: CensusUiState) {
 }
 
 @Composable
-private fun FilterRow(selected: CensusFilter, onFilter: (CensusFilter) -> Unit) {
+private fun FilterRow(selected: CensusFilter, cardsMode: Boolean, onToggleMode: () -> Unit, onFilter: (CensusFilter) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 15.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Grille ou cartes : les deux façons de recenser, écrites en toutes lettres.
+        CineChip(
+            label = stringResource(R.string.census_mode_grid_short),
+            selected = !cardsMode,
+            onClick = { if (cardsMode) onToggleMode() },
+            modifier = if (cardsMode) Modifier.testTag(CensusTestTags.MODE) else Modifier,
+        )
+        CineChip(
+            label = stringResource(R.string.census_mode_cards_short),
+            selected = cardsMode,
+            onClick = { if (!cardsMode) onToggleMode() },
+            modifier = if (!cardsMode) Modifier.testTag(CensusTestTags.MODE) else Modifier,
+        )
+        Box(Modifier.size(width = 1.dp, height = 22.dp).background(CineColors.BorderStrong))
         CensusFilter.entries.forEach { filter ->
             CineChip(label = stringResource(filter.label), selected = filter == selected, onClick = { onFilter(filter) })
         }
@@ -362,7 +352,7 @@ private fun GridContent(
         val scroll = if (cellWidth > minOf(byWidth, byHeight)) Modifier.verticalScroll(rememberScrollState()) else Modifier
         Column(
             verticalArrangement = Arrangement.spacedBy(GridRowSpacing),
-            modifier = scroll.tutorialTarget(TutorialTarget.CENSUS_GRID),
+            modifier = scroll,
         ) {
             state.items.chunked(GRID_COLUMNS).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(GridSpacing)) {
@@ -546,8 +536,7 @@ private fun GridActions(state: CensusUiState, onNextPage: () -> Unit, onUndo: ()
             enabled = !state.busy,
             modifier = Modifier
                 .weight(1f)
-                .testTag(CensusTestTags.NEXT)
-                .tutorialTarget(TutorialTarget.CENSUS_NEXT),
+                .testTag(CensusTestTags.NEXT),
         )
     }
 }

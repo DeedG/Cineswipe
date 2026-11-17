@@ -39,7 +39,6 @@
     <string name="discover_loading_series">Recherche des séries…</string>
     <string name="discover_empty_title_series">Aucune série trouvée</string>
     <string name="discover_empty_message_series">Aucune série non vue ne correspond à ces filtres.</string>
-    <string name="discover_census_message_series">Retrouve toutes les séries que tu as vues, en quelques touchers.</string>
     <string name="discover_tonight_message_series">Que regarder parmi tes séries à voir</string>
     <string name="discover_length_series">Durée d’un épisode</string>
     <string name="tonight_length_short_series">≤ 30 min</string>
@@ -178,33 +177,9 @@
     </plurals>
 
     <!-- Accueil du mode séries (première arrivée) et démo des séries. -->
-    <string name="welcome_tagline_series">Le mode séries : tes séries vues, où tu en es, des recos qui te ressemblent et un classement en duels. Un monde à part, tes films n’y changent rien.</string>
-    <string name="welcome_recos_body_series">Glisse à gauche si tu as vu la série, à droite pour la garder pour plus tard (ou la demander à Seerr ou Sonarr, toute la série ou quelques saisons).</string>
-    <string name="welcome_arena_body_series">Deux séries, tu choisis ta préférée : ton classement des séries se calcule tout seul, à part de celui des films.</string>
-    <string name="welcome_census_body_series">Retrouve tes séries vues en quelques touchers, et dis où tu en es : finie, en cours, par épisodes ou décrochée.</string>
-    <string name="welcome_demo_note_series">Un tuto pas à pas, dans une démo avec les 100 séries les plus vues et un profil fictif qui en a déjà vu une vingtaine. Rien n’y est enregistré, et tu le retrouves dans les réglages.</string>
     <string name="settings_demo_body_series">Tu explores le mode séries avec les 100 séries les plus vues et un profil fictif. Rien n’est enregistré : en quittant, tu retrouves tes vraies données.</string>
-    <string name="tuto_intro_title_series">Bienvenue dans la démo des séries</string>
-    <string name="tuto_intro_body_series">En deux minutes, on fait le tour du mode séries avec un profil fictif qui a déjà vu une vingtaine de séries (certaines finies, d’autres en cours ou décrochées) et un Seerr fictif. Essaie tout ce que tu veux : rien n’est enregistré.</string>
-    <string name="tuto_reco_body_series">Une carte = une série choisie pour toi. La ligne violette sous l’affiche dit pourquoi : une série que tu as aimée, un créateur, un grand classique… Le nombre de saisons et la durée d’un épisode sont sous le titre.</string>
-    <string name="tuto_watched_body_series">La série rejoint tes séries vues (sa fiche permet ensuite de dire où tu en es : finie, en cours avec la saison, par épisodes ou décrochée). Fais glisser la carte vers la gauche.</string>
-    <string name="tuto_watchlist_body_series">Elle rejoint ta liste À voir. Avec Seerr ou Sonarr, tu choisis ensuite de demander toute la série ou seulement quelques saisons, ou de la garder juste à voir.</string>
-    <string name="tuto_skip_body_series">La série passe sans rien changer. Elle pourra revenir plus tard, si tes goûts évoluent.</string>
-    <string name="tuto_actions_body_series">« Pas pour moi » écarte la série pour de bon, « Trailer » ouvre la bande-annonce sur YouTube, et ⚡ enchaîne des recos à partir de cette série. Touche l’affiche pour ouvrir la fiche : saisons, avancement, saison en cours.</string>
-    <string name="tuto_arena_body_series">Deux séries que tu as vues s’affrontent. Touche celle que tu préfères.</string>
-    <string name="tuto_census_open_body_series">Le recensement fait défiler les séries que tu as le plus de chances d’avoir vues. Ouvre-le.</string>
-    <string name="tuto_census_tap_body_series">Un toucher : finie. Deux : en cours. Trois : par épisodes (vue au hasard, à la télé). Quatre : décrochée. Un appui long propose aussi « à voir » ou la fiche de la série.</string>
-    <string name="tuto_census_next_body_series">« Suivant » enregistre la page. Les séries sans réponse passent en « pas vue », sans effet sur tes recos. Celles mises à voir te proposent leur demande, saison par saison.</string>
-    <string name="tuto_census_mode_body_series">Ce bouton passe en cartes, avec les mêmes gestes que les recos. Les filtres en haut ciblent une période ou les séries françaises.</string>
-    <string name="tuto_search_body_series">Tape un titre : les résultats arrivent en cartes, avec les mêmes gestes que les recos. Tape un nom : les acteurs et créateurs s’affichent, avec toutes leurs séries. Dans la démo, elle porte sur les 100 séries du bac à sable.</string>
-    <string name="tuto_profile_body_series">Tes compteurs ouvrent ta bibliothèque des séries (filtre « En cours », et glisse d’une fiche à l’autre) ou l’historique des duels. Plus bas : tes goûts en chiffres, ta rétro, tes listes perso et ton Hall of Fame.</string>
-    <string name="tuto_settings_body_series">Le switch Films | Séries, ta clé TMDB (la même pour les deux), ton homelab (Plex, Jellyfin pour savoir où tu en es ; Seerr ou Sonarr pour les demandes) et la sauvegarde de tes données.</string>
-    <string name="tuto_end_body_series">Continue d’explorer la démo librement, ou quitte-la pour revenir à tes séries. « Tuto », dans le bandeau, relance la visite. Hors démo, le switch Films | Séries, en haut des écrans, te ramène aux films.</string>
 
     <!-- Textes restés au masculin ou aux films (relevés sur la démo des séries). -->
-    <string name="tuto_watched_title_series">Déjà vue ? Glisse à gauche</string>
-    <string name="tuto_census_open_title_series">Retrouve tes séries vues</string>
-    <string name="tuto_census_tap_title_series">Touche celles que tu as vues</string>
     <plurals name="census_next_unseen_series">
         <item quantity="one">Suivant · %d pas vue</item>
         <item quantity="many">Suivant · %d pas vues</item>
@@ -288,4 +263,20 @@
     <string name="friends_common_series">%1$d séries vues tous les deux</string>
     <string name="friends_verdict_twins_series">des jumeaux de séries</string>
     <string name="friends_share_text_series">Compare tes goûts en séries avec les miens dans CineSwipe : mode séries › Profil › Comparer avec un ami › Scanner, puis colle ce code (ou partage-le directement vers CineSwipe).</string>
+
+    <!-- Parcours des nouveaux utilisateurs, en mode séries -->
+    <string name="welcome_tagline_series">Le mode séries : retrouve les séries que tu as vues, classe-les en duels, et reçois des recos qui te ressemblent. Un monde à part, tes films ne bougent pas.</string>
+    <string name="welcome_note_series">Compte quelques minutes pour les deux premières étapes. Tes séries restent sur ton téléphone.</string>
+    <string name="welcome_import_series">J’ai déjà une liste (sauvegarde, IMDb, Trakt)</string>
+    <string name="journey_intro_series">CineSwipe recommande d’après ce que tu as vu et aimé. Encore deux étapes rapides, et tes recos de séries seront vraiment les tiennes.</string>
+    <string name="journey_census_title_series">Recense tes séries vues</string>
+    <string name="journey_census_body_series">Touche les affiches des séries que tu as déjà vues, finies ou non.</string>
+    <string name="journey_census_count_series">%1$d sur %2$d séries vues</string>
+    <string name="journey_arena_body_series">Deux séries, tu choisis ta préférée : tes étoiles se calculent toutes seules.</string>
+    <string name="journey_recos_body_series">Des séries choisies pour toi, d’après tes goûts.</string>
+    <string name="journey_cta_census_series">Recenser mes séries</string>
+    <string name="journey_hint_census_grid_series">Touche les séries que tu as vues (un toucher : finie, deux : en cours), puis « Suivant » en bas.</string>
+    <string name="journey_hint_census_cards_series">Glisse à gauche si tu l’as vue, à droite pour la garder à voir, vers le haut sinon.</string>
+    <string name="journey_hint_arena_series">Touche la série que tu préfères.</string>
+    <string name="recos_hint_body_series">Glisse à gauche si tu as déjà vu la série, à droite pour la garder à voir, vers le haut pour passer à la suivante.</string>
 </resources>

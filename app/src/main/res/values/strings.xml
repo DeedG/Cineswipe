@@ -436,8 +436,6 @@
     <string name="census_help_cards">En cartes, comme dans les recos : glisse à gauche si tu l’as vu, à droite pour l’ajouter à ta liste À voir, vers le haut s’il n’est pas vu.</string>
     <string name="census_help_order">Les films que tu as le plus de chances d’avoir vus passent en premier, et l’ordre apprend de tes réponses. Les suites des films que tu as vus arrivent vite.</string>
     <string name="census_help_impression">Adoré ou bof : l’Arène part d’une meilleure base pour ces films.</string>
-    <string name="discover_census_title">Recensement</string>
-    <string name="discover_census_message">Retrouve tous les films que tu as vus, en quelques touchers.</string>
 
     <!-- Export des données et outils de diagnostic -->
     <string name="export_chooser">Envoyer l’export</string>
@@ -510,71 +508,16 @@
     <string name="diagnostics_weights">Poids du modèle « déjà vu »</string>
 
     <!-- Accueil du premier lancement et démo -->
-    <string name="welcome_tagline">Tes films vus, des recos qui te ressemblent, et un classement qui se fait en duels.</string>
-    <string name="welcome_recos_title">Recos</string>
-    <string name="welcome_recos_body">Glisse à gauche si tu as vu le film, à droite pour le garder pour plus tard : les recos apprennent de chaque geste.</string>
-    <string name="welcome_arena_title">Arène</string>
-    <string name="welcome_arena_body">Deux films, tu choisis ton préféré : ton classement et tes étoiles se calculent tout seuls.</string>
-    <string name="welcome_census_title">Recensement</string>
-    <string name="welcome_census_body">Retrouve en quelques minutes tous les films que tu as déjà vus.</string>
-    <string name="welcome_demo">Découvrir l’appli : tuto et démo</string>
-    <string name="welcome_demo_starting">Préparation de la démo…</string>
-    <string name="welcome_start">Commencer</string>
-    <string name="welcome_demo_note">Un tuto pas à pas, dans une démo avec les 100 films les plus vus et un profil fictif qui en a déjà vu une vingtaine. Rien n’y est enregistré, et tu le retrouves dans les réglages.</string>
     <string name="demo_strip_title">DÉMO</string>
     <string name="demo_strip_body">Rien n’est enregistré</string>
     <string name="demo_exit">Quitter</string>
     <string name="settings_demo_title">Mode démo</string>
     <string name="settings_demo_body">Tu explores CineSwipe avec les 100 films les plus vus et un profil fictif. Rien n’est enregistré : en quittant, tu retrouves tes vraies données.</string>
     <string name="settings_demo_exit">Quitter la démo</string>
-    <string name="settings_demo_try">Tuto et démo (bac à sable)</string>
+    <string name="settings_demo_try">Démo (bac à sable, rien n’est enregistré)</string>
     <string name="settings_demo_starting">Préparation de la démo…</string>
 
     <!-- Tuto pas à pas de la démo -->
-    <string name="demo_tutorial">Tuto</string>
-    <string name="tuto_skip">Passer le tuto</string>
-    <string name="tuto_start">C’est parti</string>
-    <string name="tuto_next">Suivant</string>
-    <string name="tuto_show_me">Montre-moi</string>
-    <string name="tuto_autoplay">Visite auto</string>
-    <string name="tuto_manual">Reprendre la main</string>
-    <string name="tuto_your_turn">À toi de jouer</string>
-    <string name="tuto_explore">Explorer la démo</string>
-    <string name="tuto_exit_demo">Quitter la démo</string>
-    <string name="tuto_intro_title">Bienvenue dans la démo</string>
-    <string name="tuto_intro_body">En deux minutes, on fait le tour de CineSwipe avec un profil fictif qui a déjà vu une vingtaine de films, et un homelab fictif (Plex et Seerr). Essaie tout ce que tu veux : rien n’est enregistré.</string>
-    <string name="tuto_reco_title">Les recos</string>
-    <string name="tuto_reco_body">Une carte = un film choisi pour toi. La ligne rouge sous l’affiche dit pourquoi : un film que tu as aimé, un réalisateur, un grand classique…</string>
-    <string name="tuto_watched_title">Déjà vu ? Glisse à gauche</string>
-    <string name="tuto_watched_body">Le film rejoint tes films vus, et les recos apprennent de ton choix. Fais glisser la carte vers la gauche.</string>
-    <string name="tuto_watchlist_title">Envie de le voir ? Glisse à droite</string>
-    <string name="tuto_watchlist_body">Il rejoint ta liste À voir. Avec un serveur Seerr ou Radarr, il est aussi demandé au téléchargement.</string>
-    <string name="tuto_skip_title">Pas maintenant ? Fais défiler vers le haut</string>
-    <string name="tuto_skip_body">Le film passe sans rien changer. Il pourra revenir plus tard, si tes goûts évoluent.</string>
-    <string name="tuto_actions_title">Les boutons de la carte</string>
-    <string name="tuto_actions_body">« Pas pour moi » écarte le film pour de bon, « Trailer » ouvre la bande-annonce sur YouTube, et ⚡ enchaîne des recos à partir de ce film. Touche l’affiche pour ouvrir la fiche complète.</string>
-    <string name="tuto_arena_title">L’Arène</string>
-    <string name="tuto_arena_body">Deux films que tu as vus s’affrontent. Touche celui que tu préfères.</string>
-    <string name="tuto_reliability_title">Ton classement se construit</string>
-    <string name="tuto_reliability_body" formatted="false">Chaque duel recalcule tes notes et tes étoiles. La fiabilité monte au fil des duels : vers 90 %, ton classement est solide.</string>
-    <string name="tuto_draw_title">Impossible de choisir ?</string>
-    <string name="tuto_draw_body">« Égalité » donne un demi-point à chacun. Une erreur ? « Annuler », en haut, rattrape le dernier duel.</string>
-    <string name="tuto_census_open_title">Retrouve tes films vus</string>
-    <string name="tuto_census_open_body">Le recensement fait défiler les films que tu as le plus de chances d’avoir vus. Ouvre-le.</string>
-    <string name="tuto_census_tap_title">Touche ceux que tu as vus</string>
-    <string name="tuto_census_tap_body">Un toucher : vu. Deux : adoré. Trois : bof. Un appui long propose aussi « à voir » ou la fiche du film.</string>
-    <string name="tuto_census_next_title">Page suivante</string>
-    <string name="tuto_census_next_body">« Suivant » enregistre la page. Les films sans réponse passent en « pas vu », sans effet sur tes recos.</string>
-    <string name="tuto_census_mode_title">En cartes, si tu préfères</string>
-    <string name="tuto_census_mode_body">Ce bouton passe en cartes, avec les mêmes gestes que les recos. Les filtres en haut ciblent une période ou les films français.</string>
-    <string name="tuto_search_title">La recherche</string>
-    <string name="tuto_search_body">Tape un titre : les résultats arrivent en cartes, avec les mêmes gestes que les recos. Tape un nom : les acteurs et réalisateurs s’affichent, avec tous leurs films. Dans la démo, elle porte sur les 100 films du bac à sable.</string>
-    <string name="tuto_profile_title">Ton profil</string>
-    <string name="tuto_profile_body">Tes compteurs ouvrent ta bibliothèque ou l’historique des duels. Plus bas : tes goûts en chiffres, ta rétro de l’année à partager, tes listes perso et ton Hall of Fame.</string>
-    <string name="tuto_settings_title">Les réglages</string>
-    <string name="tuto_settings_body">Ta clé TMDB, ton homelab (Plex, Jellyfin, Seerr, Radarr : dispo sur ton serveur, demandes d’un swipe, notification après un film vu) et la sauvegarde de tes données.</string>
-    <string name="tuto_end_title">C’est tout !</string>
-    <string name="tuto_end_body">Continue d’explorer la démo librement, ou quitte-la pour commencer avec tes films. « Tuto », dans le bandeau, relance la visite.</string>
 
     <!-- Guide de la clé TMDB -->
     <string name="tmdb_key_title">Ta clé TMDB</string>
@@ -1055,4 +998,44 @@
     <string name="reco_nudge_dismiss">Ne plus me le proposer</string>
     <string name="reco_nudge_dismissed">Compris, on ne te le proposera plus. Le recensement est dans la Découverte, les duels dans l’Arène.</string>
     <string name="settings_mode_body">Deux mondes séparés : chacun a ses recos, son Arène, sa bibliothèque et ses listes. La pastille en haut des écrans principaux passe aussi de l’un à l’autre.</string>
+
+    <!-- Parcours des nouveaux utilisateurs : recenser, noter en duels, puis les recos -->
+    <string name="tab_census">Recenser</string>
+    <string name="welcome_tagline">Retrouve les films que tu as vus, classe-les en duels, et reçois des recos qui te ressemblent.</string>
+    <string name="welcome_steps">Trois étapes, dans l’ordre :</string>
+    <string name="welcome_start">C’est parti</string>
+    <string name="welcome_import">J’ai déjà une liste (sauvegarde, Letterboxd, IMDb, Trakt)</string>
+    <string name="welcome_note">Compte environ cinq minutes pour les deux premières étapes. Tes films restent sur ton téléphone.</string>
+    <string name="journey_title">Tes recos se préparent</string>
+    <string name="journey_intro">CineSwipe recommande d’après ce que tu as vu et aimé. Encore deux étapes rapides, et tes recos seront vraiment les tiennes.</string>
+    <string name="journey_step">Étape %1$d sur 3</string>
+    <string name="journey_census_title">Recense tes films vus</string>
+    <string name="journey_census_body">Touche les affiches des films que tu as déjà vus.</string>
+    <string name="journey_census_count">%1$d sur %2$d films vus</string>
+    <string name="journey_arena_title">Départage-les en duels</string>
+    <string name="journey_arena_body">Deux films, tu choisis ton préféré : tes étoiles se calculent toutes seules.</string>
+    <string name="journey_arena_count">%1$d sur %2$d duels</string>
+    <string name="journey_recos_title">Reçois tes recos</string>
+    <string name="journey_recos_body">Des films choisis pour toi, d’après tes goûts.</string>
+    <string name="journey_cta_census">Recenser mes films</string>
+    <string name="journey_cta_census_continue">Continuer le recensement</string>
+    <string name="journey_cta_arena">Lancer les duels</string>
+    <string name="journey_cta_arena_continue">Continuer les duels</string>
+    <string name="journey_skip">Voir les recos quand même</string>
+    <string name="journey_hint_census_grid">Touche les films que tu as vus, puis « Suivant » en bas.</string>
+    <string name="journey_hint_census_cards">Glisse à gauche si tu l’as vu, à droite pour le garder à voir, vers le haut sinon.</string>
+    <string name="journey_hint_arena">Touche le film que tu préfères.</string>
+    <string name="journey_census_done">Étape 1 terminée !</string>
+    <string name="journey_census_done_body">Tu peux continuer à recenser, ou passer aux duels.</string>
+    <string name="journey_census_done_action">Passer aux duels</string>
+    <string name="journey_arena_done">Tes recos sont prêtes !</string>
+    <string name="journey_arena_done_body">Tu peux continuer les duels pour affiner tes étoiles.</string>
+    <string name="journey_arena_done_action">Voir mes recos</string>
+    <string name="journey_back_to_census">Recenser</string>
+    <string name="recos_hint_title">Tes recos sont là</string>
+    <string name="recos_hint_body">Glisse à gauche si tu as déjà vu le film, à droite pour le garder à voir, vers le haut pour passer au suivant.</string>
+    <string name="recos_hint_ok">Compris</string>
+    <string name="recos_discover">Découvrir par filtres</string>
+    <string name="census_mode_grid_short">Grille</string>
+    <string name="census_mode_cards_short">Cartes</string>
 </resources>

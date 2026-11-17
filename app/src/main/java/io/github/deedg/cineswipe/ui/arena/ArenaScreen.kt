@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.domain.journey.JourneyState
+import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.data.model.Fighter
 import io.github.deedg.cineswipe.data.model.RankingReliability
 import io.github.deedg.cineswipe.domain.TmdbImageSize
@@ -72,12 +74,10 @@ import io.github.deedg.cineswipe.ui.components.StarRow
 import io.github.deedg.cineswipe.ui.components.WorldSwitch
 import io.github.deedg.cineswipe.ui.components.worldSwitchShown
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.journey.JourneyBanner
+import io.github.deedg.cineswipe.ui.journey.journeyState
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
-import io.github.deedg.cineswipe.ui.tutorial.TutorialEvent
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import kotlin.math.roundToInt
 
 /** Repères pour les tests d'interface. */
@@ -91,7 +91,11 @@ object ArenaTestTags {
 }
 
 @Composable
-fun ArenaRoute(onOpenCensus: () -> Unit, onOpenSeasons: (() -> Unit)? = null) {
+fun ArenaRoute(onOpenCensus: () -> Unit, onOpenSeasons: (() -> Unit)? = null, onOpenRecos: () -> Unit = {}) {
+    // Parcours : l'étape des duels s'affiche ici ; l'objectif atteint sous nos yeux, on annonce les recos.
+    val journey = journeyState()
+    var guided by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(journey?.step) { if (journey?.step == JourneyStep.ARENA) guided = true }
     val viewModel = cineViewModel { ArenaViewModel(it.arena, it.library) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
@@ -113,28 +117,12 @@ fun ArenaRoute(onOpenCensus: () -> Unit, onOpenSeasons: (() -> Unit)? = null) {
         }
     }
 
-    val tutorial = LocalTutorial.current
-    // « Montre-moi » du tuto : la main touche le film du haut, qui gagne son duel.
-    LaunchedEffect(tutorial) {
-        tutorial?.handle(TutorialEvent.ARENA_VOTED) {
-            if (viewModel.state.value is ArenaUiState.Ready) {
-                tutorial.event(TutorialEvent.ARENA_VOTED)
-                viewModel.vote(Side.A)
-            }
-        }
-    }
     ArenaScreen(
         state = state,
         canUndo = canUndo,
         reliability = reliability,
-        onVote = { side ->
-            tutorial?.event(TutorialEvent.ARENA_VOTED)
-            viewModel.vote(side)
-        },
-        onDraw = {
-            tutorial?.event(TutorialEvent.ARENA_VOTED)
-            viewModel.draw()
-        },
+        onVote = viewModel::vote,
+        onDraw = viewModel::draw,
         onSkip = viewModel::skip,
         onUndo = viewModel::undo,
         onInfo = viewModel::showInfo,
@@ -143,6 +131,9 @@ fun ArenaRoute(onOpenCensus: () -> Unit, onOpenSeasons: (() -> Unit)? = null) {
         onOpenSeasons = onOpenSeasons,
         focusBanner = focusBanner,
         onStopFocus = viewModel::stopFocus,
+        journey = journey,
+        journeyJustFinished = guided,
+        onJourneyGo = { step -> if (step == JourneyStep.CENSUS) onOpenCensus() else onOpenRecos() },
     )
 
     info?.let { MovieInfoSheet(details = it, onDismiss = viewModel::hideInfo) }
@@ -164,6 +155,9 @@ fun ArenaScreen(
     onOpenSeasons: (() -> Unit)? = null,
     focusBanner: FocusBanner? = null,
     onStopFocus: () -> Unit = {},
+    journey: JourneyState? = null,
+    journeyJustFinished: Boolean = false,
+    onJourneyGo: (JourneyStep) -> Unit = {},
 ) {
     Box(
         Modifier
@@ -202,6 +196,16 @@ fun ArenaScreen(
                     onEloInfo = onEloInfo,
                     onOpenSeasons = onOpenSeasons,
                 )
+                if (journey != null) {
+                    JourneyBanner(
+                        state = journey,
+                        screen = JourneyStep.ARENA,
+                        hint = stringResource(R.string.journey_hint_arena),
+                        onGo = onJourneyGo,
+                        justFinished = journeyJustFinished,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
                 if (focusBanner != null) FocusBannerRow(focusBanner, onStop = onStopFocus)
                 Box(
                     Modifier
@@ -210,7 +214,7 @@ fun ArenaScreen(
                         .padding(bottom = 15.dp),
                 ) {
                     Column(
-                        Modifier.fillMaxSize().tutorialTarget(TutorialTarget.ARENA_DUEL),
+                        Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(15.dp),
                     ) {
                         FighterCard(
@@ -225,8 +229,7 @@ fun ArenaScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .testTag(ArenaTestTags.FIGHTER_A)
-                                .tutorialTarget(TutorialTarget.ARENA_FIGHTER),
+                                .testTag(ArenaTestTags.FIGHTER_A),
                         )
                         FighterCard(
                             fighter = state.match.b,
@@ -248,8 +251,7 @@ fun ArenaScreen(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .padding(end = 8.dp)
-                            .testTag(ArenaTestTags.DRAW)
-                            .tutorialTarget(TutorialTarget.ARENA_DRAW),
+                            .testTag(ArenaTestTags.DRAW),
                     )
                 }
             }
@@ -348,8 +350,7 @@ private fun ArenaHeader(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .clickable(onClickLabel = stringResource(R.string.arena_elo_info), onClick = onEloInfo)
-                        .testTag(ArenaTestTags.RELIABILITY)
-                        .tutorialTarget(TutorialTarget.ARENA_RELIABILITY),
+                        .testTag(ArenaTestTags.RELIABILITY),
                 )
             }
         }

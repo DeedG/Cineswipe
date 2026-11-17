@@ -59,6 +59,8 @@ class SettingsRepository(
 
     private fun worldKey(name: String) = stringPreferencesKey(if (world.isSeries) "series_$name" else name)
 
+    private val journeySkippedKey get() = worldKey("journey_skipped")
+
     /** Dernier monde ouvert (l'appli y rouvre). Commun aux deux mondes. */
     val mediaKind: Flow<MediaKind> = settings.data.map { prefs -> MediaKind.fromName(prefs[MEDIA_KIND]) }.distinctUntilChanged()
 
@@ -219,6 +221,20 @@ class SettingsRepository(
         settings.edit { prefs -> prefs[recoNudgesKey] = RecoNudges.encode(RecoNudges.decode(prefs[recoNudgesKey]) + (nudge to until)) }
     }
 
+    /** Parcours passé (« Voir les recos quand même »), propre à chaque monde. */
+    val journeySkipped: Flow<Boolean> = settings.data.map { prefs -> prefs[journeySkippedKey] == "1" }.distinctUntilChanged()
+
+    suspend fun setJourneySkipped(skipped: Boolean) {
+        settings.edit { prefs -> if (skipped) prefs[journeySkippedKey] = "1" else prefs.remove(journeySkippedKey) }
+    }
+
+    /** Rappel des gestes sur la première reco, déjà vu (commun aux deux mondes). */
+    val recosHintSeen: Flow<Boolean> = settings.data.map { prefs -> prefs[RECOS_HINT_SEEN] ?: false }.distinctUntilChanged()
+
+    suspend fun setRecosHintSeen(seen: Boolean = true) {
+        settings.edit { prefs -> prefs[RECOS_HINT_SEEN] = seen }
+    }
+
     suspend fun setOnboardingDone(done: Boolean) {
         settings.edit { prefs -> prefs[onboardingKey] = done }
     }
@@ -356,6 +372,7 @@ class SettingsRepository(
         private val REQUEST_TARGET = stringPreferencesKey("homelab_request_target")
         private val MEDIA_KIND = stringPreferencesKey("media_kind")
         private val CENSUS_CARDS = booleanPreferencesKey("census_cards")
+        private val RECOS_HINT_SEEN = booleanPreferencesKey("recos_hint_seen")
         private val DEV_TOOLS = booleanPreferencesKey("dev_tools")
         private val WATCHED_NOTIFICATIONS = booleanPreferencesKey("watched_notifications")
         private val NEW_SEASON_NOTIFICATIONS = booleanPreferencesKey("new_season_notifications")

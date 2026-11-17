@@ -13,6 +13,17 @@ allprojects {
                     .findAll { it.exists() && (it.isDirectory() || it.name.endsWith(".jar")) }
                     .collect { it.absolutePath }
                     .join("\n") + "\n"
+                // Le compilateur Kotlin lui-même et ses extensions (Compose, sérialisation), tels que Gradle les utilise.
+                ["kotlinCompilerClasspath", "kotlinBuildToolsApiClasspath", "kotlinCompilerPluginClasspathDebug"].each { name ->
+                    def conf = task.project.configurations.findByName(name)
+                    if (conf != null) {
+                        try {
+                            new File(dest, "${name}.txt").text = conf.resolve().collect { it.absolutePath }.join("\n") + "\n"
+                        } catch (Exception error) {
+                            println("Classpath ${name} illisible : ${error.message}")
+                        }
+                    }
+                }
             }
         }
     }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -19,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -27,9 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 
-/** Barre du bas de la V4 : fond presque noir, onglet actif en rouge. */
+object BottomBarTestTags {
+    fun tab(tab: Tab) = "tab_${tab.name.lowercase()}"
+}
+
+/** Barre du bas : fond presque noir, onglet actif en rouge, les Recos au centre dans une pastille. */
 @Composable
 fun CineBottomBar(
     selected: Tab,
@@ -51,7 +58,7 @@ fun CineBottomBar(
                     tab = tab,
                     isSelected = tab == selected,
                     onClick = { onSelect(tab) },
-                    modifier = Modifier.weight(1f).tutorialTarget(tab.tutorialTarget),
+                    modifier = Modifier.weight(1f).testTag(BottomBarTestTags.tab(tab)),
                 )
             }
         }
@@ -78,8 +85,21 @@ private fun BottomBarItem(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(tab.icon(), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (tab == Tab.RECOS) 1.dp else 4.dp)) {
+            if (tab == Tab.RECOS) {
+                // Le but du parcours : une pastille pleine, toujours visible.
+                Box(
+                    Modifier
+                        .size(width = 46.dp, height = 27.dp)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(if (isSelected) CineColors.Red else CineColors.SurfaceHigh),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(tab.icon(), contentDescription = null, tint = if (isSelected) Color.White else CineColors.TextSecondary, modifier = Modifier.size(20.dp))
+                }
+            } else {
+                Icon(tab.icon(), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            }
             Text(
                 text = stringResource(tab.label),
                 color = color,

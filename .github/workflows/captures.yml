@@ -16,6 +16,10 @@ on:
         options:
           - publier
           - nettoyer
+      tests:
+        description: tests à lancer (ScreenCaptureTest, JourneyCaptureTest…)
+        required: false
+        default: '*CaptureTest'
 
 permissions:
   contents: write
@@ -41,7 +45,7 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest --tests '*ScreenCaptureTest' -Pcaptures=true 2>&1 | tee build.log
+          ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest --tests '${{ inputs.tests }}' -Pcaptures=true 2>&1 | tee build.log
 
       - name: Erreurs en annotations
         if: failure()

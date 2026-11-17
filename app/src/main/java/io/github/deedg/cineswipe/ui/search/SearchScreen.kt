@@ -72,9 +72,6 @@ import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.person.knownForLabel
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -282,8 +279,7 @@ private fun SearchInput(
                 onValueChange = onQueryChange,
                 modifier = Modifier
                     .weight(1f)
-                    .focusRequester(focusRequester)
-                    .tutorialTarget(TutorialTarget.SEARCH_FIELD),
+                    .focusRequester(focusRequester),
                 singleLine = true,
                 placeholder = { Text(stringResource(R.string.search_hint), color = CineColors.TextFaint) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Search),
@@ -319,8 +315,7 @@ private fun SearchInput(
     }
     // Comme en V4, le champ prend le focus à l'ouverture de l'onglet.
     // Pendant le tuto, pas de clavier : il cacherait les explications.
-    val tutorialActive = LocalTutorial.current?.active == true
-    LaunchedEffect(Unit) { if (!tutorialActive) runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 }
 
 /** Acteurs et réalisateurs dont le nom correspond : un toucher ouvre leurs films. */

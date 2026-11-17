@@ -55,6 +55,9 @@ open class CineSwipeApp : Application(), SingletonImageLoader.Factory {
     @Volatile
     var pendingTab: String? = null
 
+    /** L'accueil vient d'être passé par « J'ai déjà une liste » : l'import s'ouvre d'emblée. */
+    var importPending: Boolean = false
+
     fun takePendingTab(): String? = pendingTab.also { pendingTab = null }
 
     /** Écran demandé par un widget (« tonight », « stats », « top », « movie:<id> »). */
@@ -136,8 +139,6 @@ open class CineSwipeApp : Application(), SingletonImageLoader.Factory {
     suspend fun startDemo(kind: MediaKind = MediaKind.FILMS) {
         val demo = withContext(Dispatchers.IO) { createDemoContainer(kind) }
         withContext(Dispatchers.Default) { DemoSeeder(demo, checkNotNull(demo.demoCatalog)).seed() }
-        // La démo commence par le tuto pas à pas.
-        demo.tutorial.start()
         val previous = container
         container = demo
         // Démo des films en rouge, des séries en violet.

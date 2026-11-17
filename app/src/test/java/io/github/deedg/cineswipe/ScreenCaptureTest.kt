@@ -30,10 +30,13 @@ import io.github.deedg.cineswipe.testing.TestCineSwipeApp
 import io.github.deedg.cineswipe.ui.arena.ArenaTestTags
 import io.github.deedg.cineswipe.ui.detail.SeriesTestTags
 import io.github.deedg.cineswipe.ui.discover.DiscoverTestTags
+import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
+import io.github.deedg.cineswipe.ui.navigation.Tab
+import io.github.deedg.cineswipe.ui.recos.RecosTestTags
+import io.github.deedg.cineswipe.ui.welcome.WelcomeTestTags
 import io.github.deedg.cineswipe.ui.feed.FeedTestTags
 import io.github.deedg.cineswipe.ui.profile.ProfileTestTags
 import io.github.deedg.cineswipe.ui.retro.RetroTestTags
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTestTags
 import io.github.deedg.cineswipe.widget.WidgetLinks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -134,11 +137,22 @@ class ScreenCaptureTest {
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             this.scenario = scenario
-            // Première arrivée dans le mode séries : son accueil (démo des séries ou commencer).
-            waitUntil { compose.onAllNodesWithText("Commencer").fetchSemanticsNodes().isNotEmpty() }
+            // Première arrivée dans le mode séries : son accueil (les trois étapes), puis le recensement.
+            waitForTag(WelcomeTestTags.START)
             settle()
             shot("accueil")
-            compose.onNodeWithText("Commencer").performScrollTo().performClick()
+            compose.onNodeWithTag(WelcomeTestTags.START).performScrollTo().performClick()
+            // Recensement des séries : l'avancement d'un toucher (finie, en cours…).
+            waitUntil { compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().isNotEmpty() }
+            settle()
+            compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().forEachIndexed { index, node ->
+                val tag = node.config[SemanticsProperties.TestTag]
+                repeat(index % 4 + 1) { compose.onNodeWithTag(tag).performClick() }
+            }
+            settle()
+            shot("recensement")
+
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.RECOS)).performClick()
             waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("recos")
@@ -164,21 +178,12 @@ class ScreenCaptureTest {
             shot("fiche-avancement")
             compose.onNodeWithContentDescription("Retour").performClick()
 
-            tab("Découverte")
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.RECOS)).performClick()
+            waitForTag(RecosTestTags.DISCOVER)
+            compose.onNodeWithTag(RecosTestTags.DISCOVER).performClick()
+            waitForTag(DiscoverTestTags.BACK)
             settle()
             shot("decouverte")
-
-            // Recensement des séries : l'avancement d'un toucher (finie, en cours…).
-            compose.onNodeWithTag(DiscoverTestTags.CENSUS).performScrollTo().performClick()
-            waitUntil { compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().isNotEmpty() }
-            settle()
-            compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().forEachIndexed { index, node ->
-                val tag = node.config[SemanticsProperties.TestTag]
-                repeat(index % 4 + 1) { compose.onNodeWithTag(tag).performClick() }
-            }
-            settle()
-            shot("recensement")
-            compose.onAllNodesWithContentDescription("Retour")[0].performClick()
 
             tab("Profil")
             waitForTag(ProfileTestTags.STATS)
@@ -186,14 +191,10 @@ class ScreenCaptureTest {
             shot("profil")
         }
 
-        // La démo des séries : 100 séries, un profil fictif, le tuto en violet.
+        // La démo des séries : 100 séries, un profil fictif, en violet.
         runBlocking { app.startDemo(MediaKind.SERIES) }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             this.scenario = scenario
-            waitForTag(TutorialTestTags.step(0))
-            settle()
-            shot("demo-tuto")
-            app.container.tutorial.stop()
             waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("demo-recos")
@@ -208,9 +209,6 @@ class ScreenCaptureTest {
         folder = File(System.getProperty("cineswipe.capturesDir"), size).apply { mkdirs() }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             this.scenario = scenario
-            waitForTag(TutorialTestTags.step(0))
-            shot("tuto")
-            app.container.tutorial.stop()
             waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("recos")
@@ -220,14 +218,16 @@ class ScreenCaptureTest {
             settle()
             shot("arene")
 
-            tab("Découverte")
-            waitForTag(DiscoverTestTags.CENSUS)
-            shot("decouverte")
-            compose.onNodeWithTag(DiscoverTestTags.CENSUS).performScrollTo().performClick()
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.CENSUS)).performClick()
             waitUntil { compose.onAllNodes(tagStartsWith("census-cell-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("recensement")
-            compose.onAllNodesWithContentDescription("Retour")[0].performClick()
+
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.RECOS)).performClick()
+            waitForTag(RecosTestTags.DISCOVER)
+            compose.onNodeWithTag(RecosTestTags.DISCOVER).performClick()
+            waitForTag(DiscoverTestTags.BACK)
+            shot("decouverte")
 
             tab("Recherche")
             waitUntil { compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
@@ -253,7 +253,6 @@ class ScreenCaptureTest {
         val intent = Intent(app, MainActivity::class.java).putExtra(WidgetLinks.EXTRA_OPEN, WidgetLinks.movie(film))
         ActivityScenario.launch<MainActivity>(intent).use { scenario ->
             this.scenario = scenario
-            app.container.tutorial.stop()
             waitUntil { compose.onAllNodes(hasText("Retirer des vus", substring = true)).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("fiche")

@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,22 +96,17 @@ import io.github.deedg.cineswipe.ui.share.SharedRoute
 import io.github.deedg.cineswipe.ui.stats.StatsRoute
 import io.github.deedg.cineswipe.ui.theme.CineColors
 import io.github.deedg.cineswipe.ui.tonight.TonightRoute
-import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
-import io.github.deedg.cineswipe.ui.tutorial.TutorialHop
-import io.github.deedg.cineswipe.ui.tutorial.TutorialOverlay
-import io.github.deedg.cineswipe.ui.tutorial.tutorialHop
 import io.github.deedg.cineswipe.ui.welcome.WelcomeScreen
 import io.github.deedg.cineswipe.widget.WidgetLinks
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Racine de l'appli : l'accueil au tout premier lancement, sinon la navigation. Pendant la démo,
- * un bandeau rappelle qu'on est dans un bac à sable et un tuto pas à pas présente l'appli.
+ * Racine de l'appli : l'accueil au tout premier lancement (les trois étapes du parcours), sinon la
+ * navigation. Pendant la démo (ouverte depuis les réglages), un bandeau rappelle qu'on est dans un
+ * bac à sable.
  */
 @Composable
 fun CineSwipeRoot() {
@@ -134,7 +128,6 @@ private fun RootScreen(app: CineSwipeApp) {
     val container = app.container
     val demo = demoViewModel()
     DemoRestartEffect(demo)
-    val starting by demo.starting.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var welcome by remember(container) { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(container) { welcome = shouldWelcome(container) }
@@ -143,10 +136,13 @@ private fun RootScreen(app: CineSwipeApp) {
     // sur les grands écrans).
     Box(Modifier.fillMaxSize().background(CineColors.Black), contentAlignment = Alignment.TopCenter) {
         Box(Modifier.fillMaxHeight().widthIn(max = MAX_APP_WIDTH).fillMaxWidth()) {
-            RootContent(welcome, container, app, demo, starting, onStart = {
+            RootContent(welcome, container, app, demo, onStart = { import ->
                 scope.launch {
                     container.settings.setOnboardingDone(true)
                     app.keyGuidePending = true
+                    // Le parcours commence par le recensement ; avec une liste déjà prête, par l'import.
+                    app.pendingTab = Tab.CENSUS.name
+                    app.importPending = import
                     welcome = false
                 }
             })
@@ -163,21 +159,17 @@ private fun RootContent(
     container: AppContainer,
     app: CineSwipeApp,
     demo: DemoViewModel,
-    starting: Boolean,
-    onStart: () -> Unit,
+    onStart: (import: Boolean) -> Unit,
 ) {
     when (welcome) {
         null -> Box(Modifier.fillMaxSize().background(CineColors.Black))
-        true -> WelcomeScreen(
-            starting = starting,
-            onDemo = demo::start,
-            onStart = onStart,
-        )
+        true -> WelcomeScreen(onStart = { onStart(false) }, onImport = { onStart(true) })
         false -> MainContent(
             container = container,
             onExitDemo = demo::stop,
             keyGuidePending = { app.keyGuidePending },
             onKeyGuideDone = { app.keyGuidePending = false },
+            takeImportPending = { app.importPending.also { app.importPending = false } },
             sharedInbox = app.sharedInbox,
             openInbox = app.openInbox,
         )
@@ -206,6 +198,7 @@ private fun MainContent(
     onExitDemo: () -> Unit,
     keyGuidePending: () -> Boolean,
     onKeyGuideDone: () -> Unit,
+    takeImportPending: () -> Boolean,
     sharedInbox: MutableStateFlow<String?>,
     openInbox: MutableStateFlow<String?> = MutableStateFlow(null),
 ) {
@@ -226,7 +219,9 @@ private fun MainContent(
     val openSettings = { navigator.open(Route.Settings) }
     val openMovie = { tmdbId: Long -> navigator.open(Route.MovieDetail(tmdbId)) }
     val openLightning = { tmdbId: Long -> navigator.open(Route.Lightning(tmdbId)) }
-    val openCensus = { navigator.open(Route.Census) }
+    val openCensus = { navigator.switchTab(Tab.CENSUS) }
+    val openArena = { navigator.switchTab(Tab.ARENA) }
+    val openRecos = { navigator.switchTab(Tab.RECOS) }
     val openKeyGuide = { navigator.open(Route.TmdbKey) }
     val openTonight = {
         navigator.switchTab(Tab.RECOS)
@@ -239,6 +234,11 @@ private fun MainContent(
     LaunchedEffect(container) {
         if (container.isDemo || !keyGuidePending()) return@LaunchedEffect
         if (container.settings.tmdbApiKey.first() != null) onKeyGuideDone() else if (navigator.current != Route.TmdbKey) navigator.open(Route.TmdbKey)
+    }
+
+    // « J'ai déjà une liste », à l'accueil : l'import s'ouvre d'emblée (le retour mène au recensement).
+    LaunchedEffect(container) {
+        if (!container.isDemo && takeImportPending()) navigator.open(Route.Import)
     }
 
     // Film partagé depuis une autre appli : sa fiche (ou le choix entre plusieurs films).
@@ -287,43 +287,11 @@ private fun MainContent(
         homelab.events.collect { event -> toaster.show(eventMessage(resources, event)) }
     }
 
-    // Tuto pas à pas de la démo : pour aller sur l'écran d'une étape, la main touche l'onglet (ou le
-    // retour, ou l'élément qui ouvre l'écran) comme on le ferait, et l'écran change avec sa transition.
-    val tutorial = container.tutorial.takeIf { container.isDemo }
-    val tutorialStep = tutorial?.step
-    val tutorialPlaying = tutorial?.play != null
-    val goTo = remember(navigator) {
-        { hop: TutorialHop ->
-            val route = hop.route
-            val tab = Tab.entries.firstOrNull { it.route == route }
-            when {
-                route == null -> navigator.back()
-                tab != null -> navigator.switchTab(tab)
-                else -> navigator.open(route)
-            }
-        }
-    }
-    LaunchedEffect(current, tutorial) { tutorial?.onRoute(current) }
-    LaunchedEffect(tutorial) { tutorial?.handleHops(goTo) }
-    LaunchedEffect(tutorial, tutorialStep, current, tutorialPlaying) {
-        val tuto = tutorial ?: return@LaunchedEffect
-        val step = tutorialStep ?: return@LaunchedEffect
-        val route = step.route ?: return@LaunchedEffect
-        if (tutorialPlaying || current == route || current == step.waitForRoute) return@LaunchedEffect
-        // La bulle s'efface et l'écran se pose avant que la main ne bouge.
-        delay(TUTORIAL_TRAVEL_PAUSE_MS)
-        val hop = tutorialHop(current, route) ?: return@LaunchedEffect
-        val target = hop.target
-        val shown = target != null &&
-            withTimeoutOrNull(TUTORIAL_TARGET_WAIT_MS) { snapshotFlow { tuto.bounds[target] }.first { it != null } } != null
-        // Élément introuvable (hors de l'écran) : l'écran change quand même, sans la main.
-        if (shown) tuto.travel(hop) else goTo(hop)
-    }
 
     val openPerson = remember(navigator) { { person: PersonRef -> navigator.open(Route.Person(person.id, person.name)) } }
-    CompositionLocalProvider(LocalToaster provides toaster, LocalTutorial provides tutorial, LocalOpenPerson provides openPerson) {
+    CompositionLocalProvider(LocalToaster provides toaster, LocalOpenPerson provides openPerson) {
         Column(Modifier.fillMaxSize().background(CineColors.Black)) {
-            if (container.isDemo) DemoStrip(onTutorial = { container.tutorial.start() }, onExit = onExitDemo)
+            if (container.isDemo) DemoStrip(onExit = onExitDemo)
             Box(
                 Modifier
                     .weight(1f)
@@ -357,7 +325,8 @@ private fun MainContent(
                                         onLightning = openLightning,
                                         onOpenTonight = openTonight,
                                         onOpenCensus = openCensus,
-                                        onOpenArena = { navigator.switchTab(Tab.ARENA) },
+                                        onOpenArena = openArena,
+                                        onOpenDiscover = { navigator.open(Route.Discover) },
                                     )
                                 }
                                 entry<Route.Shared> { key ->
@@ -408,6 +377,7 @@ private fun MainContent(
                                 entry<Route.Arena> {
                                     ArenaRoute(
                                         onOpenCensus = openCensus,
+                                        onOpenRecos = openRecos,
                                         // Séries : l'Arène des saisons, à côté.
                                         onOpenSeasons = if (container.kind.isSeries) ({ navigator.open(Route.SeasonArena) }) else null,
                                     )
@@ -423,7 +393,7 @@ private fun MainContent(
                                         onOpenMovie = openMovie,
                                         onOpenSettings = openKeyGuide,
                                         onLightning = openLightning,
-                                        onOpenCensus = openCensus,
+                                        onBack = { navigator.back() },
                                         onOpenTonight = openTonight,
                                     )
                                 }
@@ -453,7 +423,7 @@ private fun MainContent(
                                     DuelHistoryRoute(onBack = { navigator.back() }, onOpenMovie = openMovie)
                                 }
                                 entry<Route.Census> {
-                                    CensusRoute(onBack = { navigator.back() }, onOpenMovie = openMovie, onOpenSettings = openKeyGuide)
+                                    CensusRoute(onOpenMovie = openMovie, onOpenSettings = openKeyGuide, onOpenArena = openArena)
                                 }
                                 entry<Route.Settings> {
                                     SettingsRoute(
@@ -508,7 +478,6 @@ private fun MainContent(
                         )
                     }
                 }
-                tutorial?.let { TutorialOverlay(tutorial = it, onExitDemo = onExitDemo) }
                 SnackbarHost(
                     hostState = snackbarHostState,
                     modifier = Modifier
@@ -527,21 +496,14 @@ private fun MainContent(
 object DemoTestTags {
     const val STRIP = "demo_strip"
     const val EXIT = "demo_exit"
-    const val TUTORIAL = "demo_tutorial"
 }
 
 @Composable
 private fun app(): CineSwipeApp = LocalContext.current.applicationContext as CineSwipeApp
 
-/** Pause avant que la main du tuto parte vers un autre écran. */
-private const val TUTORIAL_TRAVEL_PAUSE_MS = 300L
-
-/** Attente maximale de l'élément à toucher pour changer d'écran. */
-private const val TUTORIAL_TARGET_WAIT_MS = 700L
-
 /** Bandeau de la démo, en haut de tous les écrans. */
 @Composable
-private fun DemoStrip(onTutorial: () -> Unit, onExit: () -> Unit) {
+private fun DemoStrip(onExit: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -568,9 +530,6 @@ private fun DemoStrip(onTutorial: () -> Unit, onExit: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onTutorial, modifier = Modifier.testTag(DemoTestTags.TUTORIAL)) {
-            Text(stringResource(R.string.demo_tutorial), color = Color.White, fontWeight = FontWeight.Bold)
-        }
         TextButton(onClick = onExit, modifier = Modifier.testTag(DemoTestTags.EXIT)) {
             Text(stringResource(R.string.demo_exit), color = CineColors.Red, fontWeight = FontWeight.Bold)
         }

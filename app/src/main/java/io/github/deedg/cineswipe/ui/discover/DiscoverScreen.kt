@@ -61,8 +61,6 @@ import io.github.deedg.cineswipe.ui.feed.FeedTexts
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -173,7 +171,7 @@ fun DiscoverRoute(
     onOpenMovie: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onLightning: (Long) -> Unit,
-    onOpenCensus: () -> Unit,
+    onBack: () -> Unit = {},
     onOpenTonight: () -> Unit = {},
 ) {
     val viewModel = cineViewModel { DiscoverViewModel(it.tmdb, it.feed, it.settings) }
@@ -233,7 +231,7 @@ fun DiscoverRoute(
             onOnlyAvailableChange = viewModel::setOnlyAvailable,
             onRetryGenres = viewModel::loadGenres,
             onGenerate = viewModel::generate,
-            onOpenCensus = onOpenCensus,
+            onBack = onBack,
             onOpenTonight = onOpenTonight,
         )
     }
@@ -252,7 +250,7 @@ private fun DiscoverFiltersScreen(
     onOnlyAvailableChange: (Boolean) -> Unit,
     onRetryGenres: () -> Unit,
     onGenerate: () -> Unit,
-    onOpenCensus: () -> Unit,
+    onBack: () -> Unit,
     onOpenTonight: () -> Unit,
 ) {
     val lastYear = remember { Year.now().value }
@@ -274,15 +272,26 @@ private fun DiscoverFiltersScreen(
             .padding(horizontal = 20.dp, vertical = 15.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // La Découverte s'ouvre depuis les recos : le retour y ramène.
+            GlassIconButton(
+                icon = CineIcons.Back,
+                contentDescription = stringResource(R.string.action_back),
+                onClick = onBack,
+                modifier = Modifier.testTag(DiscoverTestTags.BACK),
+            )
             Text(
                 text = stringResource(R.string.discover_title),
                 color = Color.White,
-                fontSize = 30.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.weight(1f),
             )
-            WorldSwitch(tabName = Tab.DISCOVER.name)
+            WorldSwitch(tabName = Tab.RECOS.name)
         }
 
         ShortcutCard(
@@ -292,7 +301,6 @@ private fun DiscoverFiltersScreen(
             onClick = onOpenTonight,
             modifier = Modifier.testTag(DiscoverTestTags.TONIGHT),
         )
-        CensusCard(onClick = onOpenCensus)
 
         FilterLabel(stringResource(R.string.discover_genre))
         when (genres) {
@@ -388,26 +396,6 @@ private fun DiscoverFiltersScreen(
     }
 }
 
-/** Entrée du recensement, en tête de la Découverte. */
-@Composable
-private fun CensusCard(onClick: () -> Unit) {
-    SectionCard(
-        onClick = onClick,
-        modifier = Modifier
-            .testTag(DiscoverTestTags.CENSUS)
-            .tutorialTarget(TutorialTarget.DISCOVER_CENSUS),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Icon(CineIcons.Grid, contentDescription = null, tint = CineColors.Red, modifier = Modifier.size(26.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(stringResource(R.string.discover_census_title), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                Text(stringResource(R.string.discover_census_message), color = CineColors.TextSecondary, fontSize = 14.sp)
-            }
-            Icon(CineIcons.ChevronRight, contentDescription = null, tint = CineColors.TextMuted, modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
 /** Raccourci vers un autre écran, en tête de la Découverte. */
 @Composable
 private fun ShortcutCard(icon: ImageVector, title: String, message: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -425,7 +413,7 @@ private fun ShortcutCard(icon: ImageVector, title: String, message: String, onCl
 
 /** Repères pour les tests d'interface. */
 object DiscoverTestTags {
-    const val CENSUS = "discover-census"
+    const val BACK = "discover-back"
     const val TONIGHT = "discover-tonight"
 }
 

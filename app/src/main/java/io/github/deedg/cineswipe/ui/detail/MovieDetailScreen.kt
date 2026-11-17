@@ -83,8 +83,6 @@ import io.github.deedg.cineswipe.ui.components.openWatchLink
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.lists.AddToListButton
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.TutorialTarget
-import io.github.deedg.cineswipe.ui.tutorial.tutorialTarget
 import java.util.Locale
 
 /** Actions de la fiche film. */
@@ -270,7 +268,7 @@ private fun MovieDetailContent(
                     icon = CineIcons.Back,
                     contentDescription = stringResource(R.string.action_back),
                     onClick = actions.onBack,
-                    modifier = Modifier.tutorialTarget(TutorialTarget.BACK),
+                    modifier = Modifier,
                 )
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (details.isWatched) {

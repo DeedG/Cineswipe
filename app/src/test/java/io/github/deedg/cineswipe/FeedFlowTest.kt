@@ -25,6 +25,9 @@ import io.github.deedg.cineswipe.testing.FakeTmdbServer
 import io.github.deedg.cineswipe.testing.TestCineSwipeApp
 import io.github.deedg.cineswipe.testing.TestData
 import io.github.deedg.cineswipe.ui.feed.FeedTestTags
+import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
+import io.github.deedg.cineswipe.ui.navigation.Tab
+import io.github.deedg.cineswipe.ui.recos.RecosTestTags
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -103,7 +106,9 @@ class FeedFlowTest {
             compose.waitForTag(FeedTestTags.card(FakeTmdbServer.DUNE.id))
 
             // Découverte : les filtres puis le flux.
-            compose.onNodeWithText("Découverte").performClick()
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.RECOS)).performClick()
+            compose.waitForTag(RecosTestTags.DISCOVER)
+            compose.onNodeWithTag(RecosTestTags.DISCOVER).performClick()
             compose.waitForText("Science-Fiction")
             compose.onNodeWithText("Générer mon flux précis").performClick()
             compose.waitForTag(FeedTestTags.card(first))

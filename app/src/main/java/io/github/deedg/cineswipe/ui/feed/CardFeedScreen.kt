@@ -48,8 +48,6 @@ import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.SeasonRequestSheet
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import io.github.deedg.cineswipe.ui.tutorial.LocalTutorial
-import io.github.deedg.cineswipe.ui.tutorial.TutorialEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
@@ -237,7 +235,6 @@ private fun FeedPager(
     onEndAction: (() -> Unit)?,
 ) {
     val cards = state.cards
-    val tutorial = LocalTutorial.current
     val currentCards by rememberUpdatedState(cards)
     val currentOnShown by rememberUpdatedState(onShown)
     val currentOnLoadMore by rememberUpdatedState(onLoadMore)
@@ -247,24 +244,6 @@ private fun FeedPager(
         snapshotFlow { currentCards.getOrNull(pagerState.settledPage) }
             .distinctUntilChangedBy { it?.tmdbId }
             .collect { card -> if (card != null) currentOnShown(card) }
-    }
-    // Tuto de la démo : faire défiler vers le haut passe le film.
-    LaunchedEffect(pagerState, tutorial) {
-        if (tutorial == null) return@LaunchedEffect
-        var previous = pagerState.settledPage
-        snapshotFlow { pagerState.settledPage }.collect { page ->
-            if (page > previous) tutorial.event(TutorialEvent.RECO_SKIPPED)
-            previous = page
-        }
-    }
-    // « Montre-moi » du tuto : la carte suivante monte, comme après un défilement.
-    LaunchedEffect(pagerState, tutorial) {
-        tutorial?.handle(TutorialEvent.RECO_SKIPPED) { request ->
-            val next = pagerState.settledPage + 1
-            if (next < pagerState.pageCount) {
-                pagerState.animateScrollToPage(next, animationSpec = tween(request.moveMs.coerceAtLeast(1), easing = FastOutSlowInEasing))
-            }
-        }
     }
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage to currentCards.size }
@@ -283,14 +262,7 @@ private fun FeedPager(
                 card = card,
                 showAvailability = state.showAvailability,
                 requestService = state.requestService,
-                onAction = { action ->
-                    when (action) {
-                        CardAction.WATCHED -> tutorial?.event(TutorialEvent.RECO_WATCHED)
-                        CardAction.WATCHLIST, CardAction.REQUEST -> tutorial?.event(TutorialEvent.RECO_WATCHLIST)
-                        else -> Unit
-                    }
-                    onAction(card, action)
-                },
+                onAction = { action -> onAction(card, action) },
                 onLightning = { onLightning(card) },
                 onOpenMovie = { onOpenMovie(card.tmdbId) },
                 highlight = page == pagerState.settledPage,

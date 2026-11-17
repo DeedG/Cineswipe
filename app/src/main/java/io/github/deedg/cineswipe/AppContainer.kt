@@ -35,6 +35,7 @@ import io.github.deedg.cineswipe.data.repository.ArenaRepository
 import io.github.deedg.cineswipe.data.repository.CensusRepository
 import io.github.deedg.cineswipe.data.repository.DiagnosticsRepository
 import io.github.deedg.cineswipe.data.repository.FeedRepository
+import io.github.deedg.cineswipe.data.repository.JourneyRepository
 import io.github.deedg.cineswipe.data.repository.LibraryRepository
 import io.github.deedg.cineswipe.data.repository.ListsRepository
 import io.github.deedg.cineswipe.data.repository.PeopleRepository
@@ -52,7 +53,6 @@ import io.github.deedg.cineswipe.data.share.SharedRepository
 import io.github.deedg.cineswipe.data.tmdb.TmdbApi
 import io.github.deedg.cineswipe.data.tmdb.TmdbSeriesAdapter
 import io.github.deedg.cineswipe.data.update.UpdateRepository
-import io.github.deedg.cineswipe.ui.tutorial.Tutorial
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +86,8 @@ class AppConfig(
     val updateUrl: String? = UpdateRepository.LATEST_URL,
     /** Clé TMDB intégrée au build (secret de la CI), vide pour un build sans clé. */
     val builtinTmdbKey: String? = BuildConfig.TMDB_BUILTIN_KEY.takeIf { it.isNotBlank() },
+    /** Parcours guidé des nouveaux utilisateurs (recos verrouillées tant qu'il n'est pas fait). */
+    val journey: Boolean = true,
 ) {
     companion object {
         fun demo(catalog: DemoCatalog) = AppConfig(
@@ -217,8 +219,8 @@ class AppContainer(
     /** Nouvelles saisons des séries suivies (monde des séries). */
     val seasonWatch: SeasonWatchRepository by lazy { SeasonWatchRepository(database, tmdb, settings, config.seasonNotifier(appContext)) }
 
-    /** Tuto pas à pas (utilisé pendant la démo). */
-    val tutorial: Tutorial by lazy { Tutorial() }
+    /** Parcours Recenser → Arène → Recos (terminé d'office dans la démo). */
+    val journey: JourneyRepository by lazy { JourneyRepository(database, settings, series = kind.isSeries, enabled = config.journey && !isDemo) }
     val feed: FeedRepository by lazy {
         FeedRepository(database, tmdb, settings, homelab, recos, onWatchedChanged = { arena.requestRerank() }, series = kind.isSeries)
     }

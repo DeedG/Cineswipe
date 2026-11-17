@@ -18,7 +18,8 @@ import io.github.deedg.cineswipe.testing.FakeTmdbServer
 import io.github.deedg.cineswipe.testing.TestCineSwipeApp
 import io.github.deedg.cineswipe.testing.TestData
 import io.github.deedg.cineswipe.ui.census.CensusTestTags
-import io.github.deedg.cineswipe.ui.discover.DiscoverTestTags
+import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
+import io.github.deedg.cineswipe.ui.navigation.Tab
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -61,9 +62,8 @@ class CensusFlowTest {
         val sequel = FakeTmdbServer.SEQUEL.id
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.onNodeWithText("Découverte").performClick()
-            compose.waitForTag(DiscoverTestTags.CENSUS)
-            compose.onNodeWithTag(DiscoverTestTags.CENSUS).performClick()
+            // Le recensement est le premier onglet.
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.CENSUS)).performClick()
 
             // La grille montre le catalogue TMDB, jamais un film déjà vu (Drive).
             listOf(first, second, third).forEach { compose.waitForTag(CensusTestTags.cell(it)) }

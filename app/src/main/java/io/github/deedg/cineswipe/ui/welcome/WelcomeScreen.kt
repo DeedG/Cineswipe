@@ -16,17 +16,14 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -37,21 +34,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.deedg.cineswipe.R
 import io.github.deedg.cineswipe.ui.components.CineButton
-import io.github.deedg.cineswipe.ui.components.CineSecondaryButton
-import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.journey.JourneyStepRow
+import io.github.deedg.cineswipe.ui.journey.StepStatus
 import io.github.deedg.cineswipe.ui.theme.CineColors
 
 object WelcomeTestTags {
-    const val DEMO = "welcome_demo"
     const val START = "welcome_start"
+    const val IMPORT = "welcome_import"
 }
 
 /**
- * Accueil du premier lancement : ce que fait l'appli, puis la démo (bac à sable avec les 100
- * films les plus vus) ou le vrai départ (clé TMDB).
+ * Accueil du premier lancement : ce que fait l'appli, en trois étapes dans l'ordre où on les fait
+ * (recenser, noter en duels, recevoir ses recos), puis le départ sur ses vrais films. Qui a déjà
+ * une liste (sauvegarde, Letterboxd…) commence par l'import.
  */
 @Composable
-fun WelcomeScreen(starting: Boolean, onDemo: () -> Unit, onStart: () -> Unit) {
+fun WelcomeScreen(onStart: () -> Unit, onImport: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -87,52 +85,22 @@ fun WelcomeScreen(starting: Boolean, onDemo: () -> Unit, onStart: () -> Unit) {
                 )
             }
             Text(stringResource(R.string.welcome_tagline), color = CineColors.TextSoft, fontSize = 18.sp, lineHeight = 25.sp)
-            Spacer(Modifier.height(4.dp))
-            Feature(CineIcons.Recos, stringResource(R.string.welcome_recos_title), stringResource(R.string.welcome_recos_body))
-            Feature(CineIcons.Arena, stringResource(R.string.welcome_arena_title), stringResource(R.string.welcome_arena_body))
-            Feature(CineIcons.Grid, stringResource(R.string.welcome_census_title), stringResource(R.string.welcome_census_body))
+            Text(stringResource(R.string.welcome_steps), color = CineColors.TextMuted, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            JourneyStepRow(1, stringResource(R.string.journey_census_title), stringResource(R.string.journey_census_body), StepStatus.CURRENT)
+            JourneyStepRow(2, stringResource(R.string.journey_arena_title), stringResource(R.string.journey_arena_body), StepStatus.CURRENT)
+            JourneyStepRow(3, stringResource(R.string.journey_recos_title), stringResource(R.string.journey_recos_body), StepStatus.CURRENT)
             Spacer(Modifier.height(8.dp))
             CineButton(
-                text = stringResource(if (starting) R.string.welcome_demo_starting else R.string.welcome_demo),
-                icon = if (starting) null else CineIcons.Play,
-                onClick = onDemo,
-                enabled = !starting,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(WelcomeTestTags.DEMO),
-            )
-            if (starting) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CineColors.Red, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
-                }
-            }
-            CineSecondaryButton(
                 text = stringResource(R.string.welcome_start),
                 onClick = onStart,
-                enabled = !starting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(WelcomeTestTags.START),
             )
-            Text(stringResource(R.string.welcome_demo_note), color = CineColors.TextMuted, fontSize = 13.sp, lineHeight = 18.sp)
-        }
-    }
-}
-
-@Composable
-private fun Feature(icon: ImageVector, title: String, body: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(CineColors.Surface)
-                .padding(10.dp),
-        ) {
-            Icon(icon, contentDescription = null, tint = CineColors.Red, modifier = Modifier.size(24.dp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            Text(body, color = CineColors.TextSecondary, fontSize = 14.sp, lineHeight = 20.sp)
+            TextButton(onClick = onImport, modifier = Modifier.align(Alignment.CenterHorizontally).testTag(WelcomeTestTags.IMPORT)) {
+                Text(stringResource(R.string.welcome_import), color = CineColors.TextSecondary, fontSize = 14.sp)
+            }
+            Text(stringResource(R.string.welcome_note), color = CineColors.TextMuted, fontSize = 13.sp, lineHeight = 18.sp)
         }
     }
 }

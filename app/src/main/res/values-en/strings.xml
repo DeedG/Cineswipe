@@ -432,8 +432,6 @@
     <string name="census_help_cards">In cards, like the picks: swipe left if you’ve seen it, right to add it to your watchlist, up if you haven’t seen it.</string>
     <string name="census_help_order">Movies you’re most likely to have seen come first, and the order learns from your answers. Sequels of movies you’ve seen show up quickly.</string>
     <string name="census_help_impression">Loved or meh: the Arena starts from a better guess for these movies.</string>
-    <string name="discover_census_title">Catch-up</string>
-    <string name="discover_census_message">Find every movie you’ve seen, in a few taps.</string>
 
     <!-- Data export and diagnostics -->
     <string name="export_chooser">Send the export</string>
@@ -505,71 +503,16 @@
     <string name="diagnostics_weights">Weights of the “already seen” model</string>
 
     <!-- First launch welcome and demo -->
-    <string name="welcome_tagline">The movies you’ve seen, picks that feel like you, and a ranking built from duels.</string>
-    <string name="welcome_recos_title">Picks</string>
-    <string name="welcome_recos_body">Swipe left if you’ve seen the movie, right to keep it for later: the picks learn from every gesture.</string>
-    <string name="welcome_arena_title">Arena</string>
-    <string name="welcome_arena_body">Two movies, you pick your favorite: your ranking and your stars compute themselves.</string>
-    <string name="welcome_census_title">Catch-up</string>
-    <string name="welcome_census_body">Find every movie you’ve already seen in a few minutes.</string>
-    <string name="welcome_demo">Discover the app: tour and demo</string>
-    <string name="welcome_demo_starting">Getting the demo ready…</string>
-    <string name="welcome_start">Get started</string>
-    <string name="welcome_demo_note">A step-by-step tour, in a demo with the 100 most-watched movies and a fake profile that has already seen about twenty. Nothing is saved, and you’ll find it again in the settings.</string>
     <string name="demo_strip_title">DEMO</string>
     <string name="demo_strip_body">Nothing is saved</string>
     <string name="demo_exit">Leave</string>
     <string name="settings_demo_title">Demo mode</string>
     <string name="settings_demo_body">You’re exploring CineSwipe with the 100 most-watched movies and a fake profile. Nothing is saved: when you leave, your real data is back.</string>
     <string name="settings_demo_exit">Leave the demo</string>
-    <string name="settings_demo_try">Tour and demo (sandbox)</string>
+    <string name="settings_demo_try">Demo (sandbox, nothing is saved)</string>
     <string name="settings_demo_starting">Getting the demo ready…</string>
 
     <!-- Demo step-by-step tour -->
-    <string name="demo_tutorial">Tour</string>
-    <string name="tuto_skip">Skip the tour</string>
-    <string name="tuto_start">Let’s go</string>
-    <string name="tuto_next">Next</string>
-    <string name="tuto_show_me">Show me</string>
-    <string name="tuto_autoplay">Auto tour</string>
-    <string name="tuto_manual">Take over</string>
-    <string name="tuto_your_turn">Your turn</string>
-    <string name="tuto_explore">Explore the demo</string>
-    <string name="tuto_exit_demo">Leave the demo</string>
-    <string name="tuto_intro_title">Welcome to the demo</string>
-    <string name="tuto_intro_body">In two minutes, we’ll tour CineSwipe with a fake profile that has already seen about twenty movies, and a fake homelab (Plex and Seerr). Try anything you like: nothing is saved.</string>
-    <string name="tuto_reco_title">The picks</string>
-    <string name="tuto_reco_body">One card = one movie chosen for you. The red line under the poster says why: a movie you liked, a director, a great classic…</string>
-    <string name="tuto_watched_title">Seen it? Swipe left</string>
-    <string name="tuto_watched_body">The movie joins your seen movies, and the picks learn from your choice. Drag the card to the left.</string>
-    <string name="tuto_watchlist_title">Want to see it? Swipe right</string>
-    <string name="tuto_watchlist_body">It joins your watchlist. With a Seerr or Radarr server, it’s also requested for download.</string>
-    <string name="tuto_skip_title">Not now? Scroll up</string>
-    <string name="tuto_skip_body">The movie goes by without changing anything. It may come back later, if your tastes change.</string>
-    <string name="tuto_actions_title">The card buttons</string>
-    <string name="tuto_actions_body">“Not for me” dismisses the movie for good, “Trailer” opens the trailer on YouTube, and ⚡ chains picks from this movie. Tap the poster to open the full details.</string>
-    <string name="tuto_arena_title">The Arena</string>
-    <string name="tuto_arena_body">Two movies you’ve seen face off. Tap the one you prefer.</string>
-    <string name="tuto_reliability_title">Your ranking takes shape</string>
-    <string name="tuto_reliability_body" formatted="false">Every duel recomputes your ratings and stars. Reliability goes up with each duel: around 90 %, your ranking is solid.</string>
-    <string name="tuto_draw_title">Can’t choose?</string>
-    <string name="tuto_draw_body">“Tie” gives half a point to each. A mistake? “Undo”, at the top, takes back the last duel.</string>
-    <string name="tuto_census_open_title">Find the movies you’ve seen</string>
-    <string name="tuto_census_open_body">The catch-up scrolls through the movies you’re most likely to have seen. Open it.</string>
-    <string name="tuto_census_tap_title">Tap the ones you’ve seen</string>
-    <string name="tuto_census_tap_body">One tap: seen. Two: loved. Three: meh. A long press also offers “watchlist” or the movie’s details.</string>
-    <string name="tuto_census_next_title">Next page</string>
-    <string name="tuto_census_next_body">“Next” saves the page. Movies without an answer become “not seen”, with no effect on your picks.</string>
-    <string name="tuto_census_mode_title">Cards, if you prefer</string>
-    <string name="tuto_census_mode_body">This button switches to cards, with the same gestures as the picks. The filters at the top target a period or French movies.</string>
-    <string name="tuto_search_title">Search</string>
-    <string name="tuto_search_body">Type a title: results come as cards, with the same gestures as the picks. Type a name: actors and directors show up, with all their movies. In the demo, it covers the sandbox’s 100 movies.</string>
-    <string name="tuto_profile_title">Your profile</string>
-    <string name="tuto_profile_body">Your counters open your library or the duel history. Further down: your tastes in numbers, your year in review to share, your own lists and your Hall of Fame.</string>
-    <string name="tuto_settings_title">Settings</string>
-    <string name="tuto_settings_body">Your TMDB key, your homelab (Plex, Jellyfin, Seerr, Radarr: available on your server, requests with a swipe, a notification after a movie you watched) and the backup of your data.</string>
-    <string name="tuto_end_title">That’s it!</string>
-    <string name="tuto_end_body">Keep exploring the demo freely, or leave it to start with your own movies. “Tour”, in the banner, restarts the tour.</string>
 
     <!-- TMDB key guide -->
     <string name="tmdb_key_title">Your TMDB key</string>
@@ -1032,4 +975,44 @@
     <string name="reco_nudge_dismiss">Don’t suggest this again</string>
     <string name="reco_nudge_dismissed">Got it, we won’t suggest it again. The catch-up is in Discover, the duels in the Arena.</string>
     <string name="settings_mode_body">Two separate worlds: each has its own picks, Arena, library and lists. The pill at the top of the main screens also switches between them.</string>
+
+    <!-- New users' path: catch up, rank in duels, then picks -->
+    <string name="tab_census">Catch-up</string>
+    <string name="welcome_tagline">Find the movies you’ve seen, rank them in duels, and get picks that feel like you.</string>
+    <string name="welcome_steps">Three steps, in order:</string>
+    <string name="welcome_start">Let’s go</string>
+    <string name="welcome_import">I already have a list (backup, Letterboxd, IMDb, Trakt)</string>
+    <string name="welcome_note">Allow about five minutes for the first two steps. Your movies stay on your phone.</string>
+    <string name="journey_title">Your picks are getting ready</string>
+    <string name="journey_intro">CineSwipe picks from what you’ve seen and liked. Two quick steps to go, and your picks will really be yours.</string>
+    <string name="journey_step">Step %1$d of 3</string>
+    <string name="journey_census_title">Find the movies you’ve seen</string>
+    <string name="journey_census_body">Tap the posters of the movies you’ve already seen.</string>
+    <string name="journey_census_count">%1$d of %2$d movies seen</string>
+    <string name="journey_arena_title">Rank them in duels</string>
+    <string name="journey_arena_body">Two movies, you pick your favorite: your stars compute themselves.</string>
+    <string name="journey_arena_count">%1$d of %2$d duels</string>
+    <string name="journey_recos_title">Get your picks</string>
+    <string name="journey_recos_body">Movies chosen for you, based on your tastes.</string>
+    <string name="journey_cta_census">Find my movies</string>
+    <string name="journey_cta_census_continue">Continue the catch-up</string>
+    <string name="journey_cta_arena">Start the duels</string>
+    <string name="journey_cta_arena_continue">Continue the duels</string>
+    <string name="journey_skip">See the picks anyway</string>
+    <string name="journey_hint_census_grid">Tap the movies you’ve seen, then “Next” at the bottom.</string>
+    <string name="journey_hint_census_cards">Swipe left if you’ve seen it, right to keep it for later, up otherwise.</string>
+    <string name="journey_hint_arena">Tap the movie you prefer.</string>
+    <string name="journey_census_done">Step 1 done!</string>
+    <string name="journey_census_done_body">You can keep going, or move on to the duels.</string>
+    <string name="journey_census_done_action">Go to the duels</string>
+    <string name="journey_arena_done">Your picks are ready!</string>
+    <string name="journey_arena_done_body">You can keep dueling to sharpen your stars.</string>
+    <string name="journey_arena_done_action">See my picks</string>
+    <string name="journey_back_to_census">Catch up</string>
+    <string name="recos_hint_title">Your picks are here</string>
+    <string name="recos_hint_body">Swipe left if you’ve already seen the movie, right to keep it for later, up to move to the next one.</string>
+    <string name="recos_hint_ok">Got it</string>
+    <string name="recos_discover">Discover with filters</string>
+    <string name="census_mode_grid_short">Grid</string>
+    <string name="census_mode_cards_short">Cards</string>
 </resources>

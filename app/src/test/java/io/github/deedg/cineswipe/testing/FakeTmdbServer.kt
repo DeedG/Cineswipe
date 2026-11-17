@@ -253,7 +253,13 @@ object PlainCipher : SecretCipher {
  * Appli de test : TMDB pointe vers [FakeTmdbServer], pas de tâches de fond WorkManager, et les
  * demandes au homelab partent sans délai.
  */
-class TestCineSwipeApp : CineSwipeApp() {
+open class TestCineSwipeApp : CineSwipeApp() {
+    /** Parcours des nouveaux utilisateurs : coupé dans les tests, sauf ceux qui le vérifient ([JourneyTestApp]). */
+    protected open val journey: Boolean get() = false
+
+    /** Clé TMDB intégrée au build : aucune ici (les tests vérifient le parcours sans clé). */
+    protected open val builtinKey: String? get() = null
+
     /** Notifications de nouvelles saisons envoyées pendant le test. */
     val seasonNotices = java.util.Collections.synchronizedList(ArrayList<io.github.deedg.cineswipe.data.series.SeasonNotice>())
 
@@ -262,9 +268,9 @@ class TestCineSwipeApp : CineSwipeApp() {
         cipher = { PlainCipher },
         homelabScheduler = { HomelabScheduler.None },
         requestGraceMs = 0,
-        // Les tests vérifient le parcours sans clé : pas de clé intégrée.
-        builtinTmdbKey = null,
+        builtinTmdbKey = builtinKey,
         updateUrl = null,
+        journey = journey,
         seasonNotifier = { context -> io.github.deedg.cineswipe.data.series.SeasonNotifier { notices -> seasonNotices += notices } },
     )
 
@@ -273,4 +279,12 @@ class TestCineSwipeApp : CineSwipeApp() {
     override fun createContainer(): AppContainer = AppContainer(this, testConfig())
 
     override fun createSeriesContainer(): AppContainer = AppContainer(this, testConfig(), kind = MediaKind.SERIES)
+}
+
+/** Appli de test avec le parcours Recenser → Arène → Recos, comme chez un nouvel utilisateur. */
+class JourneyTestApp : TestCineSwipeApp() {
+    override val journey: Boolean get() = true
+
+    /** Comme la version publiée : la clé est intégrée, l'accueil mène droit au recensement. */
+    override val builtinKey: String? get() = FakeTmdbServer.API_KEY
 }

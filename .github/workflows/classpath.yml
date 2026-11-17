@@ -69,6 +69,12 @@ jobs:
           }
           copy_list build/classpath/compileDebugKotlin.txt "$out/main"
           copy_list build/classpath/compileDebugUnitTestKotlin.txt "$out/test"
+          for name in kotlinCompilerClasspath kotlinBuildToolsApiClasspath kotlinCompilerPluginClasspathDebug; do
+            if [ -f "build/classpath/$name.txt" ]; then
+              mkdir -p "$out/$name"
+              copy_list "build/classpath/$name.txt" "$out/$name"
+            fi
+          done
           cp "$ANDROID_HOME/platforms/android-36/android.jar" "$out/android.jar"
           (cd "$out" && zip -qr "$GITHUB_WORKSPACE/classpath.zip" .)
           echo "::notice title=Classpath::$(ls "$out/main" | wc -l) jars (appli), $(ls "$out/test" | wc -l) jars (tests)"
