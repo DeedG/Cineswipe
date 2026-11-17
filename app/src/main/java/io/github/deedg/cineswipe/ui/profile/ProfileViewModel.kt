@@ -5,9 +5,13 @@ import androidx.lifecycle.viewModelScope
 import io.github.deedg.cineswipe.data.db.WatchStatus
 import io.github.deedg.cineswipe.data.model.LibraryItem
 import io.github.deedg.cineswipe.data.model.LibraryStats
+import io.github.deedg.cineswipe.data.model.RankingReliability
 import io.github.deedg.cineswipe.data.repository.LibraryRepository
 import io.github.deedg.cineswipe.data.repository.SettingsRepository
 import io.github.deedg.cineswipe.domain.StarScale
+import io.github.deedg.cineswipe.domain.reco.RecoQualities
+import io.github.deedg.cineswipe.domain.reco.RecoQuality
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -31,16 +35,30 @@ data class ProfileUiState(
     val hallOfFame: List<HallOfFameEntry> = emptyList(),
     /** Le compteur « Dispo sur ton serveur » n'apparaît qu'avec un serveur média connecté. */
     val showAvailability: Boolean = false,
+    /** Finesse des recos, et ce qui la ferait progresser (null sans film vu). */
+    val recoQuality: RecoQuality? = null,
 )
 
-class ProfileViewModel(library: LibraryRepository, settings: SettingsRepository) : ViewModel() {
+class ProfileViewModel(
+    library: LibraryRepository,
+    settings: SettingsRepository,
+    reliability: Flow<RankingReliability>,
+    series: Boolean,
+) : ViewModel() {
 
     val state: StateFlow<ProfileUiState> = combine(
         library.observeStats(),
         library.observeLibrary(),
         settings.homelabConnected,
-    ) { stats, items, homelab ->
-        ProfileUiState(loading = false, stats = stats, hallOfFame = hallOfFame(items), showAvailability = homelab)
+        reliability,
+    ) { stats, items, homelab, reliable ->
+        ProfileUiState(
+            loading = false,
+            stats = stats,
+            hallOfFame = hallOfFame(items),
+            showAvailability = homelab,
+            recoQuality = RecoQualities.of(series, stats.watched, reliable.value),
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUiState())
 
     private fun hallOfFame(items: List<LibraryItem>): List<HallOfFameEntry> {

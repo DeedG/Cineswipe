@@ -343,7 +343,9 @@
     <string name="service_plex_shared">%1$s (shared)</string>
     <string name="service_plex_home_users">Plex Home profile</string>
     <string name="service_plex_home_pin">%1$s (PIN)</string>
-    <string name="service_plex_home_hint">Seen titles, show progress and the sync come from this profile, for movies and shows alike. Profiles protected by a PIN aren’t supported yet.</string>
+    <string name="service_plex_home_hint">Seen titles, show progress and the sync come from this profile, for movies and shows alike. A protected profile asks for its PIN.</string>
+    <string name="service_plex_home_pin_label">%1$s’s PIN</string>
+    <string name="service_plex_home_pin_ok">Use this profile</string>
     <string name="service_plex_home_current">Plex Home profile: %1$s</string>
     <string name="service_plex_home_change_hint">To switch profiles, sign in with Plex again.</string>
     <string name="service_seerr_mode_local">Seerr account</string>
@@ -1015,4 +1017,16 @@
     <string name="recos_discover">Discover with filters</string>
     <string name="census_mode_grid_short">Grid</string>
     <string name="census_mode_cards_short">Cards</string>
+
+    <!-- Profile: how sharp the picks are -->
+    <string name="reco_quality_starting">Your picks: warming up</string>
+    <string name="reco_quality_fair">Your picks: decent</string>
+    <string name="reco_quality_good">Your picks: good</string>
+    <string name="reco_quality_sharp">Your picks: very sharp</string>
+    <string name="reco_quality_detail">%1$d movies seen · ranking %2$d %% reliable</string>
+    <string name="reco_quality_advice_census">Find more movies you’ve seen to sharpen them.</string>
+    <string name="reco_quality_advice_duels">Play a few duels to sharpen them.</string>
+    <string name="reco_quality_advice_none">They follow your tastes well.</string>
+    <string name="reco_quality_action_census">Catch up</string>
+    <string name="reco_quality_action_duels">Duels</string>
 </resources>

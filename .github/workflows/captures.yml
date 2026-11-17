@@ -17,9 +17,9 @@ on:
           - publier
           - nettoyer
       tests:
-        description: tests à lancer (ScreenCaptureTest, JourneyCaptureTest…)
+        description: tests à lancer, séparés par des espaces (chacun dans sa propre JVM)
         required: false
-        default: '*CaptureTest'
+        default: '*ScreenCaptureTest.smallPhone *ScreenCaptureTest.pixel *ScreenCaptureTest.foldOpen *ScreenCaptureTest.foldOpenLandscape *ScreenCaptureTest.flipCoverScreen *ScreenCaptureTest.seriesPixel *JourneyCaptureTest'
 
 permissions:
   contents: write
@@ -45,7 +45,21 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest --tests '${{ inputs.tests }}' -Pcaptures=true 2>&1 | tee build.log
+          # Un tour par lancement : si le moteur de rendu plante sur l'un, les autres donnent quand même leurs images.
+          failed=""
+          for tests in ${{ inputs.tests }}; do
+            echo "::group::$tests"
+            if ! ./gradlew --stacktrace :app:testDebugUnitTest --tests "$tests" -Pcaptures=true 2>&1 | tee -a build.log; then
+              failed="$failed $tests"
+              mkdir -p app/build/captures/journaux
+              find app/build/test-results -name '*.xml' -exec cp {} app/build/captures/journaux/ \; 2>/dev/null || true
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "::error title=Captures::Tours en échec :$failed"
+            exit 1
+          fi
 
       - name: Erreurs en annotations
         if: failure()

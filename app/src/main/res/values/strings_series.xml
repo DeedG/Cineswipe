@@ -279,4 +279,7 @@
     <string name="journey_hint_census_cards_series">Glisse à gauche si tu l’as vue, à droite pour la garder à voir, vers le haut sinon.</string>
     <string name="journey_hint_arena_series">Touche la série que tu préfères.</string>
     <string name="recos_hint_body_series">Glisse à gauche si tu as déjà vu la série, à droite pour la garder à voir, vers le haut pour passer à la suivante.</string>
+
+    <string name="reco_quality_detail_series">%1$d séries vues · classement fiable à %2$d %%</string>
+    <string name="reco_quality_advice_census_series">Recense d’autres séries vues pour les affiner.</string>
 </resources>

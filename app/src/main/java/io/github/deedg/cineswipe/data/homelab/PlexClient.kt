@@ -213,9 +213,16 @@ class PlexClient(
         }
     }
 
-    /** Jeton du compte d'un profil Plex Home (profil sans code PIN). */
-    suspend fun switchHomeUser(accountToken: String, userId: Long): String {
-        val reply = http.post(service, plexTv, "api/home/users/$userId/switch", accountHeaders(accountToken), body = "{}")
+    /** Jeton du compte d'un profil Plex Home ; [pin] pour un profil protégé. */
+    suspend fun switchHomeUser(accountToken: String, userId: Long, pin: String? = null): String {
+        val reply = http.post(
+            service,
+            plexTv,
+            "api/home/users/$userId/switch",
+            accountHeaders(accountToken),
+            body = "{}",
+            query = if (pin.isNullOrBlank()) emptyMap() else mapOf("pin" to pin),
+        )
         val fromJson = try {
             LENIENT.decodeFromString(PlexSwitchDto.serializer(), reply).let { it.authToken ?: it.authenticationToken }
         } catch (error: IllegalArgumentException) {

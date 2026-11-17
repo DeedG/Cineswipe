@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.domain.reco.RecoQuality
+import io.github.deedg.cineswipe.domain.reco.RecoQualityAdvice
+import io.github.deedg.cineswipe.domain.reco.RecoQualityLevel
 import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.ui.common.cineViewModel
 import io.github.deedg.cineswipe.ui.components.CineButton
@@ -63,8 +67,9 @@ fun ProfileRoute(
     onOpenList: (Long) -> Unit = {},
     onOpenRetro: () -> Unit = {},
     onOpenFriends: () -> Unit = {},
+    onOpenArena: () -> Unit = {},
 ) {
-    val viewModel = cineViewModel { ProfileViewModel(it.library, it.settings) }
+    val viewModel = cineViewModel { ProfileViewModel(it.library, it.settings, it.arena.observeReliability(), it.kind.isSeries) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     ProfileScreen(
         state = state,
@@ -76,6 +81,7 @@ fun ProfileRoute(
         onOpenStats = onOpenStats,
         onOpenRetro = onOpenRetro,
         onOpenFriends = onOpenFriends,
+        onOpenArena = onOpenArena,
         listsSection = { ListsShelfRoute(onOpenList = onOpenList, modifier = Modifier.padding(top = 6.dp)) },
         updateBanner = { UpdateBanner() },
     )
@@ -88,6 +94,8 @@ object ProfileTestTags {
     const val DUELS = "profile-duels"
     const val STATS = "profile-stats"
     const val RETRO = "profile-retro"
+    const val RECO_QUALITY = "profile-reco-quality"
+    const val RECO_QUALITY_ACTION = "profile-reco-quality-action"
 }
 
 @Composable
@@ -101,6 +109,7 @@ fun ProfileScreen(
     onOpenStats: () -> Unit = {},
     onOpenRetro: () -> Unit = {},
     onOpenFriends: () -> Unit = {},
+    onOpenArena: () -> Unit = {},
     /** « Mes listes » (listes perso), sous les stats. */
     listsSection: @Composable () -> Unit = {},
     /** Nouvelle version disponible (bandeau sous le titre). */
@@ -160,6 +169,9 @@ fun ProfileScreen(
                 onClick = { onOpenLibrary(LibraryFilter.AVAILABLE) },
             )
         }
+        state.recoQuality?.let { quality ->
+            RecoQualityCard(quality, onAct = if (quality.advice == RecoQualityAdvice.DUELS) onOpenArena else onOpenCensus)
+        }
         CineSecondaryButton(
             text = stringResource(R.string.census_cta),
             icon = CineIcons.Grid,
@@ -211,6 +223,70 @@ fun ProfileScreen(
         }
         state.hallOfFame.forEach { entry ->
             HallOfFameCard(entry = entry, onClick = { onOpenMovie(entry.tmdbId) })
+        }
+    }
+}
+
+/**
+ * Finesse des recos : un niveau, ce sur quoi il repose (titres vus, fiabilité du classement) et ce
+ * qui le ferait monter. Donne une raison de continuer à recenser et à noter, sans insister.
+ */
+@Composable
+private fun RecoQualityCard(quality: RecoQuality, onAct: () -> Unit) {
+    val shape = RoundedCornerShape(15.dp)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(CineColors.Surface)
+            .border(1.dp, CineColors.Border, shape)
+            .padding(horizontal = 18.dp, vertical = 16.dp)
+            .testTag(ProfileTestTags.RECO_QUALITY),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val level = when (quality.level) {
+            RecoQualityLevel.STARTING -> R.string.reco_quality_starting
+            RecoQualityLevel.FAIR -> R.string.reco_quality_fair
+            RecoQualityLevel.GOOD -> R.string.reco_quality_good
+            RecoQualityLevel.SHARP -> R.string.reco_quality_sharp
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(CineIcons.Recos, contentDescription = null, tint = CineColors.RedLight, modifier = Modifier.size(20.dp))
+            Text(stringResource(level), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+        LinearProgressIndicator(
+            progress = { quality.score },
+            modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+            color = CineColors.Red,
+            trackColor = CineColors.BorderStrong,
+            drawStopIndicator = {},
+        )
+        Text(
+            stringResource(R.string.reco_quality_detail, quality.watched, quality.reliability),
+            color = CineColors.TextSecondary,
+            fontSize = 13.sp,
+        )
+        val advice = when (quality.advice) {
+            RecoQualityAdvice.CENSUS -> R.string.reco_quality_advice_census
+            RecoQualityAdvice.DUELS -> R.string.reco_quality_advice_duels
+            RecoQualityAdvice.NONE -> R.string.reco_quality_advice_none
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(stringResource(advice), color = CineColors.TextSoft, fontSize = 14.sp, lineHeight = 19.sp, modifier = Modifier.weight(1f))
+            if (quality.advice != RecoQualityAdvice.NONE) {
+                Text(
+                    stringResource(if (quality.advice == RecoQualityAdvice.DUELS) R.string.reco_quality_action_duels else R.string.reco_quality_action_census),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(CineColors.Red)
+                        .clickable(role = Role.Button, onClick = onAct)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .testTag(ProfileTestTags.RECO_QUALITY_ACTION),
+                )
+            }
         }
     }
 }

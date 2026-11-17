@@ -15,12 +15,12 @@ statistiques d'usage. Rien à configurer : installe, et c'est parti.
 </p>
 
 <p align="center">
+  <img src="docs/captures/accueil.png" width="16%" alt="Accueil : les trois étapes" />
+  <img src="docs/captures/recensement.png" width="16%" alt="Recensement" />
+  <img src="docs/captures/arene.png" width="16%" alt="Arène" />
   <img src="docs/captures/recos.png" width="16%" alt="Recos de films" />
   <img src="docs/captures/recos-series.png" width="16%" alt="Recos de séries" />
-  <img src="docs/captures/arene.png" width="16%" alt="Arène" />
-  <img src="docs/captures/recensement.png" width="16%" alt="Recensement" />
   <img src="docs/captures/profil-series.png" width="16%" alt="Profil, mode séries" />
-  <img src="docs/captures/retro.png" width="16%" alt="Rétro de l'année" />
 </p>
 
 ---

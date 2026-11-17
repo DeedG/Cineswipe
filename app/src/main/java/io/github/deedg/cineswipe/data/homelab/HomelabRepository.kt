@@ -455,8 +455,8 @@ class HomelabRepository(
     }
 
     /** Serveurs vus par un profil Plex Home, avec le jeton d'accès propre à ce profil. */
-    suspend fun plexServersAs(accountToken: String, user: PlexHomeUser): List<PlexServer> =
-        plex.servers(if (user.admin) accountToken else plex.switchHomeUser(accountToken, user.id))
+    suspend fun plexServersAs(accountToken: String, user: PlexHomeUser, pin: String? = null): List<PlexServer> =
+        plex.servers(if (user.admin) accountToken else plex.switchHomeUser(accountToken, user.id, pin))
 
     /** Connexion d'un utilisateur à Seerr : ses demandes seront à son nom. */
     suspend fun seerrLogin(rawUrl: String, headers: String, mode: SeerrAuthMode, identifier: String, secret: String): SeerrSession {

@@ -367,7 +367,8 @@ class HomelabClientsTest {
         assertTrue(users[0].admin)
         assertTrue(users[2].pinProtected)
         assertEquals("jeton-lou", client.switchHomeUser("jeton-compte", 12))
-        assertEquals("jeton-xml", client.switchHomeUser("jeton-compte", 13))
+        // Profil protégé : le code PIN part avec la demande.
+        assertEquals("jeton-xml", client.switchHomeUser("jeton-compte", 13, pin = "1234"))
         val servers = client.servers("jeton-lou")
         assertEquals("machine-1", servers.single().id)
         assertEquals("serveur-lou", servers.single().accessToken)
@@ -378,7 +379,8 @@ class HomelabClientsTest {
         val switch = next()
         assertEquals("POST", switch.method)
         assertEquals("/api/home/users/12/switch", switch.url.encodedPath)
-        next()
+        assertEquals(null, switch.url.queryParameter("pin"))
+        assertEquals("1234", next().url.queryParameter("pin"))
         assertEquals("jeton-lou", next().headers["X-Plex-Token"])
     }
 

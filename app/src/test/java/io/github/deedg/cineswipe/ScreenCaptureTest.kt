@@ -71,6 +71,13 @@ class ScreenCaptureTest {
     @Before
     fun setUp() {
         assumeTrue(System.getProperty("cineswipe.captures") == "true")
+        // Le moteur de rendu natif plantait au hasard (« Class not found: java/nio/IntBuffer ») quand
+        // la première image décodée l'était sur un fil d'arrière-plan (affiches de la démo) : on lui
+        // fait charger ses classes NIO ici, sur le fil principal.
+        Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).apply {
+            copyPixelsToBuffer(java.nio.ByteBuffer.allocate(4))
+            copyPixelsToBuffer(java.nio.IntBuffer.allocate(1))
+        }
         runBlocking { app.startDemo() }
     }
 
@@ -197,6 +204,11 @@ class ScreenCaptureTest {
             this.scenario = scenario
             waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
+            // L'affiche vient du vrai TMDB : on lui laisse le temps d'arriver.
+            repeat(4) {
+                Thread.sleep(1_000)
+                settle()
+            }
             shot("demo-recos")
             tab("Profil")
             waitForTag(ProfileTestTags.STATS)

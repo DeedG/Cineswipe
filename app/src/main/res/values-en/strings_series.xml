@@ -267,4 +267,7 @@
     <string name="journey_hint_census_cards_series">Swipe left if you’ve seen it, right to keep it for later, up otherwise.</string>
     <string name="journey_hint_arena_series">Tap the show you prefer.</string>
     <string name="recos_hint_body_series">Swipe left if you’ve already seen the show, right to keep it for later, up to move to the next one.</string>
+
+    <string name="reco_quality_detail_series">%1$d shows seen · ranking %2$d %% reliable</string>
+    <string name="reco_quality_advice_census_series">Find more shows you’ve seen to sharpen them.</string>
 </resources>

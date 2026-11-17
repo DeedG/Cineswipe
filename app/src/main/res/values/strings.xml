@@ -345,7 +345,9 @@
     <string name="service_plex_shared">%1$s (partagé)</string>
     <string name="service_plex_home_users">Profil Plex Home</string>
     <string name="service_plex_home_pin">%1$s (code PIN)</string>
-    <string name="service_plex_home_hint">Les films vus, l’avancement des séries et la synchro sont ceux de ce profil, pour les films comme pour les séries. Les profils protégés par un code PIN ne sont pas encore pris en charge.</string>
+    <string name="service_plex_home_hint">Les films vus, l’avancement des séries et la synchro sont ceux de ce profil, pour les films comme pour les séries. Un profil protégé demande son code PIN.</string>
+    <string name="service_plex_home_pin_label">Code PIN de %1$s</string>
+    <string name="service_plex_home_pin_ok">Utiliser ce profil</string>
     <string name="service_plex_home_current">Profil Plex Home : %1$s</string>
     <string name="service_plex_home_change_hint">Pour changer de profil, reconnecte-toi avec Plex.</string>
     <string name="service_seerr_mode_local">Compte Seerr</string>
@@ -1038,4 +1040,16 @@
     <string name="recos_discover">Découvrir par filtres</string>
     <string name="census_mode_grid_short">Grille</string>
     <string name="census_mode_cards_short">Cartes</string>
+
+    <!-- Profil : finesse des recos -->
+    <string name="reco_quality_starting">Tes recos : en rodage</string>
+    <string name="reco_quality_fair">Tes recos : correctes</string>
+    <string name="reco_quality_good">Tes recos : bonnes</string>
+    <string name="reco_quality_sharp">Tes recos : très fines</string>
+    <string name="reco_quality_detail">%1$d films vus · classement fiable à %2$d %%</string>
+    <string name="reco_quality_advice_census">Recense d’autres films vus pour les affiner.</string>
+    <string name="reco_quality_advice_duels">Joue quelques duels pour les affiner.</string>
+    <string name="reco_quality_advice_none">Elles suivent bien tes goûts.</string>
+    <string name="reco_quality_action_census">Recenser</string>
+    <string name="reco_quality_action_duels">Duels</string>
 </resources>

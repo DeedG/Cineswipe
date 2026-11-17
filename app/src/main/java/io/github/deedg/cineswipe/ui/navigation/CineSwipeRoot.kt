@@ -408,6 +408,7 @@ private fun MainContent(
                                         onOpenList = { id -> navigator.open(Route.UserList(id)) },
                                         onOpenRetro = { navigator.open(Route.Retro) },
                                         onOpenFriends = { navigator.open(Route.Friends()) },
+                                        onOpenArena = openArena,
                                     )
                                 }
                                 entry<Route.Library> { key ->

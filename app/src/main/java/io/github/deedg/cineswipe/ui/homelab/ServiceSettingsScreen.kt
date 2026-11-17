@@ -76,7 +76,7 @@ class ServiceActions(
     val onPlexSignIn: () -> Unit,
     val onReopenPlexLogin: () -> Unit,
     val onChooseServer: (PlexServer) -> Unit,
-    val onChooseHomeUser: (PlexHomeUser) -> Unit,
+    val onChooseHomeUser: (PlexHomeUser, String?) -> Unit,
     val onSave: () -> Unit,
     val onClear: () -> Unit,
 )
@@ -366,9 +366,24 @@ private fun PlexAuth(state: ServiceSettingsUiState, actions: ServiceActions, bus
                 CineChip(
                     label = if (user.pinProtected) stringResource(R.string.service_plex_home_pin, user.name) else user.name,
                     selected = user.name == draft.userName,
-                    onClick = { if (!busy) actions.onChooseHomeUser(user) },
+                    onClick = { if (!busy) actions.onChooseHomeUser(user, null) },
                 )
             }
+        }
+        state.plexPinFor?.let { user ->
+            var pin by remember(user.id) { mutableStateOf("") }
+            CineTextField(
+                value = pin,
+                onValueChange = { typed -> pin = typed.filter(Char::isDigit).take(PLEX_PIN_LENGTH) },
+                label = stringResource(R.string.service_plex_home_pin_label, user.name),
+                keyboardType = KeyboardType.NumberPassword,
+                secret = true,
+            )
+            CineSecondaryButton(
+                text = stringResource(R.string.service_plex_home_pin_ok),
+                onClick = { if (!busy && pin.isNotEmpty()) actions.onChooseHomeUser(user, pin) },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
         HintText(stringResource(R.string.service_plex_home_hint))
     } else if (!draft.userName.isNullOrBlank()) {
@@ -662,3 +677,6 @@ private fun AdvancedSection(draft: ServiceConfig, onEdit: ServiceEdit) {
         }
     }
 }
+
+/** Un code PIN de profil Plex fait quatre chiffres. */
+private const val PLEX_PIN_LENGTH = 4

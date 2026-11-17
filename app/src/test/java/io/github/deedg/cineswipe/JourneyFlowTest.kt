@@ -101,10 +101,13 @@ class JourneyFlowTest {
             compose.waitForTag(ArenaTestTags.FIGHTER_A)
             compose.waitForText("Étape 2 sur 3")
             compose.waitForText("Touche le film que tu préfères.")
+            // Premiers duels : ni Elo ni étoiles, seulement les deux films.
+            assertTrue(compose.onAllNodesWithTag(ArenaTestTags.RATING, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
 
             // Objectif de duels atteint sous nos yeux : l'Arène annonce les recos.
             runBlocking { TestData.seedWatched(app.container.database, Journey.FILMS_WATCHED, duels = 2) }
             compose.waitForText("Tes recos sont prêtes !")
+            assertTrue(compose.onAllNodesWithTag(ArenaTestTags.RATING, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
             compose.onNodeWithTag(JourneyTestTags.BANNER_ACTION).performClick()
 
             // Les recos sont ouvertes, avec le rappel des gestes ; « Compris » le referme pour de bon.

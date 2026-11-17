@@ -51,6 +51,8 @@ data class ServiceSettingsUiState(
     val plexAccountToken: String? = null,
     /** Profils Plex Home du compte (vide sans Plex Home). */
     val plexHomeUsers: List<PlexHomeUser> = emptyList(),
+    /** Profil protégé dont on attend le code PIN. */
+    val plexPinFor: PlexHomeUser? = null,
     /** Plex exige le https : l'adresse plex.direct a remplacé l'adresse saisie. */
     val secureUrlApplied: Boolean = false,
 )
@@ -199,21 +201,26 @@ class ServiceSettingsViewModel(
      * Profil Plex Home choisi : on récupère son jeton auprès de plex.tv, puis le jeton d'accès de
      * ce profil au serveur choisi. Les films vus, l'avancement et la synchro seront les siens.
      */
-    fun chooseHomeUser(user: PlexHomeUser) {
+    fun chooseHomeUser(user: PlexHomeUser, pin: String? = null) {
         val state = _state.value
         val accountToken = state.plexAccountToken ?: return
         val wanted = state.plexServer ?: state.plexServers.singleOrNull()
+        // Profil protégé : on demande d'abord son code PIN.
+        if (!user.admin && user.pinProtected && pin.isNullOrBlank()) {
+            _state.update { it.copy(plexPinFor = user, test = TestState.Idle) }
+            return
+        }
         if (user.admin) {
-            _state.update { it.copy(draft = it.draft.copy(userName = user.name)) }
+            _state.update { it.copy(plexPinFor = null, draft = it.draft.copy(userName = user.name)) }
             wanted?.let { applyServer(it) }
             return
         }
         launchTest {
-            val servers = homelab.plexServersAs(accountToken, user)
+            val servers = homelab.plexServersAs(accountToken, user, pin)
             val server = servers.firstOrNull { wanted != null && ((wanted.id != null && it.id == wanted.id) || it.name == wanted.name) }
                 ?: servers.singleOrNull()
                 ?: throw HomelabException(HomelabService.PLEX, HomelabException.Kind.NOT_FOUND, "Serveur introuvable pour le profil ${user.name}")
-            _state.update { it.copy(draft = it.draft.copy(userName = user.name)) }
+            _state.update { it.copy(plexPinFor = null, draft = it.draft.copy(userName = user.name)) }
             // Les adresses restent celles du serveur choisi avec le compte principal.
             applyServer(server.copy(connections = wanted?.connections ?: server.connections))
         }

@@ -87,6 +87,7 @@ object ArenaTestTags {
     const val FIGHTER_B = "arena-fighter-b"
     const val DRAW = "arena-draw"
     const val RELIABILITY = "arena-reliability"
+    const val RATING = "arena-rating"
     const val FOCUS = "arena-focus"
 }
 
@@ -188,9 +189,12 @@ fun ArenaScreen(
                     .statusBarsPadding()
                     .padding(horizontal = 15.dp),
             ) {
+                // Étape 2 du parcours : seulement les deux affiches et la question. L'Elo, les étoiles
+                // et la fiabilité ne disent rien à qui joue ses premiers duels ; ils arrivent ensuite.
+                val plain = journey?.step == JourneyStep.ARENA
                 ArenaHeader(
                     canUndo = canUndo,
-                    reliability = reliability,
+                    reliability = reliability.takeUnless { plain },
                     onUndo = onUndo,
                     onSkip = onSkip,
                     onEloInfo = onEloInfo,
@@ -224,6 +228,7 @@ fun ArenaScreen(
                             isLoser = state.winner == Side.B,
                             isDraw = state.draw,
                             enterFromTop = true,
+                            showRating = !plain,
                             onVote = { onVote(Side.A) },
                             onInfo = { onInfo(state.match.a.tmdbId) },
                             modifier = Modifier
@@ -238,6 +243,7 @@ fun ArenaScreen(
                             isLoser = state.winner == Side.A,
                             isDraw = state.draw,
                             enterFromTop = false,
+                            showRating = !plain,
                             onVote = { onVote(Side.B) },
                             onInfo = { onInfo(state.match.b.tmdbId) },
                             modifier = Modifier.weight(1f).fillMaxWidth().testTag(ArenaTestTags.FIGHTER_B),
@@ -386,6 +392,7 @@ private fun FighterCard(
     onVote: () -> Unit,
     onInfo: () -> Unit,
     modifier: Modifier = Modifier,
+    showRating: Boolean = true,
 ) {
     val entrance = remember(round) { Animatable(0f) }
     LaunchedEffect(round) { entrance.animateTo(1f, tween(durationMillis = 500, easing = EntranceEasing)) }
@@ -458,9 +465,15 @@ private fun FighterCard(
                 )
                 InfoButton(title = fighter.title, onClick = onInfo)
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                EloBadge(rating = fighter.rating, large = true)
-                StarRow(stars = fighter.stars, provisional = fighter.provisional, starSize = 16.dp)
+            if (showRating) {
+                Row(
+                    Modifier.testTag(ArenaTestTags.RATING),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    EloBadge(rating = fighter.rating, large = true)
+                    StarRow(stars = fighter.stars, provisional = fighter.provisional, starSize = 16.dp)
+                }
             }
         }
     }

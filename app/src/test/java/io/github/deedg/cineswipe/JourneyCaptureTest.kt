@@ -22,6 +22,7 @@ import io.github.deedg.cineswipe.ui.census.CensusTestTags
 import io.github.deedg.cineswipe.ui.journey.JourneyTestTags
 import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
 import io.github.deedg.cineswipe.ui.navigation.Tab
+import io.github.deedg.cineswipe.ui.profile.ProfileTestTags
 import io.github.deedg.cineswipe.ui.welcome.WelcomeTestTags
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
@@ -116,6 +117,10 @@ class JourneyCaptureTest {
             waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("recos-ouvertes")
+            compose.onNodeWithTag(BottomBarTestTags.tab(Tab.PROFILE)).performClick()
+            waitForTag(ProfileTestTags.RECO_QUALITY)
+            settle()
+            shot("profil-finesse-des-recos")
         }
     }
 
