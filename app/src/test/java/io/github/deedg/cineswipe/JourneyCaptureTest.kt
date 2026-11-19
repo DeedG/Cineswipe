@@ -19,6 +19,7 @@ import io.github.deedg.cineswipe.testing.JourneyTestApp
 import io.github.deedg.cineswipe.testing.TestData
 import io.github.deedg.cineswipe.ui.arena.ArenaTestTags
 import io.github.deedg.cineswipe.ui.census.CensusTestTags
+import io.github.deedg.cineswipe.ui.journey.BackupOfferTestTags
 import io.github.deedg.cineswipe.ui.journey.JourneyTestTags
 import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
 import io.github.deedg.cineswipe.ui.navigation.Tab
@@ -74,6 +75,7 @@ class JourneyCaptureTest {
             app.mainContainer.settings.setOnboardingDone(false)
             app.mainContainer.settings.setJourneySkipped(false)
             app.mainContainer.settings.setRecosHintSeen(false)
+            app.mainContainer.settings.setBackupOfferSeen(false)
             app.mainContainer.settings.setCensusCardsMode(false)
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -114,6 +116,10 @@ class JourneyCaptureTest {
             settle()
             shot("arene-recos-pretes")
             compose.onNodeWithTag(JourneyTestTags.BANNER_ACTION).performClick()
+            waitForTag(BackupOfferTestTags.SHEET)
+            settle()
+            shot("sauvegarde-proposee")
+            compose.onNodeWithTag(BackupOfferTestTags.LATER).performClick()
             waitUntil { compose.onAllNodes(tagStartsWith("feed-card-")).fetchSemanticsNodes().isNotEmpty() }
             settle()
             shot("recos-ouvertes")

@@ -42,6 +42,8 @@ object CineIcons {
         stroke("download", "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3")
     }
     val ChevronRight: ImageVector by lazy { stroke("chevron_right", "M9 18l6-6-6-6") }
+    val ChevronDown: ImageVector by lazy { stroke("chevron_down", "M6 9l6 6 6-6") }
+    val ChevronUp: ImageVector by lazy { stroke("chevron_up", "M18 15l-6-6-6 6") }
     val Link: ImageVector by lazy {
         stroke("link", "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71", "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71")
     }

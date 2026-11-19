@@ -3,6 +3,7 @@ package io.github.deedg.cineswipe
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -20,6 +21,7 @@ import io.github.deedg.cineswipe.ui.journey.JourneyTestTags
 import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.profile.ProfileTestTags
+import io.github.deedg.cineswipe.ui.settings.SettingsTestTags
 import io.github.deedg.cineswipe.ui.settings.TmdbKeyTestTags
 import io.github.deedg.cineswipe.ui.welcome.WelcomeTestTags
 import kotlinx.coroutines.runBlocking
@@ -108,6 +110,9 @@ class AppSmokeTest {
             compose.waitForText("Hall of Fame")
             // Le profil est resté défilé jusqu'au bouton de la bibliothèque : on remonte aux réglages.
             compose.onNodeWithContentDescription("Réglages").performScrollTo().performClick()
+            // La clé TMDB est rangée sous « Avancé ».
+            compose.waitForTag(SettingsTestTags.ADVANCED)
+            compose.onNodeWithTag(SettingsTestTags.ADVANCED).performScrollTo().performClick()
             compose.waitForText("Clé API TMDB")
             compose.waitForText("Mes données")
             compose.waitForText("Recommencer le classement")
@@ -128,8 +133,9 @@ class AppSmokeTest {
             // Un vote puis son annulation : aucun duel ne doit rester enregistré.
             compose.waitForTag(ArenaTestTags.FIGHTER_A)
             compose.onNodeWithTag(ArenaTestTags.FIGHTER_A).performClick()
-            compose.waitForText("Annuler")
-            compose.onNodeWithText("Annuler").performClick()
+            // « Annuler » : l'icône de l'en-tête de l'Arène.
+            compose.waitUntil(TIMEOUT_MS) { compose.onAllNodesWithContentDescription("Annuler").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Annuler").performClick()
             compose.waitUntil(TIMEOUT_MS) { runBlocking { app.container.database.arenaDao().lastDuel() } == null }
             compose.waitForTag(ArenaTestTags.FIGHTER_B)
             compose.waitForTag(ArenaTestTags.RELIABILITY)
@@ -138,8 +144,9 @@ class AppSmokeTest {
             compose.waitForTag(ArenaTestTags.DRAW)
             compose.onNodeWithTag(ArenaTestTags.DRAW).performClick()
             compose.waitUntil(TIMEOUT_MS) { runBlocking { app.container.database.arenaDao().lastDuel() }?.draw == true }
-            compose.waitForText("Annuler")
-            compose.onNodeWithText("Annuler").performClick()
+            // « Annuler » : l'icône de l'en-tête de l'Arène.
+            compose.waitUntil(TIMEOUT_MS) { compose.onAllNodesWithContentDescription("Annuler").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Annuler").performClick()
             compose.waitUntil(TIMEOUT_MS) { runBlocking { app.container.database.arenaDao().lastDuel() } == null }
 
             compose.onNodeWithText("Profil").performClick()

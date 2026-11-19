@@ -159,10 +159,13 @@
     <!-- Profil -->
     <string name="profile_title">Mon profil</string>
     <string name="profile_open_library">Voir ma bibliothèque</string>
+    <string name="profile_section_mine">Mes films</string>
+    <string name="profile_section_more">Pour aller plus loin</string>
     <string name="profile_stat_watched">Films vus</string>
     <string name="profile_stat_duels">Duels joués</string>
     <string name="profile_stat_watchlist">À voir</string>
     <string name="profile_stat_available">Dispo sur ton serveur</string>
+    <string name="profile_stat_available_short">Sur le serveur</string>
     <string name="profile_hall_of_fame">Hall of Fame</string>
     <string name="profile_hall_of_fame_empty">Combats dans l’Arène pour classer tes films !</string>
     <string name="profile_settings">Réglages</string>
@@ -191,6 +194,8 @@
 
     <!-- Réglages -->
     <string name="settings_title">Réglages</string>
+    <string name="settings_advanced">Avancé</string>
+    <string name="settings_advanced_body">Clé TMDB, homelab (Plex, Jellyfin, Seerr…), journal d’erreurs</string>
     <string name="settings_tmdb_title">Clé API TMDB</string>
     <string name="settings_tmdb_body_builtin">CineSwipe a sa propre clé TMDB : rien à faire. Tu peux mettre la tienne si tu préfères (elle remplace celle de l’appli).</string>
     <string name="settings_tmdb_builtin">Clé de CineSwipe utilisée</string>
@@ -632,6 +637,7 @@
     <string name="update_banner_body">Touche pour télécharger la mise à jour.</string>
     <string name="update_dismiss">Plus tard</string>
     <string name="seasons_open">Arène des saisons</string>
+    <string name="seasons_open_short">Saisons</string>
     <string name="seasons_title">Arène des saisons</string>
     <string name="seasons_intro">%1$d saisons vues, classées à part de tes séries. Touche ta préférée. Fiabilité : %2$d %%.</string>
     <string name="seasons_badge">Saison %1$d</string>
@@ -694,12 +700,13 @@
     <string name="tonight_next_season">« %1$s » : place à la saison %2$d</string>
     <string name="tonight_series_finished">« %1$s » : finie, bravo !</string>
     <string name="tonight_marked_watched">« %1$s » ajouté aux vus</string>
-    <string name="discover_tonight_title">Ce soir</string>
-    <string name="discover_tonight_message">Que regarder parmi tes films à voir et ceux de ton serveur</string>
     <!-- Sauvegarde automatique -->
     <string name="backup_title">Sauvegarde automatique</string>
     <string name="backup_body_off">Chaque semaine, une copie de tous tes films et séries, duels et réponses compris, dans un dossier de ton choix : sur le téléphone, ou un dossier synchronisé (Nextcloud, Syncthing…). Les 8 dernières sont gardées.</string>
     <string name="backup_choose">Choisir un dossier</string>
+    <string name="backup_offer_title">Garder tes films à l’abri ?</string>
+    <string name="backup_offer_body">Choisis un dossier : CineSwipe y copiera chaque semaine tes films, tes séries et ton classement. Pratique pour changer de téléphone, ou si l’appli est effacée.</string>
+    <string name="backup_offer_later">Plus tard (dans les réglages)</string>
     <string name="backup_body_on">Une copie chaque semaine dans « %1$s », films et séries ensemble. Les 8 dernières sont gardées.</string>
     <string name="backup_folder_unknown">dossier choisi</string>
     <string name="backup_last">Dernière sauvegarde : %1$s</string>
@@ -1038,6 +1045,7 @@
     <string name="recos_hint_body">Glisse à gauche si tu as déjà vu le film, à droite pour le garder à voir, vers le haut pour passer au suivant.</string>
     <string name="recos_hint_ok">Compris</string>
     <string name="recos_discover">Découvrir par filtres</string>
+    <string name="recos_discover_short">Filtres</string>
     <string name="census_mode_grid_short">Grille</string>
     <string name="census_mode_cards_short">Cartes</string>
 

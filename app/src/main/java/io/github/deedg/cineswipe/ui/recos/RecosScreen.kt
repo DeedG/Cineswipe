@@ -51,9 +51,11 @@ import io.github.deedg.cineswipe.ui.feed.CardFeed
 import io.github.deedg.cineswipe.ui.feed.CardFeedScreen
 import io.github.deedg.cineswipe.ui.feed.FeedTexts
 import io.github.deedg.cineswipe.ui.icons.CineIcons
+import io.github.deedg.cineswipe.ui.journey.BackupOffer
 import io.github.deedg.cineswipe.ui.journey.JourneyScreen
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -62,7 +64,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 /** Invitation à montrer sur les recos, avec de quoi la formuler. */
 data class RecoNudgeUi(val nudge: RecoNudge, val strength: RecoStrength)
@@ -160,6 +161,8 @@ fun RecosRoute(
         return
     }
     val state by viewModel.feed.state.collectAsStateWithLifecycle()
+    // Parcours fait (assez de films vus et de duels) : proposer, une fois, de mettre tout ça à l'abri.
+    if (current.step == JourneyStep.RECOS && current.watchedGoal > 0) BackupOffer()
     val shownNudge by viewModel.nudge.collectAsStateWithLifecycle()
     val showHint by viewModel.showHint.collectAsStateWithLifecycle()
     // Parcours tout juste terminé : pas d'invitation à recenser ou à noter par-dessus (elle reste
@@ -201,9 +204,9 @@ fun RecosRoute(
                     modifier = Modifier.testTag(RecosTestTags.TONIGHT),
                 )
                 // La Découverte (recos par genre, années, note) n'a plus d'onglet : elle s'ouvre d'ici.
-                GlassIconButton(
+                GlassPillButton(
+                    text = stringResource(R.string.recos_discover_short),
                     icon = CineIcons.Discover,
-                    contentDescription = stringResource(R.string.recos_discover),
                     onClick = onOpenDiscover,
                     modifier = Modifier.testTag(RecosTestTags.DISCOVER),
                 )

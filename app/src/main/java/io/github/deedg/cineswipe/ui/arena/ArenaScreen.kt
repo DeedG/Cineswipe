@@ -57,17 +57,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
-import io.github.deedg.cineswipe.domain.journey.JourneyState
-import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.data.model.Fighter
 import io.github.deedg.cineswipe.data.model.RankingReliability
 import io.github.deedg.cineswipe.domain.TmdbImageSize
+import io.github.deedg.cineswipe.domain.journey.JourneyState
+import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.ui.common.cineViewModel
+import io.github.deedg.cineswipe.ui.components.CineHeader
 import io.github.deedg.cineswipe.ui.components.EloBadge
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.GlassPillButton
 import io.github.deedg.cineswipe.ui.components.GrayscaleFilter
+import io.github.deedg.cineswipe.ui.components.HeaderSubtitle
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
 import io.github.deedg.cineswipe.ui.components.StarRow
@@ -318,64 +320,39 @@ private fun ArenaHeader(
     onEloInfo: () -> Unit,
     onOpenSeasons: (() -> Unit)? = null,
 ) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(64.dp),
-    ) {
-        AnimatedVisibility(
-            visible = canUndo,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterStart),
-        ) {
-            GlassPillButton(text = stringResource(R.string.arena_undo), icon = CineIcons.Undo, onClick = onUndo)
-        }
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Le switch Films | Séries tient lieu de titre ; pendant la démo (pas de switch), le titre reste.
-            if (worldSwitchShown()) {
-                WorldSwitch(tabName = Tab.ARENA.name, modifier = Modifier.padding(bottom = 4.dp))
-            } else {
-                Text(
-                    text = stringResource(R.string.arena_title),
-                    color = CineColors.Red,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp,
-                )
+    CineHeader(
+        title = stringResource(R.string.tab_arena),
+        worldTab = Tab.ARENA.name,
+        subtitle = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (reliability != null && reliability.films >= 2) {
+                    // Confiance moyenne dans les étoiles : elle monte à chaque duel ; un toucher l'explique.
+                    HeaderSubtitle(
+                        text = stringResource(R.string.arena_reliability, (reliability.value * 100).roundToInt()) + "  ⓘ",
+                        modifier = Modifier
+                            .clickable(onClickLabel = stringResource(R.string.arena_elo_info), onClick = onEloInfo)
+                            .testTag(ArenaTestTags.RELIABILITY),
+                    )
+                }
+                if (onOpenSeasons != null) {
+                    // Séries : l'Arène des saisons, écrite en toutes lettres.
+                    HeaderSubtitle(
+                        text = stringResource(R.string.seasons_open_short) + " ›",
+                        color = CineColors.RedLight,
+                        modifier = Modifier
+                            .clickable(role = Role.Button, onClick = onOpenSeasons)
+                            .testTag(ArenaTestTags.SEASONS),
+                    )
+                }
             }
-            if (reliability != null && reliability.films >= 2) {
-                // Confiance moyenne dans les étoiles : elle monte à chaque duel.
-                Text(
-                    text = stringResource(R.string.arena_reliability, (reliability.value * 100).roundToInt()),
-                    color = CineColors.TextMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .clickable(onClickLabel = stringResource(R.string.arena_elo_info), onClick = onEloInfo)
-                        .testTag(ArenaTestTags.RELIABILITY),
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (onOpenSeasons != null) {
-                GlassIconButton(
-                    icon = CineIcons.Layers,
-                    contentDescription = stringResource(R.string.seasons_open),
-                    onClick = onOpenSeasons,
-                    modifier = Modifier.testTag(ArenaTestTags.SEASONS),
-                )
+        },
+        actions = {
+            AnimatedVisibility(visible = canUndo, enter = fadeIn(), exit = fadeOut()) {
+                GlassIconButton(icon = CineIcons.Undo, contentDescription = stringResource(R.string.arena_undo), onClick = onUndo)
             }
             GlassIconButton(icon = CineIcons.Skip, contentDescription = stringResource(R.string.arena_skip), onClick = onSkip)
-            GlassIconButton(icon = CineIcons.Info, contentDescription = stringResource(R.string.arena_elo_info), onClick = onEloInfo)
-        }
-    }
+        },
+    )
 }
 
 private val FighterShape = RoundedCornerShape(20.dp)

@@ -271,6 +271,7 @@ open class TestCineSwipeApp : CineSwipeApp() {
         builtinTmdbKey = builtinKey,
         updateUrl = null,
         journey = journey,
+        offerBackup = journey,
         seasonNotifier = { context -> io.github.deedg.cineswipe.data.series.SeasonNotifier { notices -> seasonNotices += notices } },
     )
 

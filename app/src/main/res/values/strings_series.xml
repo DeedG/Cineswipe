@@ -39,7 +39,6 @@
     <string name="discover_loading_series">Recherche des séries…</string>
     <string name="discover_empty_title_series">Aucune série trouvée</string>
     <string name="discover_empty_message_series">Aucune série non vue ne correspond à ces filtres.</string>
-    <string name="discover_tonight_message_series">Que regarder parmi tes séries à voir</string>
     <string name="discover_length_series">Durée d’un épisode</string>
     <string name="tonight_length_short_series">≤ 30 min</string>
     <string name="tonight_length_medium_series">≤ 50 min</string>
@@ -52,6 +51,7 @@
     <string name="library_section_unranked_series">Non classées</string>
     <string name="profile_stat_watched_series">Séries vues</string>
     <string name="profile_hall_of_fame_empty_series">Combats dans l’Arène pour classer tes séries !</string>
+    <string name="profile_section_mine_series">Mes séries</string>
     <plurals name="library_count_series">
         <item quantity="one">%1$d série</item>
         <item quantity="many">%1$d séries</item>

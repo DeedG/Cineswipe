@@ -64,7 +64,7 @@ import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.LocalOpenPerson
 import io.github.deedg.cineswipe.ui.components.PersonRef
 import io.github.deedg.cineswipe.ui.components.PosterImage
-import io.github.deedg.cineswipe.ui.components.WorldSwitch
+import io.github.deedg.cineswipe.ui.components.CineHeader
 import io.github.deedg.cineswipe.ui.feed.CardFeed
 import io.github.deedg.cineswipe.ui.feed.CardFeedScreen
 import io.github.deedg.cineswipe.ui.feed.FeedTexts
@@ -233,46 +233,11 @@ private fun SearchInput(
             .fillMaxSize()
             .statusBarsPadding()
             .imePadding()
-            .padding(20.dp),
+            .padding(horizontal = 20.dp, vertical = 4.dp),
     ) {
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            if (people.isNotEmpty() && onOpenPerson != null) {
-                PeopleList(
-                    people = people,
-                    onOpen = { person ->
-                        keyboard?.hide()
-                        onOpenPerson(PersonRef(person.id, person.name))
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.widthIn(max = 360.dp),
-                ) {
-                    Icon(CineIcons.Search, contentDescription = null, tint = CineColors.BorderSoft, modifier = Modifier.size(48.dp))
-                    Text(
-                        text = stringResource(R.string.search_intro),
-                        color = CineColors.TextFaint,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.search_title),
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.weight(1f),
-            )
-            WorldSwitch(tabName = Tab.SEARCH.name)
-        }
-        Spacer(Modifier.height(15.dp))
+        // Titre et champ en haut, comme sur les autres onglets ; les personnes et l'aide dessous.
+        CineHeader(title = stringResource(R.string.search_title), worldTab = Tab.SEARCH.name)
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = query,
@@ -298,7 +263,6 @@ private fun SearchInput(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .shadow(12.dp, RoundedCornerShape(12.dp), ambientColor = CineColors.Red, spotColor = CineColors.Red)
                     .clip(RoundedCornerShape(12.dp))
                     .background(CineColors.Red)
                     .clickable(role = Role.Button) { submit() },
@@ -309,6 +273,32 @@ private fun SearchInput(
                     contentDescription = stringResource(R.string.search_action),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        if (people.isNotEmpty() && onOpenPerson != null) {
+            PeopleList(
+                people = people,
+                onOpen = { person ->
+                    keyboard?.hide()
+                    onOpenPerson(PersonRef(person.id, person.name))
+                },
+            )
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
+            ) {
+                Icon(CineIcons.Search, contentDescription = null, tint = CineColors.BorderSoft, modifier = Modifier.size(48.dp))
+                Text(
+                    text = stringResource(R.string.search_intro),
+                    color = CineColors.TextFaint,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(max = 360.dp),
                 )
             }
         }

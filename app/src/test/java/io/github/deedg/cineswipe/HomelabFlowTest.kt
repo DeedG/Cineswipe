@@ -31,6 +31,8 @@ import io.github.deedg.cineswipe.testing.TestCineSwipeApp
 import io.github.deedg.cineswipe.ui.components.WatchTestTags
 import io.github.deedg.cineswipe.ui.homelab.HomelabTestTags
 import io.github.deedg.cineswipe.ui.recos.RecosTestTags
+import io.github.deedg.cineswipe.ui.settings.SettingsTestTags
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -49,7 +51,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import java.time.Instant
 
 /**
  * Mode homelab de bout en bout, sur un faux Jellyfin + Radarr + Seerr : synchro des films vus et
@@ -320,6 +321,8 @@ class HomelabFlowTest {
             compose.onNodeWithText("Profil").performClick()
             compose.waitForText("Hall of Fame")
             compose.onNodeWithContentDescription("Réglages").performClick()
+            compose.waitForTag(SettingsTestTags.ADVANCED)
+            compose.onNodeWithTag(SettingsTestTags.ADVANCED).performScrollTo().performClick()
             compose.waitForText("Mode homelab")
             compose.onNodeWithText("Mode homelab").performScrollTo().performClick()
 

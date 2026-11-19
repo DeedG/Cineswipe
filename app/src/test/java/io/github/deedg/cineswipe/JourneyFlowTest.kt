@@ -20,6 +20,7 @@ import io.github.deedg.cineswipe.testing.TestData
 import io.github.deedg.cineswipe.ui.arena.ArenaTestTags
 import io.github.deedg.cineswipe.ui.census.CensusTestTags
 import io.github.deedg.cineswipe.ui.feed.FeedTestTags
+import io.github.deedg.cineswipe.ui.journey.BackupOfferTestTags
 import io.github.deedg.cineswipe.ui.journey.JourneyTestTags
 import io.github.deedg.cineswipe.ui.navigation.BottomBarTestTags
 import io.github.deedg.cineswipe.ui.navigation.Tab
@@ -58,6 +59,7 @@ class JourneyFlowTest {
             app.container.settings.setOnboardingDone(false)
             app.container.settings.setJourneySkipped(false)
             app.container.settings.setRecosHintSeen(false)
+            app.container.settings.setBackupOfferSeen(false)
             // Un autre test a pu laisser le recensement en cartes.
             app.container.settings.setCensusCardsMode(false)
         }
@@ -109,6 +111,12 @@ class JourneyFlowTest {
             compose.waitForText("Tes recos sont prêtes !")
             assertTrue(compose.onAllNodesWithTag(ArenaTestTags.RATING, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
             compose.onNodeWithTag(JourneyTestTags.BANNER_ACTION).performClick()
+
+            // Première ouverture des recos : la sauvegarde est proposée ; « Plus tard » la range dans les réglages.
+            compose.waitForTag(BackupOfferTestTags.SHEET)
+            compose.onNodeWithTag(BackupOfferTestTags.LATER).performClick()
+            compose.waitUntil(TIMEOUT_MS) { compose.onAllNodesWithTag(BackupOfferTestTags.SHEET).fetchSemanticsNodes().isEmpty() }
+            assertTrue(runBlocking { app.container.settings.backupOfferSeen.first() })
 
             // Les recos sont ouvertes, avec le rappel des gestes ; « Compris » le referme pour de bon.
             compose.waitUntil(TIMEOUT_MS) { compose.onAllNodesWithTag(JourneyTestTags.SCREEN).fetchSemanticsNodes().isEmpty() }

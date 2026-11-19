@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -92,6 +93,33 @@ object SettingsTestTags {
     const val IMPORT = "settings_import"
     const val DEMO_TRY = "settings_demo_try"
     const val DEMO_EXIT = "settings_demo_exit"
+    const val ADVANCED = "settings_advanced"
+}
+
+/** « Avancé » : clé TMDB, homelab, nouvelles saisons, journal d'erreurs, diagnostic. */
+@Composable
+private fun AdvancedToggle(open: Boolean, onToggle: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(15.dp))
+            .clickable(role = Role.Button, onClick = onToggle)
+            .padding(vertical = 12.dp)
+            .testTag(SettingsTestTags.ADVANCED),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_advanced), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.settings_advanced_body), color = CineColors.TextMuted, fontSize = 13.sp)
+        }
+        Icon(
+            if (open) CineIcons.ChevronUp else CineIcons.ChevronDown,
+            contentDescription = null,
+            tint = CineColors.TextSecondary,
+            modifier = Modifier.size(20.dp),
+        )
+    }
 }
 
 @Composable
@@ -165,29 +193,35 @@ fun SettingsScreen(
                 GlassIconButton(icon = CineIcons.Back, contentDescription = stringResource(R.string.action_back), onClick = onBack)
             },
         )
-        if (state.demo) {
-            DemoSection(onStopDemo)
-        } else {
-            ModeSection()
-            // Séries : prévenir des nouvelles saisons.
-            if (isSeriesWorld()) SeasonNotificationsSection()
-            TmdbSection(
-                maskedKey = state.tmdbKeyMasked,
-                builtinKey = state.builtinKey,
-                keyCheck = state.keyCheck,
-                onSave = onSaveTmdbKey,
-                onKeyCheckShown = onKeyCheckShown,
-                onRemove = onRemoveTmdbKey,
-                onOpenGuide = onOpenKeyGuide,
-            )
-        }
+        // Devant : ce dont tout le monde se sert. Derrière « Avancé » : clé TMDB, homelab, journal…
+        if (state.demo) DemoSection(onStopDemo) else ModeSection()
         LanguageSection(state.language, onLanguageChange)
-        if (!state.demo) HomelabSection(state.homelabReady, onOpenHomelab)
-        DataSection(exporting = state.exporting, onExport = onExport, onImport = onOpenImport, onReset = onReset)
         if (!state.demo) backupSection()
-        if (state.devTools) DevToolsSection(onOpenDiagnostics)
-        CrashSection(state.crashLog, onClearCrash)
+        DataSection(exporting = state.exporting, onExport = onExport, onImport = onOpenImport, onReset = onReset)
         if (!state.demo) UpdateSection()
+
+        // Ouvert d'office quand il y a quelque chose à y voir (outils de diagnostic, plantage).
+        var advanced by rememberSaveable { mutableStateOf(false) }
+        val showAdvanced = advanced || state.devTools || state.crashLog != null
+        AdvancedToggle(open = showAdvanced, onToggle = { advanced = !showAdvanced })
+        if (showAdvanced) {
+            if (!state.demo) {
+                TmdbSection(
+                    maskedKey = state.tmdbKeyMasked,
+                    builtinKey = state.builtinKey,
+                    keyCheck = state.keyCheck,
+                    onSave = onSaveTmdbKey,
+                    onKeyCheckShown = onKeyCheckShown,
+                    onRemove = onRemoveTmdbKey,
+                    onOpenGuide = onOpenKeyGuide,
+                )
+                HomelabSection(state.homelabReady, onOpenHomelab)
+                // Séries : prévenir des nouvelles saisons.
+                if (isSeriesWorld()) SeasonNotificationsSection()
+            }
+            if (state.devTools) DevToolsSection(onOpenDiagnostics)
+            CrashSection(state.crashLog, onClearCrash)
+        }
         AboutSection(
             devTools = state.devTools,
             onUnlockDevTools = onUnlockDevTools,

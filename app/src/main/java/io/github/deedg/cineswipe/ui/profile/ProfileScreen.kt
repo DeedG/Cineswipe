@@ -37,12 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
+import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.domain.reco.RecoQuality
 import io.github.deedg.cineswipe.domain.reco.RecoQualityAdvice
 import io.github.deedg.cineswipe.domain.reco.RecoQualityLevel
-import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.ui.common.cineViewModel
 import io.github.deedg.cineswipe.ui.components.CineButton
+import io.github.deedg.cineswipe.ui.components.CineHeader
 import io.github.deedg.cineswipe.ui.components.CineSecondaryButton
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.PosterImage
@@ -123,95 +124,74 @@ fun ProfileScreen(
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(15.dp),
     ) {
-        ScreenTitle(
-            text = stringResource(R.string.profile_title),
-            trailing = {
-                WorldSwitch(tabName = Tab.PROFILE.name)
+        CineHeader(
+            title = stringResource(R.string.profile_title),
+            worldTab = Tab.PROFILE.name,
+            actions = {
                 GlassIconButton(
                     icon = CineIcons.Settings,
                     contentDescription = stringResource(R.string.profile_settings),
                     onClick = onOpenSettings,
-                    modifier = Modifier,
                 )
             },
         )
         updateBanner()
-        StatCard(
-            icon = CineIcons.Eye,
-            label = stringResource(R.string.profile_stat_watched),
-            value = state.stats.watched,
-            loading = state.loading,
-            onClick = { onOpenLibrary(LibraryFilter.WATCHED) },
-            modifier = Modifier
-                .testTag(ProfileTestTags.WATCHED),
-        )
-        StatCard(
-            icon = CineIcons.Arena,
-            label = stringResource(R.string.profile_stat_duels),
-            value = state.stats.duels,
-            loading = state.loading,
-            onClick = onOpenDuels,
-            modifier = Modifier.testTag(ProfileTestTags.DUELS),
-        )
-        StatCard(
-            icon = CineIcons.Bookmark,
-            label = stringResource(R.string.profile_stat_watchlist),
-            value = state.stats.watchlist,
-            loading = state.loading,
-            onClick = { onOpenLibrary(LibraryFilter.WATCHLIST) },
-        )
-        if (state.showAvailability) {
-            StatCard(
-                icon = CineIcons.Server,
-                label = stringResource(R.string.profile_stat_available),
-                value = state.stats.available,
+        // Les compteurs en une rangée : un toucher ouvre la bibliothèque filtrée ou l'historique.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile(
+                icon = CineIcons.Eye,
+                label = stringResource(R.string.profile_stat_watched),
+                value = state.stats.watched,
                 loading = state.loading,
-                onClick = { onOpenLibrary(LibraryFilter.AVAILABLE) },
+                onClick = { onOpenLibrary(LibraryFilter.WATCHED) },
+                modifier = Modifier.weight(1f).testTag(ProfileTestTags.WATCHED),
             )
+            StatTile(
+                icon = CineIcons.Arena,
+                label = stringResource(R.string.profile_stat_duels),
+                value = state.stats.duels,
+                loading = state.loading,
+                onClick = onOpenDuels,
+                modifier = Modifier.weight(1f).testTag(ProfileTestTags.DUELS),
+            )
+            StatTile(
+                icon = CineIcons.Bookmark,
+                label = stringResource(R.string.profile_stat_watchlist),
+                value = state.stats.watchlist,
+                loading = state.loading,
+                onClick = { onOpenLibrary(LibraryFilter.WATCHLIST) },
+                modifier = Modifier.weight(1f),
+            )
+            if (state.showAvailability) {
+                StatTile(
+                    icon = CineIcons.Server,
+                    label = stringResource(R.string.profile_stat_available_short),
+                    value = state.stats.available,
+                    loading = state.loading,
+                    onClick = { onOpenLibrary(LibraryFilter.AVAILABLE) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
         state.recoQuality?.let { quality ->
             RecoQualityCard(quality, onAct = if (quality.advice == RecoQualityAdvice.DUELS) onOpenArena else onOpenCensus)
         }
-        CineSecondaryButton(
-            text = stringResource(R.string.census_cta),
-            icon = CineIcons.Grid,
-            onClick = onOpenCensus,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-        )
-        CineSecondaryButton(
-            text = stringResource(R.string.stats_open),
-            icon = CineIcons.BarChart,
-            onClick = onOpenStats,
-            modifier = Modifier.fillMaxWidth().testTag(ProfileTestTags.STATS),
-        )
-        CineSecondaryButton(
-            text = stringResource(R.string.retro_open),
-            icon = CineIcons.Calendar,
-            onClick = onOpenRetro,
-            modifier = Modifier.fillMaxWidth().testTag(ProfileTestTags.RETRO),
-        )
-        CineSecondaryButton(
-            text = stringResource(R.string.friends_open),
-            icon = CineIcons.QrCode,
-            onClick = onOpenFriends,
-            modifier = Modifier.fillMaxWidth().testTag(ProfileTestTags.FRIENDS),
-        )
-        listsSection()
-        // Juste au-dessus du Hall of Fame.
+
+        // Mes films : la bibliothèque, le haut du classement, les listes perso.
+        SectionLabel(stringResource(R.string.profile_section_mine))
         CineButton(
             text = stringResource(R.string.profile_open_library),
             icon = CineIcons.Film,
             onClick = { onOpenLibrary(LibraryFilter.ALL) },
             modifier = Modifier.fillMaxWidth(),
         )
-
         Row(
-            Modifier.padding(top = 10.dp),
+            Modifier.padding(top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(CineIcons.Trophy, contentDescription = null, tint = CineColors.Red, modifier = Modifier.size(24.dp))
-            Text(stringResource(R.string.profile_hall_of_fame), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Icon(CineIcons.Trophy, contentDescription = null, tint = CineColors.Red, modifier = Modifier.size(20.dp))
+            Text(stringResource(R.string.profile_hall_of_fame), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
         }
         if (state.hallOfFame.isEmpty() && !state.loading) {
             Text(
@@ -224,7 +204,79 @@ fun ProfileScreen(
         state.hallOfFame.forEach { entry ->
             HallOfFameCard(entry = entry, onClick = { onOpenMovie(entry.tmdbId) })
         }
+        listsSection()
+
+        // Pour aller plus loin : une liste, pas une pile de boutons.
+        SectionLabel(stringResource(R.string.profile_section_more))
+        val shape = RoundedCornerShape(15.dp)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(CineColors.Surface)
+                .border(1.dp, CineColors.Border, shape),
+        ) {
+            LinkRow(CineIcons.BarChart, stringResource(R.string.stats_open), onOpenStats, Modifier.testTag(ProfileTestTags.STATS))
+            LinkDivider()
+            LinkRow(CineIcons.Calendar, stringResource(R.string.retro_open), onOpenRetro, Modifier.testTag(ProfileTestTags.RETRO))
+            LinkDivider()
+            LinkRow(CineIcons.QrCode, stringResource(R.string.friends_open), onOpenFriends, Modifier.testTag(ProfileTestTags.FRIENDS))
+        }
     }
+}
+
+/** Titre de bloc du profil. */
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text.uppercase(),
+        color = CineColors.TextMuted,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(top = 10.dp),
+    )
+}
+
+/** Compteur du profil, en tuile. */
+@Composable
+private fun StatTile(icon: ImageVector, label: String, value: Int, loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(15.dp)
+    Column(
+        modifier
+            .clip(shape)
+            .background(CineColors.Surface)
+            .border(1.dp, CineColors.Border, shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = CineColors.TextSecondary, modifier = Modifier.size(18.dp))
+        Text(if (loading) "–" else value.toString(), color = CineColors.Red, fontSize = 26.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Text(label, color = CineColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 15.sp)
+    }
+}
+
+/** Ligne d'une liste de liens : icône, texte, chevron. */
+@Composable
+private fun LinkRow(icon: ImageVector, text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 15.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+        Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Icon(CineIcons.ChevronRight, contentDescription = null, tint = CineColors.TextFaint, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun LinkDivider() {
+    Box(Modifier.fillMaxWidth().padding(start = 50.dp).height(1.dp).background(CineColors.Border))
 }
 
 /**
@@ -288,46 +340,6 @@ private fun RecoQualityCard(quality: RecoQuality, onAct: () -> Unit) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun StatCard(
-    icon: ImageVector,
-    label: String,
-    value: Int,
-    loading: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(15.dp)
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(CineColors.Surface)
-            .border(1.dp, CineColors.Border, shape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(start = 20.dp, top = 20.dp, bottom = 20.dp, end = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(15.dp),
-    ) {
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(CineColors.Border)
-                .padding(10.dp),
-        ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-        }
-        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text(
-            text = if (loading) "–" else value.toString(),
-            color = CineColors.Red,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Icon(CineIcons.ChevronRight, contentDescription = null, tint = CineColors.TextFaint, modifier = Modifier.size(18.dp))
     }
 }
 

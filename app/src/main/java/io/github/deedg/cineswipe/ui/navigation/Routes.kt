@@ -1,6 +1,9 @@
 package io.github.deedg.cineswipe.ui.navigation
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
@@ -86,43 +89,77 @@ enum class Tab(val route: Route, @param:StringRes val label: Int, val icon: () -
     PROFILE(Route.Profile, R.string.tab_profile, { CineIcons.Profile }),
 }
 
-/** Écran de départ : les Recos (ou le parcours qui y mène, tant qu'il n'est pas fait). */
-val StartRoute: Route = Route.Recos
+/** Onglet de départ : les Recos (ou le parcours qui y mène, tant qu'il n'est pas fait). */
+val StartTab: Tab = Tab.RECOS
+val StartRoute: Route = StartTab.route
 
-val Route.tab: Tab
+/**
+ * Écrans « plein écran », sans barre du bas : la fiche d'un film, et les réglages avec tout ce qui
+ * s'ouvre depuis eux. Ils ont un bouton retour ; les autres écrans restent dans leur onglet.
+ */
+val Route.showsBottomBar: Boolean
     get() = when (this) {
-        Route.Recos, is Route.Lightning, Route.Tonight, Route.Discover -> Tab.RECOS
-        Route.Census -> Tab.CENSUS
-        Route.Arena, Route.SeasonArena -> Tab.ARENA
-        Route.Search, is Route.Shared -> Tab.SEARCH
-        Route.Profile, is Route.Library, Route.DuelHistory, Route.Settings, Route.Homelab, is Route.HomelabServiceSettings,
-        is Route.MovieDetail, Route.Diagnostics, Route.TmdbKey, Route.Import, is Route.Person, Route.Stats,
-        is Route.UserList, Route.Retro, is Route.Friends,
-        -> Tab.PROFILE
+        is Route.MovieDetail, Route.TmdbKey, Route.Settings, Route.Homelab, is Route.HomelabServiceSettings,
+        Route.Diagnostics, Route.Import, is Route.Shared,
+        -> false
+        else -> true
     }
 
-val Route.showsBottomBar: Boolean
-    get() = this !is Route.MovieDetail && this != Route.TmdbKey
+/**
+ * Navigation par onglets, une pile par onglet : changer d'onglet garde où on en était ; toucher
+ * l'onglet ouvert ramène à sa racine. La pile affichée ([backStack]) est celle de l'onglet ouvert.
+ */
+class Navigator(private val backStack: NavBackStack<NavKey>, initialTab: Tab) {
 
-/** Manipulations de la pile de navigation. Elle n'est jamais vidée complètement. */
-class Navigator(private val backStack: NavBackStack<NavKey>) {
+    /** Onglet ouvert : celui qui s'allume dans la barre du bas, d'où qu'on vienne. */
+    var tab: Tab by mutableStateOf(initialTab)
+        private set
+
+    /** Piles des autres onglets, gardées pendant qu'on est ailleurs. */
+    private val stacks = mutableMapOf<Tab, List<NavKey>>()
 
     val current: Route?
         get() = backStack.lastOrNull() as? Route
 
-    /** Onglet : la pile devient [départ, onglet], pour que « retour » ramène au départ. */
-    fun switchTab(tab: Tab) {
-        val target: List<NavKey> = if (tab.route == StartRoute) listOf(StartRoute) else listOf(StartRoute, tab.route)
-        if (backStack.toList() == target) return
-        backStack.addAll(target)
-        repeat(backStack.size - target.size) { backStack.removeAt(0) }
+    /** À la racine d'un onglet (rien à dépiler). */
+    val atRoot: Boolean
+        get() = backStack.size <= 1
+
+    /** Barre du bas : l'onglet touché, là où on l'avait laissé ; l'onglet ouvert, à sa racine. */
+    fun switchTab(target: Tab) {
+        if (target == tab) {
+            replaceWith(listOf(target.route))
+            return
+        }
+        stacks[tab] = backStack.toList()
+        tab = target
+        replaceWith(stacks.remove(target) ?: listOf(target.route))
+    }
+
+    /** Aller à un onglet depuis un bouton (« Passer aux duels »…) : toujours à sa racine. */
+    fun goTo(target: Tab) {
+        if (target != tab) stacks[tab] = backStack.toList()
+        stacks.remove(target)
+        tab = target
+        replaceWith(listOf(target.route))
     }
 
     fun open(route: Route) {
         if (backStack.lastOrNull() != route) backStack.add(route)
     }
 
+    /** Retour : dépile ; à la racine d'un onglet, revient aux Recos (l'onglet de départ). */
     fun back() {
-        if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        when {
+            backStack.size > 1 -> backStack.removeAt(backStack.lastIndex)
+            tab != StartTab -> switchTab(StartTab)
+        }
+    }
+
+    private fun replaceWith(target: List<NavKey>) {
+        if (backStack.toList() == target) return
+        val old = backStack.size
+        backStack.addAll(target)
+        repeat(old) { backStack.removeAt(0) }
     }
 }

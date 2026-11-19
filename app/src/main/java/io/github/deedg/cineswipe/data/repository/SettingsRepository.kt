@@ -228,6 +228,13 @@ class SettingsRepository(
         settings.edit { prefs -> if (skipped) prefs[journeySkippedKey] = "1" else prefs.remove(journeySkippedKey) }
     }
 
+    /** Sauvegarde automatique proposée une fois, à l'ouverture des recos (commun aux deux mondes). */
+    val backupOfferSeen: Flow<Boolean> = settings.data.map { prefs -> prefs[BACKUP_OFFER_SEEN] ?: false }.distinctUntilChanged()
+
+    suspend fun setBackupOfferSeen(seen: Boolean = true) {
+        settings.edit { prefs -> prefs[BACKUP_OFFER_SEEN] = seen }
+    }
+
     /** Rappel des gestes sur la première reco, déjà vu (commun aux deux mondes). */
     val recosHintSeen: Flow<Boolean> = settings.data.map { prefs -> prefs[RECOS_HINT_SEEN] ?: false }.distinctUntilChanged()
 
@@ -373,6 +380,7 @@ class SettingsRepository(
         private val MEDIA_KIND = stringPreferencesKey("media_kind")
         private val CENSUS_CARDS = booleanPreferencesKey("census_cards")
         private val RECOS_HINT_SEEN = booleanPreferencesKey("recos_hint_seen")
+        private val BACKUP_OFFER_SEEN = booleanPreferencesKey("backup_offer_seen")
         private val DEV_TOOLS = booleanPreferencesKey("dev_tools")
         private val WATCHED_NOTIFICATIONS = booleanPreferencesKey("watched_notifications")
         private val NEW_SEASON_NOTIFICATIONS = booleanPreferencesKey("new_season_notifications")

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -70,6 +71,7 @@ import io.github.deedg.cineswipe.ui.components.DirectedBy
 import io.github.deedg.cineswipe.ui.components.EloBadge
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
+import io.github.deedg.cineswipe.ui.components.HeaderHeight
 import io.github.deedg.cineswipe.ui.components.LocalToaster
 import io.github.deedg.cineswipe.ui.components.PosterImage
 import io.github.deedg.cineswipe.ui.components.RatingPill
@@ -259,32 +261,13 @@ private fun MovieDetailContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
+            // Même en-tête que les autres écrans : le retour à gauche, à la hauteur commune.
+            Row(Modifier.fillMaxWidth().heightIn(min = HeaderHeight), verticalAlignment = Alignment.CenterVertically) {
                 GlassIconButton(
                     icon = CineIcons.Back,
                     contentDescription = stringResource(R.string.action_back),
                     onClick = actions.onBack,
-                    modifier = Modifier,
                 )
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (details.isWatched) {
-                        val label = if (series) details.user?.let { progressLabel(it) } else null
-                        StatusBadge(label ?: stringResource(R.string.badge_watched), CineColors.Red, icon = CineIcons.Eye)
-                    }
-                    if (status == WatchStatus.WATCHLIST) {
-                        StatusBadge(stringResource(R.string.badge_watchlist), CineColors.TmdbBlue, icon = CineIcons.Bookmark)
-                    }
-                    if (showAvailability && details.user?.availability == Availability.AVAILABLE) {
-                        StatusBadge(stringResource(R.string.badge_available), CineColors.TextSecondary, icon = CineIcons.Server)
-                    }
-                    if (showAvailability && details.user?.availability == Availability.REQUESTED) {
-                        StatusBadge(stringResource(R.string.badge_requested), CineColors.Warning, icon = CineIcons.Download)
-                    }
-                }
             }
             PosterImage(
                 path = movie.posterPath,
@@ -306,6 +289,25 @@ private fun MovieDetailContent(
             )
             if (series) SeriesInfoLine(movie) else YearAndRuntime(year = movie.year, runtimeMinutes = movie.runtimeMinutes)
             DirectedBy(movie, color = CineColors.TextSoft, fontSize = 15.sp, textAlign = TextAlign.Center)
+            // Où en est ce film pour toi : une rangée sous le titre (vu, à voir, sur le serveur, demandé).
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (details.isWatched) {
+                    val label = if (series) details.user?.let { progressLabel(it) } else null
+                    StatusBadge(label ?: stringResource(R.string.badge_watched), CineColors.Red, icon = CineIcons.Eye)
+                }
+                if (status == WatchStatus.WATCHLIST) {
+                    StatusBadge(stringResource(R.string.badge_watchlist), CineColors.TmdbBlue, icon = CineIcons.Bookmark)
+                }
+                if (showAvailability && details.user?.availability == Availability.AVAILABLE) {
+                    StatusBadge(stringResource(R.string.badge_available), CineColors.TextSecondary, icon = CineIcons.Server)
+                }
+                if (showAvailability && details.user?.availability == Availability.REQUESTED) {
+                    StatusBadge(stringResource(R.string.badge_requested), CineColors.Warning, icon = CineIcons.Download)
+                }
+            }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(8.dp),

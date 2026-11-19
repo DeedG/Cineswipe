@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -91,11 +92,11 @@ import io.github.deedg.cineswipe.ui.components.RatingPill
 import io.github.deedg.cineswipe.ui.components.StatusBadge
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sign
+import kotlinx.coroutines.launch
 
 /** Repères pour les tests d'interface. */
 object FeedTestTags {
@@ -146,6 +147,10 @@ private enum class SwipeKind(
  *
  * [onAction] est appelé une fois la carte sortie de l'écran.
  */
+
+/** Place prise par un bandeau posé au-dessus des cartes : l'affiche se décale d'autant. */
+val LocalCardTopInset = compositionLocalOf { 0.dp }
+
 @Composable
 fun SwipeableMovieCard(
     card: FeedCardUi,
@@ -384,9 +389,12 @@ private fun CardContent(
         // Écran court (petit téléphone, pliant ouvert en paysage, écran externe) : la carte se
         // resserre pour que l'affiche garde sa place.
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            // Un bandeau au-dessus des cartes (recos faibles, rappel des gestes) prend sa place sur l'affiche.
+            val topInset = LocalCardTopInset.current
+            val available = maxHeight - topInset
             val density = when {
-                maxHeight >= FULL_CARD_HEIGHT -> CardDensity.FULL
-                maxHeight >= COMPACT_CARD_HEIGHT -> CardDensity.COMPACT
+                available >= FULL_CARD_HEIGHT -> CardDensity.FULL
+                available >= COMPACT_CARD_HEIGHT -> CardDensity.COMPACT
                 else -> CardDensity.TINY
             }
             Column(Modifier.fillMaxSize()) {
@@ -395,7 +403,7 @@ private fun CardContent(
                         .weight(1f)
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(top = if (density == CardDensity.TINY) 48.dp else 56.dp, bottom = 10.dp),
+                        .padding(top = (if (density == CardDensity.TINY) 48.dp else 56.dp) + topInset, bottom = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(Modifier.fillMaxHeight().fillMaxWidth(0.7f), contentAlignment = Alignment.Center) {

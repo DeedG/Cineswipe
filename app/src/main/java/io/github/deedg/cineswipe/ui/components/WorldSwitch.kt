@@ -74,7 +74,7 @@ fun WorldSwitch(tabName: String?, modifier: Modifier = Modifier) {
     val thumb = remember { Animatable(if (current.isSeries) 1f else 0f) }
     var switching by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
-    val segmentWidth = 64.dp
+    val segmentWidth = 56.dp
 
     fun switchTo(target: MediaKind) {
         if (switching || target == current) return

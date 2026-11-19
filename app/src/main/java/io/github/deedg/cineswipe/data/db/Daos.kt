@@ -27,14 +27,16 @@ import io.github.deedg.cineswipe.data.repository.StatsRow
 import io.github.deedg.cineswipe.domain.ArenaCandidate
 import io.github.deedg.cineswipe.domain.DuelOutcome
 import io.github.deedg.cineswipe.domain.FilmRating
+import io.github.deedg.cineswipe.domain.FilmTraits
 import io.github.deedg.cineswipe.domain.Ranking
 import io.github.deedg.cineswipe.domain.RankingPrior
+import io.github.deedg.cineswipe.domain.StartingRating
 import io.github.deedg.cineswipe.domain.census.CensusChoice
 import io.github.deedg.cineswipe.domain.census.CensusSource
 import io.github.deedg.cineswipe.domain.reco.RecoSource
 import io.github.deedg.cineswipe.domain.reco.TmdbTag
-import kotlinx.coroutines.flow.Flow
 import kotlin.math.abs
+import kotlinx.coroutines.flow.Flow
 
 private const val LIBRARY_QUERY = """
     SELECT u.tmdbId AS tmdbId, m.title AS title, m.year AS year, m.posterPath AS posterPath,
@@ -209,6 +211,22 @@ private const val RANKING_ROWS_QUERY = """
     WHERE status = 'WATCHED'
 """
 
+/** Traits TMDB des films vus (note, votes, genres, réalisateurs). */
+data class TraitsRow(
+    val tmdbId: Long,
+    val tmdbRating: Double?,
+    val voteCount: Int?,
+    val genreIds: List<Int>,
+    val directors: List<TmdbTag>,
+)
+
+private const val TRAITS_QUERY = """
+    SELECT u.tmdbId AS tmdbId, m.tmdbRating AS tmdbRating, m.voteCount AS voteCount, m.genreIds AS genreIds, m.directors AS directors
+    FROM user_movie AS u
+    INNER JOIN movie AS m ON m.tmdbId = u.tmdbId
+    WHERE u.status = 'WATCHED'
+"""
+
 /** Duels du journal entre deux films vus : un duel contre un film qui n'est plus vu ne compte pas. */
 private const val WATCHED_DUELS = """
     FROM duel AS d
@@ -261,6 +279,10 @@ abstract class ArenaDao {
 
     @Query(RANKING_ROWS_QUERY)
     abstract suspend fun rankingRows(): List<RankingRow>
+
+    /** Ce que TMDB dit des films vus, pour estimer la note de départ des nouveaux. */
+    @Query(TRAITS_QUERY)
+    abstract suspend fun traitsRows(): List<TraitsRow>
 
     @Query("SELECT d.winnerId AS winnerId, d.loserId AS loserId, d.draw AS draw $WATCHED_DUELS ORDER BY d.id")
     abstract suspend fun duelOutcomes(): List<DuelOutcome>
@@ -346,7 +368,8 @@ abstract class ArenaDao {
         val rows = rankingRows()
         if (rows.isEmpty()) return emptyMap()
         val imported = ImportedScale.of(rows.mapNotNull { it.importedRating })
-        val ratings = Ranking.compute(rows.map { prior(it, imported) }, duelOutcomes())
+        val estimate = startingRating(rows)
+        val ratings = Ranking.compute(rows.map { prior(it, imported, estimate) }, duelOutcomes())
         val ranked = rankedIds().mapNotNull { id -> ratings[id]?.let { id to it } }.toMap()
         val confidence = Ranking.starConfidence(ranked)
         rows.forEach { row ->
@@ -366,12 +389,15 @@ abstract class ArenaDao {
      * bof) ou, à défaut, par la note reprise d'une autre appli (comparée à tes autres notes), ce
      * qui réduit aussi un peu l'incertitude d'un film encore jamais classé.
      */
-    private fun prior(row: RankingRow, imported: ImportedScale): RankingPrior {
+    private fun prior(row: RankingRow, imported: ImportedScale, estimate: Estimate?): RankingPrior {
         val importedRating = row.importedRating
+        val estimated = estimate?.takeIf { row.priorDuels == 0 }?.let { it.traits[row.tmdbId] }?.let { estimate.model.shift(it) }
         val (shift, deviation) = when {
             row.impression == Impression.LOVED -> IMPRESSION_SHIFT to IMPRESSION_DEVIATION
             row.impression == Impression.DISLIKED -> -IMPRESSION_SHIFT to IMPRESSION_DEVIATION
             importedRating != null -> imported.shift(importedRating) to IMPORTED_DEVIATION
+            // Sinon, une estimation d'après TMDB et tes goûts : l'incertitude reste celle d'un nouveau film.
+            estimated != null -> estimated to null
             else -> 0.0 to null
         }
         return RankingPrior(
@@ -381,6 +407,23 @@ abstract class ArenaDao {
             current = row.rating,
             deviation = deviation.takeIf { row.priorDuels == 0 },
         )
+    }
+
+    /** Modèle de note de départ et traits des films vus. */
+    private class Estimate(val model: StartingRating, val traits: Map<Long, FilmTraits>)
+
+    /**
+     * Note de départ estimée, apprise sur les films bien classés (assez de duels) sans impression ni
+     * note reprise : leur place vient des duels, pas d'un a priori.
+     */
+    private suspend fun startingRating(rows: List<RankingRow>): Estimate? {
+        val learnable = rows.filter { it.duels >= StartingRating.MIN_DUELS && it.impression == null && it.importedRating == null }
+        if (learnable.size < StartingRating.MIN_TRAINING) return null
+        val traits = traitsRows().associate { row ->
+            row.tmdbId to FilmTraits(row.tmdbId, row.tmdbRating, row.voteCount, row.genreIds, row.directors.map { it.id })
+        }
+        val model = StartingRating.learn(learnable.mapNotNull { row -> traits[row.tmdbId]?.let { it to row.rating - row.priorRating } }) ?: return null
+        return Estimate(model, traits)
     }
 
     private companion object {

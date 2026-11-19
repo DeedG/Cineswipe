@@ -88,6 +88,8 @@ class AppConfig(
     val builtinTmdbKey: String? = BuildConfig.TMDB_BUILTIN_KEY.takeIf { it.isNotBlank() },
     /** Parcours guidé des nouveaux utilisateurs (recos verrouillées tant qu'il n'est pas fait). */
     val journey: Boolean = true,
+    /** Sauvegarde automatique proposée à la première ouverture des recos. */
+    val offerBackup: Boolean = true,
 ) {
     companion object {
         fun demo(catalog: DemoCatalog) = AppConfig(
@@ -218,6 +220,9 @@ class AppContainer(
 
     /** Nouvelles saisons des séries suivies (monde des séries). */
     val seasonWatch: SeasonWatchRepository by lazy { SeasonWatchRepository(database, tmdb, settings, config.seasonNotifier(appContext)) }
+
+    /** Propose la sauvegarde automatique à la première ouverture des recos (jamais dans la démo). */
+    val offersBackup: Boolean get() = config.offerBackup && !isDemo
 
     /** Parcours Recenser → Arène → Recos (terminé d'office dans la démo). */
     val journey: JourneyRepository by lazy { JourneyRepository(database, settings, series = kind.isSeries, enabled = config.journey && !isDemo) }

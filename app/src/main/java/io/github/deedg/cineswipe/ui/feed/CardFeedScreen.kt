@@ -22,9 +22,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -32,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -147,6 +151,8 @@ fun CardFeedScreen(
     }
 
     Box(modifier.fillMaxSize().background(CineColors.Black)) {
+        var bannerHeight by remember { mutableIntStateOf(0) }
+        val bannerInset = with(LocalDensity.current) { if (bannerHeight > 0) bannerHeight.toDp() + 4.dp else 0.dp }
         when (state.phase) {
             FeedPhase.IDLE, FeedPhase.LOADING -> FeedLoading(texts.loading)
             FeedPhase.NEEDS_KEY -> EmptyState(
@@ -170,7 +176,8 @@ fun CardFeedScreen(
                 onAction = onEndAction,
                 modifier = Modifier.statusBarsPadding(),
             )
-            FeedPhase.READY -> FeedPager(
+            FeedPhase.READY -> CompositionLocalProvider(LocalCardTopInset provides bannerInset) {
+                FeedPager(
                 pagerState = pagerState,
                 state = state,
                 texts = texts,
@@ -182,7 +189,8 @@ fun CardFeedScreen(
                 onOpenMovie = onOpenMovie,
                 onOpenSettings = onOpenSettings,
                 onEndAction = onEndAction,
-            )
+                )
+            }
         }
         Row(
             modifier = Modifier
@@ -202,12 +210,16 @@ fun CardFeedScreen(
             }
         }
         if (banner != null && (state.phase == FeedPhase.READY || state.phase == FeedPhase.EMPTY)) {
+            // Le bandeau se pose entre les boutons du haut et l'affiche, qui lui fait de la place.
             Box(
                 Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(start = 15.dp, end = 15.dp, top = 68.dp),
+                    .padding(start = 15.dp, end = 15.dp, top = 64.dp)
+                    .onSizeChanged { size -> bannerHeight = size.height },
             ) { banner() }
+        } else {
+            bannerHeight = 0
         }
         if (topEnd != null) {
             Box(

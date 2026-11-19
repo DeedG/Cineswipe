@@ -39,7 +39,6 @@
     <string name="discover_loading_series">Finding shows…</string>
     <string name="discover_empty_title_series">No show found</string>
     <string name="discover_empty_message_series">No unseen show matches these filters.</string>
-    <string name="discover_tonight_message_series">What to watch from your shows to watch</string>
     <string name="discover_length_series">Episode length</string>
     <string name="tonight_length_short_series">≤ 30 min</string>
     <string name="tonight_length_medium_series">≤ 50 min</string>
@@ -52,6 +51,7 @@
     <string name="library_section_unranked_series">Unranked</string>
     <string name="profile_stat_watched_series">Shows seen</string>
     <string name="profile_hall_of_fame_empty_series">Fight in the Arena to rank your shows!</string>
+    <string name="profile_section_mine_series">My shows</string>
     <plurals name="library_count_series">
         <item quantity="one">%1$d show</item>
         <item quantity="other">%1$d shows</item>

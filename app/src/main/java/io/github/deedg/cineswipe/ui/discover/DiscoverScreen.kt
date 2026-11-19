@@ -50,6 +50,7 @@ import io.github.deedg.cineswipe.data.repository.TmdbRepository
 import io.github.deedg.cineswipe.ui.common.cineViewModel
 import io.github.deedg.cineswipe.ui.components.CineButton
 import io.github.deedg.cineswipe.ui.components.CineChip
+import io.github.deedg.cineswipe.ui.components.CineHeader
 import io.github.deedg.cineswipe.ui.components.CineSwitchRow
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
@@ -61,6 +62,9 @@ import io.github.deedg.cineswipe.ui.feed.FeedTexts
 import io.github.deedg.cineswipe.ui.icons.CineIcons
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
+import java.time.Year
+import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -71,9 +75,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Year
-import java.util.Locale
-import kotlin.math.roundToInt
 
 /** Première année proposée par les filtres (comme en V4). */
 const val DISCOVER_FIRST_YEAR = 1920
@@ -172,7 +173,6 @@ fun DiscoverRoute(
     onOpenSettings: () -> Unit,
     onLightning: (Long) -> Unit,
     onBack: () -> Unit = {},
-    onOpenTonight: () -> Unit = {},
 ) {
     val viewModel = cineViewModel { DiscoverViewModel(it.tmdb, it.feed, it.settings) }
     val filters by viewModel.filters.collectAsStateWithLifecycle()
@@ -232,7 +232,6 @@ fun DiscoverRoute(
             onRetryGenres = viewModel::loadGenres,
             onGenerate = viewModel::generate,
             onBack = onBack,
-            onOpenTonight = onOpenTonight,
         )
     }
 }
@@ -251,7 +250,6 @@ private fun DiscoverFiltersScreen(
     onRetryGenres: () -> Unit,
     onGenerate: () -> Unit,
     onBack: () -> Unit,
-    onOpenTonight: () -> Unit,
 ) {
     val lastYear = remember { Year.now().value }
     val sliderColors = SliderDefaults.colors(
@@ -272,34 +270,11 @@ private fun DiscoverFiltersScreen(
             .padding(horizontal = 20.dp, vertical = 15.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            // La Découverte s'ouvre depuis les recos : le retour y ramène.
-            GlassIconButton(
-                icon = CineIcons.Back,
-                contentDescription = stringResource(R.string.action_back),
-                onClick = onBack,
-                modifier = Modifier.testTag(DiscoverTestTags.BACK),
-            )
-            Text(
-                text = stringResource(R.string.discover_title),
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.weight(1f),
-            )
-            WorldSwitch(tabName = Tab.RECOS.name)
-        }
-
-        ShortcutCard(
-            icon = CineIcons.Moon,
-            title = stringResource(R.string.discover_tonight_title),
-            message = stringResource(R.string.discover_tonight_message),
-            onClick = onOpenTonight,
-            modifier = Modifier.testTag(DiscoverTestTags.TONIGHT),
+        // La Découverte s'ouvre depuis les recos : le retour y ramène.
+        CineHeader(
+            title = stringResource(R.string.discover_title),
+            onBack = onBack,
+            modifier = Modifier.padding(bottom = 6.dp).testTag(DiscoverTestTags.BACK),
         )
 
         FilterLabel(stringResource(R.string.discover_genre))
@@ -396,25 +371,10 @@ private fun DiscoverFiltersScreen(
     }
 }
 
-/** Raccourci vers un autre écran, en tête de la Découverte. */
-@Composable
-private fun ShortcutCard(icon: ImageVector, title: String, message: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    SectionCard(onClick = onClick, modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Icon(icon, contentDescription = null, tint = CineColors.Red, modifier = Modifier.size(26.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                Text(message, color = CineColors.TextSecondary, fontSize = 14.sp)
-            }
-            Icon(CineIcons.ChevronRight, contentDescription = null, tint = CineColors.TextMuted, modifier = Modifier.size(20.dp))
-        }
-    }
-}
 
 /** Repères pour les tests d'interface. */
 object DiscoverTestTags {
     const val BACK = "discover-back"
-    const val TONIGHT = "discover-tonight"
 }
 
 /** Libellé de filtre en petites capitales grises (`.discover-label` en V4), avec sa valeur en rouge. */

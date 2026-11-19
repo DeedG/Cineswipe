@@ -1,5 +1,6 @@
 package io.github.deedg.cineswipe.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -208,8 +209,9 @@ private fun MainContent(
         val name = application.takePendingTab()
         Tab.entries.firstOrNull { it.name == name }
     }
-    val backStack = if (startTab == null || startTab.route == StartRoute) rememberNavBackStack(StartRoute) else rememberNavBackStack(StartRoute, startTab.route)
-    val navigator = remember(backStack) { Navigator(backStack) }
+    val initialTab = startTab ?: StartTab
+    val backStack = rememberNavBackStack(initialTab.route)
+    val navigator = remember(backStack) { Navigator(backStack, Tab.entries.firstOrNull { it.route == backStack.firstOrNull() } ?: initialTab) }
     val current = navigator.current
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -219,12 +221,12 @@ private fun MainContent(
     val openSettings = { navigator.open(Route.Settings) }
     val openMovie = { tmdbId: Long -> navigator.open(Route.MovieDetail(tmdbId)) }
     val openLightning = { tmdbId: Long -> navigator.open(Route.Lightning(tmdbId)) }
-    val openCensus = { navigator.switchTab(Tab.CENSUS) }
-    val openArena = { navigator.switchTab(Tab.ARENA) }
-    val openRecos = { navigator.switchTab(Tab.RECOS) }
+    val openCensus = { navigator.goTo(Tab.CENSUS) }
+    val openArena = { navigator.goTo(Tab.ARENA) }
+    val openRecos = { navigator.goTo(Tab.RECOS) }
     val openKeyGuide = { navigator.open(Route.TmdbKey) }
     val openTonight = {
-        navigator.switchTab(Tab.RECOS)
+        navigator.goTo(Tab.RECOS)
         navigator.open(Route.Tonight)
     }
 
@@ -262,15 +264,15 @@ private fun MainContent(
             when {
                 target == WidgetLinks.TONIGHT -> openTonight()
                 target == WidgetLinks.STATS -> {
-                    navigator.switchTab(Tab.PROFILE)
+                    navigator.goTo(Tab.PROFILE)
                     navigator.open(Route.Stats)
                 }
-                target == WidgetLinks.TOP -> navigator.switchTab(Tab.PROFILE)
+                target == WidgetLinks.TOP -> navigator.goTo(Tab.PROFILE)
                 target.startsWith("movie:") -> target.removePrefix("movie:").toLongOrNull()?.let(openMovie)
                 // Notification après un film vu sur le serveur : l'Arène le place en priorité.
                 WatchedNotifier.parseRankLink(target) != null -> {
                     container.arena.focusOn(WatchedNotifier.parseRankLink(target).orEmpty())
-                    navigator.switchTab(Tab.ARENA)
+                    navigator.goTo(Tab.ARENA)
                 }
             }
         }
@@ -304,11 +306,13 @@ private fun MainContent(
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
                         if (current?.showsBottomBar != false && !imeVisible) {
-                            CineBottomBar(selected = current?.tab ?: StartRoute.tab, onSelect = navigator::switchTab)
+                            CineBottomBar(selected = navigator.tab, onSelect = navigator::switchTab)
                         }
                     },
                 ) { padding ->
                     Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
+                        // À la racine d'un onglet autre que les Recos, « retour » y ramène (puis quitte l'appli).
+                        BackHandler(enabled = navigator.atRoot && navigator.tab != StartTab) { navigator.back() }
                         NavDisplay(
                             backStack = backStack,
                             modifier = Modifier.fillMaxSize(),
@@ -394,7 +398,6 @@ private fun MainContent(
                                         onOpenSettings = openKeyGuide,
                                         onLightning = openLightning,
                                         onBack = { navigator.back() },
-                                        onOpenTonight = openTonight,
                                     )
                                 }
                                 entry<Route.Profile> {

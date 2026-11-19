@@ -73,17 +73,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.deedg.cineswipe.R
-import io.github.deedg.cineswipe.domain.journey.JourneyState
-import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.data.repository.CensusItem
 import io.github.deedg.cineswipe.data.repository.CensusProgress
 import io.github.deedg.cineswipe.domain.TmdbImageSize
 import io.github.deedg.cineswipe.domain.census.CensusChoice
 import io.github.deedg.cineswipe.domain.census.CensusFilter
+import io.github.deedg.cineswipe.domain.journey.JourneyState
+import io.github.deedg.cineswipe.domain.journey.JourneyStep
 import io.github.deedg.cineswipe.ui.common.cineViewModel
 import io.github.deedg.cineswipe.ui.common.isSeriesWorld
 import io.github.deedg.cineswipe.ui.components.CineButton
 import io.github.deedg.cineswipe.ui.components.CineChip
+import io.github.deedg.cineswipe.ui.components.CineHeader
 import io.github.deedg.cineswipe.ui.components.EmptyState
 import io.github.deedg.cineswipe.ui.components.GlassIconButton
 import io.github.deedg.cineswipe.ui.components.GlassPillButton
@@ -96,10 +97,10 @@ import io.github.deedg.cineswipe.ui.journey.JourneyBanner
 import io.github.deedg.cineswipe.ui.journey.journeyState
 import io.github.deedg.cineswipe.ui.navigation.Tab
 import io.github.deedg.cineswipe.ui.theme.CineColors
-import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 /** Repères pour les tests d'interface. */
 object CensusTestTags {
@@ -192,7 +193,7 @@ fun CensusScreen(
                 screen = JourneyStep.CENSUS,
                 hint = stringResource(if (state.cardsMode) R.string.journey_hint_census_cards else R.string.journey_hint_census_grid),
                 onGo = onJourneyGo,
-                modifier = Modifier.padding(start = 15.dp, end = 15.dp, top = 4.dp, bottom = 6.dp),
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 6.dp),
             )
         }
         FilterRow(selected = state.filter, cardsMode = state.cardsMode, onToggleMode = onToggleMode, onFilter = onFilter)
@@ -247,21 +248,19 @@ fun CensusScreen(
 
 @Composable
 private fun CensusHeader(state: CensusUiState, onHelp: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.census_title), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                state.progress?.let { ProgressText(it, state) }
-            }
-            GlassIconButton(icon = CineIcons.Help, contentDescription = stringResource(R.string.census_help), onClick = onHelp)
-            WorldSwitch(tabName = Tab.CENSUS.name)
-        }
+    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 4.dp)) {
+        CineHeader(
+            title = stringResource(R.string.census_title),
+            worldTab = Tab.CENSUS.name,
+            subtitle = state.progress?.let { progress -> { ProgressText(progress, state) } },
+            actions = { GlassIconButton(icon = CineIcons.Help, contentDescription = stringResource(R.string.census_help), onClick = onHelp) },
+        )
         val progress = state.progress
         val universe = progress?.universe
         if (progress != null && universe != null && universe > 0) {
             LinearProgressIndicator(
                 progress = { (progress.answered.toFloat() / universe).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(3.dp).clip(RoundedCornerShape(2.dp)),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(3.dp).clip(RoundedCornerShape(2.dp)),
                 color = CineColors.Red,
                 trackColor = CineColors.BorderStrong,
                 drawStopIndicator = {},
@@ -288,7 +287,7 @@ private fun FilterRow(selected: CensusFilter, cardsMode: Boolean, onToggleMode: 
         Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 15.dp),
+            .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
